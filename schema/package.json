@@ -1,0 +1,22 @@
+{
+  "name": "@testfile/schema",
+  "version": "0.1.0",
+  "description": "JSON schema for Testfile / testfile.yaml",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "testfile.schema.json",
+  "exports": {
+    ".": "./testfile.schema.json"
+  },
+  "files": [
+    "testfile.schema.json"
+  ],
+  "scripts": {
+    "test": "node scripts/validate.mjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "yaml": "^2.8.0"
+  }
+}

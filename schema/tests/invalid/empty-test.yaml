@@ -1,0 +1,4 @@
+# Invalid: a test without command/script/sequence/parallel.
+version: 1
+test:
+  name: does nothing

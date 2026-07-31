@@ -1,0 +1,19 @@
+{
+  "name": "testfile-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Testfile — a declarative YAML format for running test trees with services, matrices and dynamic ports",
+  "license": "Apache-2.0",
+  "workspaces": [
+    "schema",
+    "runner-ts",
+    "website"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

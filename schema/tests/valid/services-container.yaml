@@ -1,0 +1,25 @@
+# Container services with log/tcp readiness checks, scoped to a subtree.
+version: 1
+ports:
+  db: random
+test:
+  name: integration
+  services:
+    postgres:
+      container:
+        image: docker.io/library/postgres:16
+        engine: auto
+        ports:
+          - "${{ ports.db }}:5432"
+        env:
+          POSTGRES_PASSWORD: test
+      ready:
+        log:
+          pattern: database system is ready to accept connections
+          stream: any
+        tcp: ${{ ports.db }}
+        interval: 500ms
+        timeout: 60s
+  env:
+    DATABASE_URL: postgres://postgres:test@localhost:${{ ports.db }}/postgres
+  command: npm run test:integration

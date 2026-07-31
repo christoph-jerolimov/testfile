@@ -1,0 +1,204 @@
+---
+import { getCollection } from "astro:content";
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+const docs = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.order);
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const currentPath = Astro.url.pathname.replace(/\/$/, "");
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · Testfile</title>
+    {description && <meta name="description" content={description} />}
+  </head>
+  <body>
+    <header>
+      <a class="brand" href={`${base}/`}>Testfile</a>
+      <nav class="top">
+        <a href="https://github.com/christoph-jerolimov/testfile">GitHub</a>
+      </nav>
+    </header>
+    <div class="wrap">
+      <aside>
+        <nav>
+          <p class="nav-title">Documentation</p>
+          <ul>
+            {
+              docs.map((doc) => {
+                const href = `${base}/docs/${doc.id}`;
+                return (
+                  <li>
+                    <a href={href} aria-current={currentPath === href ? "page" : undefined}>
+                      {doc.data.title}
+                    </a>
+                  </li>
+                );
+              })
+            }
+          </ul>
+          <p class="nav-title">Project</p>
+          <ul>
+            <li>
+              <a href="https://github.com/christoph-jerolimov/testfile/blob/main/spec/README.md">
+                Specification
+              </a>
+            </li>
+            <li>
+              <a href="https://github.com/christoph-jerolimov/testfile/blob/main/schema/testfile.schema.json">
+                JSON schema
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+      <main>
+        <slot />
+      </main>
+    </div>
+    <style is:global>
+      :root {
+        --bg: #ffffff;
+        --fg: #1c1e21;
+        --muted: #57606a;
+        --border: #d0d7de;
+        --accent: #0969da;
+        --code-bg: #f6f8fa;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0d1117;
+          --fg: #e6edf3;
+          --muted: #8b949e;
+          --border: #30363d;
+          --accent: #58a6ff;
+          --code-bg: #161b22;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.6;
+        background: var(--bg);
+        color: var(--fg);
+      }
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+      }
+      .brand {
+        font-weight: 700;
+        font-size: 1.15rem;
+        color: var(--fg);
+        text-decoration: none;
+      }
+      nav.top a {
+        color: var(--muted);
+        text-decoration: none;
+      }
+      nav.top a:hover {
+        color: var(--accent);
+      }
+      .wrap {
+        display: flex;
+        max-width: 72rem;
+        margin: 0 auto;
+        gap: 2rem;
+        padding: 0 1.5rem;
+      }
+      aside {
+        flex: 0 0 14rem;
+        padding: 1.5rem 0;
+      }
+      .nav-title {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        margin: 1.25rem 0 0.25rem;
+      }
+      aside ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      aside li a {
+        display: block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        color: var(--fg);
+        text-decoration: none;
+      }
+      aside li a:hover {
+        color: var(--accent);
+      }
+      aside li a[aria-current="page"] {
+        background: var(--code-bg);
+        color: var(--accent);
+        font-weight: 600;
+      }
+      main {
+        flex: 1;
+        min-width: 0;
+        padding: 1.5rem 0 4rem;
+      }
+      main h1 {
+        margin-top: 0.5rem;
+      }
+      main a {
+        color: var(--accent);
+      }
+      main code {
+        background: var(--code-bg);
+        padding: 0.15em 0.35em;
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+      main pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem;
+        overflow-x: auto;
+      }
+      main pre code {
+        background: none;
+        padding: 0;
+      }
+      main table {
+        border-collapse: collapse;
+        display: block;
+        overflow-x: auto;
+      }
+      main th,
+      main td {
+        border: 1px solid var(--border);
+        padding: 0.4rem 0.75rem;
+        text-align: left;
+      }
+      @media (max-width: 48rem) {
+        .wrap {
+          flex-direction: column;
+        }
+        aside {
+          flex-basis: auto;
+          padding-bottom: 0;
+        }
+      }
+    </style>
+  </body>
+</html>

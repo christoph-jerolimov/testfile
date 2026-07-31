@@ -1,0 +1,24 @@
+# Groups: a sequence containing a parallel group.
+version: 1
+name: groups
+env:
+  CI: true
+test:
+  name: all
+  sequence:
+    - name: build
+      command: npm run build
+    - name: checks
+      parallel:
+        - name: lint
+          command: npm run lint
+        - name: unit
+          command: npm run test:unit
+        - name: typecheck
+          command: npx tsc --noEmit
+      maxParallel: 2
+    - name: cleanup
+      continueOnError: true
+      script: |
+        rm -rf tmp
+        echo "done"

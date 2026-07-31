@@ -1,0 +1,61 @@
+# Kitchen sink: global + scoped services, matrix over database versions,
+# sequence/parallel nesting, dynamic ports and templates.
+version: 1
+name: full example
+env:
+  NODE_ENV: test
+ports:
+  web: random
+  db: random
+services:
+  web:
+    script: |
+      npm run build
+      npm start
+    env:
+      PORT: ${{ ports.web }}
+    ready:
+      http:
+        url: http://localhost:${{ ports.web }}/healthz
+        method: GET
+        status: 200
+      delay: 1s
+      interval: 2s
+      timeout: 1m
+test:
+  name: all
+  timeout: 30m
+  sequence:
+    - name: unit
+      parallel:
+        - name: lint
+          command: npm run lint
+        - name: unit tests
+          command: npm run test:unit
+    - name: integration
+      matrix:
+        postgres: ["15", "16", "17"]
+      services:
+        postgres:
+          container:
+            image: docker.io/library/postgres:${{ matrix.postgres }}
+            engine: podman
+            ports:
+              - "${{ ports.db }}:5432"
+            env:
+              POSTGRES_PASSWORD: test
+            volumes:
+              - ./fixtures:/docker-entrypoint-initdb.d:ro
+          ready:
+            log: database system is ready to accept connections
+            timeout: 90s
+          stop:
+            timeout: 20s
+      env:
+        DATABASE_URL: postgres://postgres:test@localhost:${{ ports.db }}/postgres
+      workdir: ./integration
+      command: npm run test:integration
+    - name: e2e
+      env:
+        BASE_URL: http://localhost:${{ ports.web }}
+      command: npm run test:e2e
