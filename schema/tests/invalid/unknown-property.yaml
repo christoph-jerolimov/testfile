@@ -1,0 +1,4 @@
+# Invalid: unknown properties are rejected (catches typos like "commands").
+version: 1
+test:
+  commands: npm test

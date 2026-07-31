@@ -1,0 +1,3 @@
+# Invalid: "version" is required.
+test:
+  command: npm test

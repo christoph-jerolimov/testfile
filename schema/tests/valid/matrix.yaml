@@ -1,0 +1,17 @@
+# A matrix expands one test into one instance per combination.
+version: 1
+test:
+  name: matrix
+  matrix:
+    node: ["20", "22"]
+    db: [postgres, mysql]
+    exclude:
+      - node: "20"
+        db: mysql
+    include:
+      - node: "23"
+        db: postgres
+  env:
+    NODE_VERSION: ${{ matrix.node }}
+    DATABASE: ${{ matrix.db }}
+  command: npm run test:integration

@@ -1,0 +1,6 @@
+# Invalid: port out of range and not "random".
+version: 1
+ports:
+  web: 123456
+test:
+  command: npm test

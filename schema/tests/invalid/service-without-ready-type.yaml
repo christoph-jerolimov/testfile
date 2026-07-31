@@ -1,0 +1,9 @@
+# Invalid: ready must contain at least one of http/tcp/log.
+version: 1
+services:
+  web:
+    command: npm start
+    ready:
+      timeout: 30s
+test:
+  command: npm test

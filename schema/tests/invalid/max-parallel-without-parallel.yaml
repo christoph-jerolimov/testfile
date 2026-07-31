@@ -1,0 +1,5 @@
+# Invalid: maxParallel is only allowed together with parallel.
+version: 1
+test:
+  command: npm test
+  maxParallel: 2

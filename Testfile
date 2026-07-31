@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=schema/testfile.schema.json
+# This repository's own tests, described as a Testfile.
+version: 1
+name: testfile-monorepo
+env:
+  CI: true
+test:
+  name: ci
+  sequence:
+    - name: install
+      command: npm ci
+    - name: checks
+      parallel:
+        - name: schema
+          command: npm test --workspace schema
+        - name: runner-ts
+          script: |
+            npm run build --workspace runner-ts
+            npm test --workspace runner-ts
+        - name: website
+          command: npm run build --workspace website

@@ -1,0 +1,21 @@
+# A local process service with a random port and an HTTP readiness check.
+version: 1
+ports:
+  web: random
+services:
+  web:
+    description: The app under test
+    command: npm start
+    env:
+      PORT: ${{ ports.web }}
+    ready:
+      http: http://localhost:${{ ports.web }}/healthz
+      timeout: 30s
+    stop:
+      signal: SIGINT
+      timeout: 5s
+test:
+  name: e2e
+  env:
+    BASE_URL: http://localhost:${{ ports.web }}
+  command: npm run test:e2e

@@ -1,0 +1,413 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json",
+  "title": "Testfile",
+  "description": "Schema for a Testfile (Testfile, testfile.yaml or testfile.yml): a declarative description of how a project runs its tests. A Testfile is a tree of tests. Each test either runs a command or a script, or groups sub-tests that run in sequence or in parallel. Any test can be expanded through a matrix. Tests can depend on services (local processes or containers) that are started before and gracefully stopped after the test.",
+  "type": "object",
+  "required": ["version", "test"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "description": "Version of the Testfile format. Currently always 1.",
+      "const": 1
+    },
+    "name": {
+      "description": "Human readable name of this Testfile / project.",
+      "type": "string"
+    },
+    "env": {
+      "description": "Environment variables available to every test and service in this file.",
+      "$ref": "#/$defs/envMap"
+    },
+    "ports": {
+      "description": "Named ports. A value of \"random\" allocates a free port on startup; an integer pins a fixed port. Referenced anywhere via ${{ ports.NAME }} templates.",
+      "$ref": "#/$defs/portsMap"
+    },
+    "services": {
+      "description": "Services that are started before the root test runs and gracefully stopped afterwards (also on Ctrl+C).",
+      "$ref": "#/$defs/servicesMap"
+    },
+    "test": {
+      "description": "The root test of the tree.",
+      "$ref": "#/$defs/test"
+    }
+  },
+  "$defs": {
+    "scalar": {
+      "type": ["string", "number", "boolean"]
+    },
+    "envMap": {
+      "type": "object",
+      "description": "Map of environment variable names to values. Non-string values are coerced to strings. Values may contain ${{ ... }} templates.",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/scalar"
+      }
+    },
+    "portsMap": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "const": "random",
+            "description": "Allocate a free port when the run starts."
+          },
+          {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535,
+            "description": "A fixed port number."
+          }
+        ]
+      }
+    },
+    "duration": {
+      "description": "A duration, either as an integer number of seconds or as a string with a unit (ms, s, m, h), e.g. 30, \"30s\", \"5m\", \"500ms\".",
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]+(ms|s|m|h)$"
+        }
+      ]
+    },
+    "matrix": {
+      "type": "object",
+      "description": "Expands the test into one instance per combination of the given variables (cross product). Variables are available as ${{ matrix.NAME }} and as environment variables. The reserved keys 'exclude' and 'include' remove or add specific combinations.",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "properties": {
+        "exclude": {
+          "description": "Combinations to remove from the cross product. Each entry matches combinations that contain all of the given variable values.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "$ref": "#/$defs/scalar"
+            }
+          }
+        },
+        "include": {
+          "description": "Extra combinations to add after the cross product (and after 'exclude') has been evaluated.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "$ref": "#/$defs/scalar"
+            }
+          }
+        }
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/scalar"
+        }
+      }
+    },
+    "test": {
+      "type": "object",
+      "description": "A node in the test tree. Exactly one of 'command', 'script', 'sequence' or 'parallel' must be set.",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "description": "Display name of this test. Matrix instances get the matrix values appended.",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "env": {
+          "description": "Environment variables for this test and its children. Merged over the parent environment.",
+          "$ref": "#/$defs/envMap"
+        },
+        "workdir": {
+          "description": "Working directory for this test and its children, relative to the Testfile location (or absolute).",
+          "type": "string"
+        },
+        "timeout": {
+          "description": "Maximum time this test (including children) may run before it is aborted and reported as failed.",
+          "$ref": "#/$defs/duration"
+        },
+        "continueOnError": {
+          "description": "If true, a failure of this test does not abort the surrounding sequence and does not fail the parent (the failure is still reported).",
+          "type": "boolean",
+          "default": false
+        },
+        "services": {
+          "description": "Services scoped to this subtree: started before this test runs, gracefully stopped when it finishes.",
+          "$ref": "#/$defs/servicesMap"
+        },
+        "matrix": {
+          "$ref": "#/$defs/matrix"
+        },
+        "command": {
+          "description": "A single shell command to run. The test passes when the command exits with code 0.",
+          "type": "string",
+          "minLength": 1
+        },
+        "script": {
+          "description": "A multi-line shell script to run (executed with 'sh -e'). The test passes when the script exits with code 0.",
+          "type": "string",
+          "minLength": 1
+        },
+        "sequence": {
+          "description": "Child tests that run one after another. The sequence stops at the first failure unless that child sets continueOnError.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/test"
+          }
+        },
+        "parallel": {
+          "description": "Child tests that run at the same time. The group fails if any child fails.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/test"
+          }
+        },
+        "maxParallel": {
+          "description": "Maximum number of children of 'parallel' running at the same time. Defaults to unlimited.",
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "oneOf": [
+        { "required": ["command"] },
+        { "required": ["script"] },
+        { "required": ["sequence"] },
+        { "required": ["parallel"] }
+      ],
+      "dependentRequired": {
+        "maxParallel": ["parallel"]
+      }
+    },
+    "servicesMap": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/service"
+      }
+    },
+    "service": {
+      "type": "object",
+      "description": "A long-running dependency (web server, database, ...) needed by tests. Exactly one of 'command', 'script' or 'container' must be set. The runner waits for the 'ready' check before starting the dependent tests and stops the service gracefully afterwards.",
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "env": {
+          "$ref": "#/$defs/envMap"
+        },
+        "workdir": {
+          "type": "string"
+        },
+        "command": {
+          "description": "Start the service as a local process running this shell command.",
+          "type": "string",
+          "minLength": 1
+        },
+        "script": {
+          "description": "Start the service as a local process running this shell script (executed with 'sh -e').",
+          "type": "string",
+          "minLength": 1
+        },
+        "container": {
+          "$ref": "#/$defs/container"
+        },
+        "ready": {
+          "$ref": "#/$defs/ready"
+        },
+        "stop": {
+          "$ref": "#/$defs/stop"
+        }
+      },
+      "oneOf": [
+        { "required": ["command"] },
+        { "required": ["script"] },
+        { "required": ["container"] }
+      ]
+    },
+    "container": {
+      "type": "object",
+      "description": "Run the service as a container image.",
+      "additionalProperties": false,
+      "required": ["image"],
+      "properties": {
+        "image": {
+          "description": "The container image to run, e.g. docker.io/library/postgres:16.",
+          "type": "string",
+          "minLength": 1
+        },
+        "engine": {
+          "description": "Container engine to use. 'auto' picks podman if available, otherwise docker. 'kubernetes' (local or remote cluster) is reserved for a future version.",
+          "enum": ["auto", "podman", "docker", "kubernetes"],
+          "default": "auto"
+        },
+        "ports": {
+          "description": "Port mappings as \"HOST:CONTAINER\". The host part may be a template, e.g. \"${{ ports.db }}:5432\".",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[^:]+:[0-9]+$"
+          }
+        },
+        "env": {
+          "$ref": "#/$defs/envMap"
+        },
+        "volumes": {
+          "description": "Volume mounts as \"HOST:CONTAINER[:OPTIONS]\".",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "command": {
+          "description": "Override the image command.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ready": {
+      "type": "object",
+      "description": "How the runner detects that a service is ready. At least one of 'http', 'tcp' or 'log' must be set. Checks are polled until they succeed or 'timeout' is reached.",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["http"] },
+        { "required": ["tcp"] },
+        { "required": ["log"] }
+      ],
+      "properties": {
+        "http": {
+          "description": "Ready when an HTTP request succeeds. A plain string is a URL expected to answer with a 2xx status.",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["url"],
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "method": {
+                  "type": "string",
+                  "default": "GET"
+                },
+                "status": {
+                  "description": "Expected status code. Defaults to any 2xx.",
+                  "type": "integer",
+                  "minimum": 100,
+                  "maximum": 599
+                }
+              }
+            }
+          ]
+        },
+        "tcp": {
+          "description": "Ready when a TCP connection can be established. A plain value is a port on localhost; the port may be a template string.",
+          "oneOf": [
+            {
+              "type": ["integer", "string"]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["port"],
+              "properties": {
+                "host": {
+                  "type": "string",
+                  "default": "localhost"
+                },
+                "port": {
+                  "type": ["integer", "string"]
+                }
+              }
+            }
+          ]
+        },
+        "log": {
+          "description": "Ready when the service output matches this regular expression. A plain string matches on any stream.",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["pattern"],
+              "properties": {
+                "pattern": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "stream": {
+                  "enum": ["stdout", "stderr", "any"],
+                  "default": "any"
+                }
+              }
+            }
+          ]
+        },
+        "delay": {
+          "description": "Wait this long before the first check.",
+          "$ref": "#/$defs/duration"
+        },
+        "interval": {
+          "description": "Time between checks. Defaults to 1s.",
+          "$ref": "#/$defs/duration"
+        },
+        "timeout": {
+          "description": "Give up (and fail the run) when the service is not ready after this time. Defaults to 30s.",
+          "$ref": "#/$defs/duration"
+        }
+      }
+    },
+    "stop": {
+      "type": "object",
+      "description": "How the service is stopped. By default the runner sends 'signal' (SIGTERM) and escalates to SIGKILL after 'timeout'. Containers are stopped with their engine's stop command using the same timeout.",
+      "additionalProperties": false,
+      "properties": {
+        "signal": {
+          "type": "string",
+          "pattern": "^SIG[A-Z0-9]+$",
+          "default": "SIGTERM"
+        },
+        "timeout": {
+          "$ref": "#/$defs/duration",
+          "default": "10s"
+        },
+        "command": {
+          "description": "Run this shell command to stop the service instead of sending a signal.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
