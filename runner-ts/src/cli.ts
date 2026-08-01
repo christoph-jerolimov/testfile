@@ -11,7 +11,7 @@ import {
   splitGenericFilters,
   type TestFilters,
 } from "./filter.js";
-import { HISTORY_DIR, RunHistory, type RunRecord } from "./history.js";
+import { diffRuns, HISTORY_DIR, RunHistory, type RunRecord } from "./history.js";
 import { loadTestfile } from "./loader.js";
 import { writeReport, type ReporterKind } from "./report.js";
 import { ConsoleReporter } from "./reporter.js";
@@ -170,12 +170,47 @@ program
   .argument("[path]", "Testfile or directory containing one", ".")
   .option("--run <id>", "show one recorded run (a unique id prefix is enough)")
   .option("--log [test-path]", "with --run: print the run's merged log, or a single test's log")
-  .description("List or show recorded test runs")
-  .action((path: string, options: { run?: string; log?: string | boolean }) => {
+  .option("--diff <ids...>", "compare two recorded runs (older id first)")
+  .description("List, show or compare recorded test runs")
+  .action((path: string, options: { run?: string; log?: string | boolean; diff?: string[] }) => {
     const history = new RunHistory(resolveHistoryBase(path));
     if (history.runs.length === 0) {
       console.error(`no recorded runs in ${HISTORY_DIR}/`);
       process.exitCode = 1;
+      return;
+    }
+
+    if (options.diff) {
+      if (options.diff.length !== 2) {
+        console.error(`${color(31, "✘")} --diff needs exactly two run ids`);
+        process.exitCode = 1;
+        return;
+      }
+      const [base, compare] = options.diff.map((id) => history.find(id));
+      const missing = options.diff.filter((_, i) => (i === 0 ? !base : !compare));
+      if (!base || !compare) {
+        console.error(`${color(31, "✘")} no recorded run matches "${missing[0]}"`);
+        process.exitCode = 1;
+        return;
+      }
+      const diff = diffRuns(base, compare);
+      console.log(color(1, `${base.id} -> ${compare.id}`));
+      const section = (label: string, code: number, paths: string[]): void => {
+        for (const p of paths) console.log(`  ${pad(color(code, label), 13)} ${p}`);
+      };
+      section("newly failed", 31, diff.newlyFailed);
+      section("fixed", 32, diff.fixed);
+      section("still failing", 33, diff.stillFailing);
+      section("added", 36, diff.added);
+      section("removed", 90, diff.removed);
+      for (const d of diff.durations) {
+        const arrow = d.toMs > d.fromMs ? color(33, "slower") : color(32, "faster");
+        console.log(`  ${pad(arrow, 13)} ${d.path} (${formatMs(d.fromMs)} -> ${formatMs(d.toMs)})`);
+      }
+      const total =
+        diff.newlyFailed.length + diff.fixed.length + diff.stillFailing.length +
+        diff.added.length + diff.removed.length + diff.durations.length;
+      if (total === 0) console.log(color(90, "  no differences"));
       return;
     }
 
