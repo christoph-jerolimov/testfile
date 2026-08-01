@@ -284,7 +284,13 @@ addFilterOptions(
       await app.waitUntilExit();
       const status = session.runner?.root.status;
       process.exitCode =
-        session.runner === undefined ? 0 : session.runner.interrupted ? 130 : status === "passed" ? 0 : 1;
+        session.runner === undefined
+          ? 0
+          : session.runner.interrupted
+            ? 130
+            : status === "passed" || status === "skipped"
+              ? 0
+              : 1;
     } else {
       if (options.tui) console.error("not a TTY, falling back to plain output");
       process.on("SIGINT", onSignal);
@@ -297,7 +303,8 @@ addFilterOptions(
       if (session.lastRecord) {
         console.log(color(90, `run recorded in ${HISTORY_DIR}/runs/${session.lastRecord.id}`));
       }
-      process.exitCode = session.runner!.interrupted ? 130 : status === "passed" ? 0 : 1;
+      process.exitCode =
+        session.runner!.interrupted ? 130 : status === "passed" || status === "skipped" ? 0 : 1;
     }
   });
 

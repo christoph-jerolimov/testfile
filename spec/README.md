@@ -65,6 +65,7 @@ Common fields available on every test:
 | `name`            | string   | Display name. Matrix instances get their combination appended, e.g. `integration (postgres=16)`. |
 | `description`     | string   | Free-form description. |
 | `tags`            | array    | Optional labels made of letters and digits only (`[A-Za-z0-9]+`), e.g. `fast`, `slow`, `flaky`, `nightly`, `aws`, `gcp`. A tag applies to the test and its whole subtree. Runners use tags to execute a subset of tests. |
+| `if`              | string   | Condition deciding whether the test (and subtree) runs, see [Conditions](#conditions). A false condition marks the test `skipped` without failing the parent. |
 | `env`             | map      | Environment variables, merged over the parent's environment (child wins). |
 | `workdir`         | string   | Working directory for this subtree, relative to the Testfile (or absolute). |
 | `timeout`         | duration | Abort and fail this test (and its children) after this time. |
@@ -86,6 +87,28 @@ Common fields available on every test:
   `sh -e`, so the first failing line fails the script.
 - The exit status of a test is one of `passed`, `failed`, `skipped` or
   `aborted` (run cancelled, e.g. Ctrl+C or timeout).
+
+## Conditions
+
+`if` is evaluated after template resolution, with these rules:
+
+- Unknown template references resolve to `""` instead of erroring (so
+  `if: ${{ env.CI }}` works locally where `CI` is unset).
+- A bare value is a truthiness check: `""`, `"false"`, `"0"`, `"no"` and
+  `"off"` (case-insensitive) are false, everything else is true.
+- `left == right` / `left != right` compare as strings; surrounding quotes
+  are stripped from the operands.
+- A leading `!` negates the whole expression (quote it in YAML:
+  `if: "!${{ env.CI }}"`).
+
+The runner injects `TESTFILE_OS` (`linux`, `darwin`, `win32`) and
+`TESTFILE_ARCH` into the environment, so platform conditions are written as
+`if: ${{ env.TESTFILE_OS }} == linux`.
+
+A false condition skips the test and its subtree (status `skipped`). This
+does not fail the surrounding sequence/parallel group; a group whose active
+children all skipped is itself `skipped`. A fully skipped run exits with
+code `0`.
 
 ## Matrix
 

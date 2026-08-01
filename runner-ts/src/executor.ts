@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { resolve as resolvePath } from "node:path";
+import { evaluateCondition } from "./condition.js";
 import type { ServiceDef, TestfileDoc } from "./model.js";
 import { resolvePorts } from "./ports.js";
 import { walk, type RunNode, type Status } from "./runtree.js";
@@ -63,6 +64,9 @@ export class Runner extends EventEmitter {
     for (const [key, value] of Object.entries(process.env)) {
       if (value !== undefined) baseEnv[key] = value;
     }
+    // Platform facts for `if` conditions, e.g. ${{ env.TESTFILE_OS }} == linux.
+    baseEnv.TESTFILE_OS = process.platform;
+    baseEnv.TESTFILE_ARCH = process.arch;
     const started: ServiceInstance[] = [];
     try {
       this.ports = await resolvePorts(this.doc.ports);
@@ -126,6 +130,16 @@ export class Runner extends EventEmitter {
           env[`TESTFILE_MATRIX_${key.toUpperCase()}`] = value;
         }
         const nodeScopes: Scopes = { ...withMatrix, env };
+
+        if (node.def.if !== undefined && !evaluateCondition(node.def.if, nodeScopes, where)) {
+          node.output.system(`skipped: condition not met (${node.def.if})`);
+          this.markRemaining(node, "skipped");
+          node.endedAt = Date.now();
+          this.emit("node-end", node);
+          this.emitUpdate();
+          return;
+        }
+
         const nodeCwd = node.def.workdir
           ? resolvePath(cwd, resolveTemplate(node.def.workdir, nodeScopes, where))
           : cwd;
@@ -265,9 +279,12 @@ export class Runner extends EventEmitter {
       (child) =>
         (child.status === "failed" || child.status === "aborted") && !child.def.continueOnError
     );
+    const ran = node.children.filter((child) => this.isActive(child));
     if (node.timedOut) node.status = "failed";
     else if (signal.aborted && this.interrupted) node.status = "aborted";
-    else node.status = failing ? "failed" : "passed";
+    else if (failing) node.status = "failed";
+    else if (ran.length > 0 && ran.every((child) => child.status === "skipped")) node.status = "skipped";
+    else node.status = "passed";
   }
 
   private async startServices(

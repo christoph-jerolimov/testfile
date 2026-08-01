@@ -160,6 +160,52 @@ test("test-scoped services stop when the subtree finishes", async () => {
   assert.equal(runner.services[0].status, "stopped");
 });
 
+test("a false if condition skips the test without failing the sequence", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      sequence: [
+        { name: "skipped", if: "${{ env.TESTFILE_NOT_SET }}", command: "false" },
+        { name: "runs", command: "true" },
+      ],
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.equal(runner.root.children[0].status, "skipped");
+  assert.equal(runner.root.children[1].status, "passed");
+});
+
+test("if conditions see platform facts and matrix values", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      name: "m",
+      matrix: { db: ["postgres", "mysql"] },
+      if: "${{ matrix.db }} == postgres",
+      command: "true",
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.equal(runner.root.children[0].status, "passed");
+  assert.equal(runner.root.children[1].status, "skipped");
+
+  const platform = makeRunner({
+    version: 1,
+    test: { if: `\${{ env.TESTFILE_OS }} == ${process.platform}`, command: "true" },
+  });
+  assert.equal(await platform.run(), "passed");
+});
+
+test("a group whose children all skip is reported as skipped", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      sequence: [{ name: "a", if: "false", command: "true" }],
+    },
+  });
+  assert.equal(await runner.run(), "skipped");
+});
+
 test("retry re-runs a flaky command until it passes", async () => {
   const dir = mkdtempSync(join(tmpdir(), "testfile-retry-"));
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));

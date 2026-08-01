@@ -1,0 +1,15 @@
+# Conditional tests: truthiness, comparison and negation.
+version: 1
+test:
+  sequence:
+    - name: always
+      command: npm run lint
+    - name: only in ci
+      if: ${{ env.CI }}
+      command: npm run test:ci
+    - name: only on linux
+      if: ${{ env.TESTFILE_OS }} == linux
+      command: npm run test:linux
+    - name: not in ci
+      if: "!${{ env.CI }}"
+      command: npm run test:local

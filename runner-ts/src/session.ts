@@ -100,12 +100,14 @@ export class Session extends EventEmitter {
         lines: node.output.lines,
       });
     });
+    // A fully condition-skipped run counts as success: nothing failed.
+    const ok = status === "passed" || status === "skipped";
     this.lastRecord = this.history.saveRun(
       {
         startedAtMs,
         durationMs,
-        status: status === "passed" ? "passed" : runner.interrupted ? "aborted" : "failed",
-        exitCode: runner.interrupted ? 130 : status === "passed" ? 0 : 1,
+        status: ok ? "passed" : runner.interrupted ? "aborted" : "failed",
+        exitCode: runner.interrupted ? 130 : ok ? 0 : 1,
         cancelled: runner.interrupted,
         env: runner.docEnv,
         ports: runner.ports,

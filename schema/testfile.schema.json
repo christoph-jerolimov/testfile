@@ -130,6 +130,11 @@
         "description": {
           "type": "string"
         },
+        "if": {
+          "description": "Condition deciding whether this test (and its subtree) runs. Supports templates, truthiness (\"\", \"false\", \"0\", \"no\", \"off\" are false), \"a == b\" / \"a != b\" string comparison, and a leading \"!\" negating the whole expression. Unknown template references resolve to \"\". A false condition marks the test as skipped without failing the parent. Example: \"${{ env.CI }}\" or \"${{ env.TESTFILE_OS }} == linux\".",
+          "type": "string",
+          "minLength": 1
+        },
         "tags": {
           "description": "Optional labels (letters and digits only) to group tests, e.g. fast, slow, flaky, nightly, aws, gcp. A tag applies to the whole subtree; runners can filter by tag to execute a subset of tests.",
           "type": "array",
