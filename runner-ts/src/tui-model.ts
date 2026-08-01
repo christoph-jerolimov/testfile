@@ -1,5 +1,7 @@
-import type { RunHistory } from "./history.js";
+import type { RunHistory, RunRecord } from "./history.js";
+import type { OutputLine } from "./output.js";
 import { walk, type RunNode } from "./runtree.js";
+import { formatMs } from "./util.js";
 
 // The nodes shown in the TUI tree, honoring collapsed groups and the search
 // query. A non-empty query overrides collapsing: it shows every node whose
@@ -60,6 +62,46 @@ export function runningFocus(tree: RunNode): RunNode | undefined {
     if (!deepest || node.depth > deepest.depth) deepest = node;
   });
   return leaf ?? deepest;
+}
+
+// A recorded run rendered as pane lines: metadata, then one line per test
+// (failures on the stderr stream so they stand out).
+export function describeRun(run: RunRecord): OutputLine[] {
+  const lines: OutputLine[] = [
+    { text: `started:   ${run.startedAt}`, stream: "system" },
+    { text: `duration:  ${formatMs(run.durationMs)}`, stream: "system" },
+    { text: `status:    ${run.status} (exit code ${run.exitCode})`, stream: "system" },
+  ];
+  if (run.cancelled) lines.push({ text: "cancelled: yes", stream: "system" });
+  if (run.selected.length > 0) {
+    lines.push({ text: `selected:  ${run.selected.join(", ")}`, stream: "system" });
+  }
+  const env = Object.entries(run.env)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(" ");
+  if (env) lines.push({ text: `env:       ${env}`, stream: "system" });
+  const ports = Object.entries(run.ports)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(" ");
+  if (ports) lines.push({ text: `ports:     ${ports}`, stream: "system" });
+  lines.push({ text: "", stream: "system" });
+  for (const test of run.tests) {
+    const duration = test.durationMs !== undefined ? ` (${formatMs(test.durationMs)})` : "";
+    const artifacts = test.artifacts?.length ? `  [${test.artifacts.length} artifacts]` : "";
+    lines.push({
+      text: `${test.status.padEnd(8)} ${test.path}${duration}${artifacts}`,
+      stream: test.status === "failed" || test.status === "aborted" ? "stderr" : "stdout",
+    });
+  }
+  return lines;
+}
+
+// One row of the history list.
+export function runListLabel(run: RunRecord): string {
+  const counts = new Map<string, number>();
+  for (const test of run.tests) counts.set(test.status, (counts.get(test.status) ?? 0) + 1);
+  const summary = [...counts.entries()].map(([status, n]) => `${n} ${status}`).join(", ");
+  return `${run.startedAt.replace("T", " ").slice(0, 19)}  ${run.status}  ${summary}`;
 }
 
 // Slices the tail of a log for display: scroll = 0 follows the end, larger
