@@ -142,6 +142,8 @@ export class ServiceInstance extends EventEmitter {
   error?: string;
   // Where in the tree the service was declared, for display purposes.
   owner = "";
+  // Resolved facts for display: image, port mappings, service-level env.
+  details: { image?: string; ports?: string[]; env?: Record<string, string> } = {};
   onUnexpectedExit?: () => void;
 
   private child?: ChildProcess; // service process, or the log follower for containers
@@ -151,6 +153,9 @@ export class ServiceInstance extends EventEmitter {
   private stopping = false;
   private env: Record<string, string> = {};
   private cwd = ".";
+  // Kept for restarts.
+  private startScopes?: Scopes;
+  private startCwd?: string;
 
   constructor(
     readonly name: string,
@@ -161,10 +166,23 @@ export class ServiceInstance extends EventEmitter {
 
   async start(scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
     this.setStatus("starting");
+    this.startScopes = scopes;
+    this.startCwd = cwd;
     const where = `service "${this.name}"`;
-    const env = { ...scopes.env, ...resolveEnvMap(this.def.env, scopes, where) };
+    const ownEnv = resolveEnvMap(this.def.env, scopes, where);
+    const env = { ...scopes.env, ...ownEnv };
     const myScopes: Scopes = { ...scopes, env };
     this.env = env;
+    // Readiness log matching starts at the current end of the buffer, so a
+    // restart is not satisfied by the previous run's output.
+    const logFrom = this.output.lines.length;
+    this.details = {
+      env: Object.keys(ownEnv).length > 0 ? ownEnv : undefined,
+      image: this.def.container
+        ? resolveTemplate(this.def.container.image, myScopes, where)
+        : undefined,
+      ports: this.def.container?.ports?.map((p) => resolveTemplate(p, myScopes, where)),
+    };
     this.cwd = this.def.workdir
       ? resolvePath(cwd, resolveTemplate(this.def.workdir, myScopes, where))
       : cwd;
@@ -180,6 +198,7 @@ export class ServiceInstance extends EventEmitter {
         signal,
         where,
         cwd: this.cwd,
+        logFrom,
         isRunning: () => !this.exited,
       });
       if (this.status === "starting") this.setStatus("ready");
@@ -302,6 +321,24 @@ export class ServiceInstance extends EventEmitter {
     } finally {
       if (!wasFailed) this.setStatus("stopped");
       this.emit("update");
+    }
+  }
+
+  // Stops the service and starts it again with the same configuration.
+  async restart(): Promise<void> {
+    if (!this.startScopes || this.startCwd === undefined) return;
+    if (this.status === "starting" || this.status === "stopping") return;
+    await this.stop().catch(() => {});
+    this.stopping = false;
+    this.exited = false;
+    this.child = undefined;
+    this.containerId = undefined;
+    this.error = undefined;
+    this.output.system("--- restart ---");
+    try {
+      await this.start(this.startScopes, this.startCwd, new AbortController().signal);
+    } catch {
+      // start() already recorded the failure on the instance
     }
   }
 

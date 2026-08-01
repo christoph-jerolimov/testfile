@@ -47,8 +47,11 @@ export class OutputBuffer extends EventEmitter {
   }
 
   // Combined text of stdout+stderr (or a single stream), for log matching.
-  text(stream?: "stdout" | "stderr"): string {
+  // `from` limits matching to lines appended after that index, so readiness
+  // checks after a service restart ignore output of the previous run.
+  text(stream?: "stdout" | "stderr", from = 0): string {
     return this.lines
+      .slice(from)
       .filter((l) => (stream ? l.stream === stream : l.stream !== "system"))
       .map((l) => l.text)
       .join("\n");

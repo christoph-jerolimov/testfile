@@ -1,7 +1,34 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildContainerRunArgs } from "./services.js";
+import { buildContainerRunArgs, ServiceInstance } from "./services.js";
 import type { Scopes } from "./template.js";
+
+function processEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) if (v !== undefined) env[k] = v;
+  return env;
+}
+
+test("a process service can be restarted with its original configuration", async () => {
+  const instance = new ServiceInstance("svc", {
+    script: "echo up\nsleep 30",
+    env: { GREETING: "hi" },
+    ready: { log: "up", interval: "100ms", timeout: "5s" },
+  });
+  const scopes: Scopes = { env: processEnv(), ports: {}, matrix: {} };
+  await instance.start(scopes, process.cwd(), new AbortController().signal);
+  assert.equal(instance.status, "ready");
+  assert.deepEqual(instance.details.env, { GREETING: "hi" });
+
+  await instance.restart();
+  assert.equal(instance.status, "ready", "ready again after restart");
+  const ups = instance.output.lines.filter((l) => l.text === "up").length;
+  assert.equal(ups, 2, "the service actually ran twice");
+  assert.ok(instance.output.lines.some((l) => l.text === "--- restart ---"));
+
+  await instance.stop();
+  assert.equal(instance.status, "stopped");
+});
 
 const scopes: Scopes = {
   env: {},
