@@ -102,6 +102,26 @@ sequence:
     command: rm -rf tmp
 ```
 
+## Composing Testfiles
+
+In a monorepo, each package can keep its own Testfile and the root file
+stitches them together with `include`:
+
+```yaml
+version: 1
+test:
+  name: all
+  sequence:
+    - name: packages
+      include: packages/*/Testfile   # glob -> parallel group
+    - include: ./app                 # single file or directory
+```
+
+Included tests run with the included file's directory as working
+directory, keep their own `env` and `services` (scoped to the embedded
+subtree), and their named `ports` merge into the root file's ports.
+Includes nest; cycles and conflicting port definitions are rejected.
+
 ## Artifacts
 
 Declare files a test produces — coverage, screenshots, reports — and the

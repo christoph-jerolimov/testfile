@@ -120,7 +120,7 @@
     },
     "test": {
       "type": "object",
-      "description": "A node in the test tree. Exactly one of 'command', 'script', 'sequence' or 'parallel' must be set.",
+      "description": "A node in the test tree. Exactly one of 'command', 'script', 'sequence', 'parallel' or 'include' must be set.",
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -237,6 +237,11 @@
             "$ref": "#/$defs/test"
           }
         },
+        "include": {
+          "description": "Path or glob (relative to this Testfile) of another Testfile - or a directory containing one - to embed here. The included file's env and services are scoped to the embedded subtree, its ports merge into this file's ports, and its tests run with the included file's directory as working directory. A glob matching several files embeds them as a parallel group. Not templated; 'workdir' cannot be combined with include.",
+          "type": "string",
+          "minLength": 1
+        },
         "maxParallel": {
           "description": "Maximum number of children of 'parallel' running at the same time. Defaults to unlimited.",
           "type": "integer",
@@ -257,7 +262,8 @@
         { "required": ["command"] },
         { "required": ["script"] },
         { "required": ["sequence"] },
-        { "required": ["parallel"] }
+        { "required": ["parallel"] },
+        { "required": ["include"] }
       ],
       "dependentRequired": {
         "maxParallel": ["parallel"]

@@ -1,6 +1,6 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, globSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import { parse } from "yaml";
 import type { TestDef, TestfileDoc } from "./model.js";
@@ -46,6 +46,9 @@ export function validateSemantics(doc: TestfileDoc): void {
   const errors: string[] = [];
 
   const visit = (def: TestDef, path: string, inParallel: boolean): void => {
+    if (def.include !== undefined) {
+      errors.push(`${path}: unresolved include - includes are expanded when loading a Testfile from disk`);
+    }
     if (def.needs?.length && !inParallel) {
       errors.push(`${path}: "needs" is only allowed on children of a parallel group`);
     }
@@ -98,10 +101,88 @@ export function validateSemantics(doc: TestfileDoc): void {
   }
 }
 
+// Replaces every `include` node with the content of the referenced
+// Testfile(s): their root test is embedded as a subtree, their env and
+// services become node-scoped, their ports merge into the root document's
+// ports, and their directory becomes the subtree's working directory.
+export function expandIncludes(doc: TestfileDoc, filePath: string): void {
+  const real = realpathSync(resolve(filePath));
+  expandTest(doc, doc.test, dirname(real), [real]);
+}
+
+function expandTest(root: TestfileDoc, def: TestDef, baseDir: string, stack: string[]): void {
+  if (def.include !== undefined) {
+    const pattern = def.include;
+    const where = `include "${pattern}"`;
+    if (def.workdir !== undefined) {
+      throw new Error(`${where}: "workdir" cannot be combined with include (the included file's directory is used)`);
+    }
+    const matches = /[*?[\]{}]/.test(pattern)
+      ? globSync(pattern, { cwd: baseDir })
+          .sort()
+          .map((m) => join(baseDir, m))
+      : [resolve(baseDir, pattern)];
+    if (matches.length === 0) throw new Error(`${where}: nothing matched`);
+    const embeds = matches.map((match) => embedFile(root, match, stack, where));
+    delete def.include;
+    if (embeds.length === 1) {
+      const embed = embeds[0];
+      def.name = def.name ?? embed.name;
+      def.env = { ...embed.env, ...def.env };
+      if (embed.services || def.services) def.services = { ...embed.services, ...def.services };
+      def.workdir = embed.workdir;
+      def.sequence = embed.sequence;
+    } else {
+      def.name = def.name ?? pattern;
+      def.parallel = embeds;
+    }
+    return;
+  }
+  for (const child of def.sequence ?? def.parallel ?? []) {
+    expandTest(root, child, baseDir, stack);
+  }
+}
+
+function embedFile(root: TestfileDoc, pathOrDir: string, stack: string[], where: string): TestDef {
+  let file: string;
+  try {
+    file = findTestfile(pathOrDir);
+  } catch (err) {
+    throw new Error(`${where}: ${err instanceof Error ? err.message : err}`);
+  }
+  const real = realpathSync(file);
+  if (stack.includes(real)) {
+    throw new Error(`${where}: include cycle (${[...stack, real].join(" -> ")})`);
+  }
+  const raw: unknown = parse(readFileSync(file, "utf8"));
+  try {
+    validateDoc(raw);
+  } catch (err) {
+    throw new Error(`${where}: ${err instanceof Error ? err.message : err}`);
+  }
+  const included = raw;
+  expandTest(root, included.test, dirname(real), [...stack, real]);
+  for (const [name, value] of Object.entries(included.ports ?? {})) {
+    const existing = root.ports?.[name];
+    if (existing !== undefined && existing !== value) {
+      throw new Error(`${where}: port "${name}" (${value}) conflicts with an existing port (${existing})`);
+    }
+    root.ports = { ...root.ports, [name]: value };
+  }
+  return {
+    name: included.name ?? file,
+    env: included.env,
+    services: included.services,
+    workdir: dirname(real),
+    sequence: [included.test],
+  };
+}
+
 export function loadTestfile(pathOrDir: string): { path: string; doc: TestfileDoc } {
   const path = findTestfile(pathOrDir);
   const doc: unknown = parse(readFileSync(path, "utf8"));
   validateDoc(doc);
+  expandIncludes(doc, path);
   validateSemantics(doc);
   return { path, doc };
 }
