@@ -1,0 +1,23 @@
+# Container pull policy, named network and entrypoint override.
+version: 1
+services:
+  db:
+    container:
+      image: docker.io/library/postgres:16
+      pull: always
+      network: testnet
+      env:
+        POSTGRES_PASSWORD: test
+    ready:
+      log: ready to accept connections
+  app:
+    container:
+      image: ghcr.io/example/app:latest
+      pull: missing
+      network: testnet
+      entrypoint: [/bin/sh, -c]
+      command: ["./start.sh --db-host db"]
+    ready:
+      http: http://localhost:8080/healthz
+test:
+  command: npm run test:e2e

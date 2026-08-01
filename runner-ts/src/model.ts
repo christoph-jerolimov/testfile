@@ -70,6 +70,9 @@ export interface ContainerDef {
   ports?: string[];
   env?: EnvMap;
   volumes?: string[];
+  pull?: "always" | "missing" | "never";
+  network?: string;
+  entrypoint?: string[];
   command?: string[];
 }
 

@@ -262,6 +262,9 @@ runner marks the service as failed and aborts the dependent subtree.
 | `ports`   | array of string | `"HOST:CONTAINER"` mappings; the host part may be a template like `"${{ ports.db }}:5432"`. |
 | `env`     | map             | Environment inside the container. |
 | `volumes` | array of string | `"HOST:CONTAINER[:OPTIONS]"` mounts. |
+| `pull`    | enum            | `always`, `missing` (default) or `never`: when to pull the image. |
+| `network` | string          | Attach to this named container network, creating it if needed (networks are left in place after the run). The service name becomes a network alias, so services on the same network reach each other by name. |
+| `entrypoint` | array of string | Override the image entrypoint. |
 | `command` | array of string | Override the image command. |
 
 ### Readiness (`ready`)
