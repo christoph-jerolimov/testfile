@@ -1,0 +1,7 @@
+version: 1
+name: pkg
+env:
+  WHO: pkg
+test:
+  name: inner
+  command: test -f marker && test "$WHO" = pkg

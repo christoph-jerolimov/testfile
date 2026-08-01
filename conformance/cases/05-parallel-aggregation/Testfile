@@ -1,0 +1,10 @@
+version: 1
+test:
+  name: root
+  parallel:
+    - name: ok1
+      command: "true"
+    - name: broken
+      command: "false"
+    - name: ok2
+      command: sleep 0.2

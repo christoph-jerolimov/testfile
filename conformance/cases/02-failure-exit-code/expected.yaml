@@ -1,0 +1,4 @@
+exitCode: 1
+status: failed
+tests:
+  - { path: root, status: failed }

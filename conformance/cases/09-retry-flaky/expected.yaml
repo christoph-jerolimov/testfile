@@ -1,0 +1,4 @@
+exitCode: 0
+status: passed
+tests:
+  - { path: flaky, status: passed }

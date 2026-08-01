@@ -1,0 +1,15 @@
+version: 1
+env:
+  SHARED: from-root
+  OVERRIDDEN: root
+ports:
+  p: random
+test:
+  name: root
+  env:
+    OVERRIDDEN: child
+    PORT: ${{ ports.p }}
+  script: |
+    test "$SHARED" = from-root
+    test "$OVERRIDDEN" = child
+    test "$PORT" -gt 0

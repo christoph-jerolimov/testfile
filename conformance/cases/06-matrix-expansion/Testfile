@@ -1,0 +1,10 @@
+version: 1
+test:
+  name: m
+  matrix:
+    a: ["1", "2"]
+    b: [x, y]
+    exclude:
+      - a: "2"
+        b: y
+  command: test "${{ matrix.a }}" = "$TESTFILE_MATRIX_A"

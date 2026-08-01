@@ -1,0 +1,10 @@
+version: 1
+test:
+  name: root
+  sequence:
+    - name: a
+      command: "true"
+    - name: b
+      command: "false"
+    - name: c
+      command: "true"

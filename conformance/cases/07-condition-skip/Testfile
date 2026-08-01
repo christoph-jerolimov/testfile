@@ -1,0 +1,10 @@
+version: 1
+test:
+  name: root
+  sequence:
+    - name: on
+      if: ${{ env.CONFORMANCE_FLAG }} == yes
+      command: "true"
+    - name: off
+      if: ${{ env.CONFORMANCE_UNSET_FLAG }}
+      command: "false"

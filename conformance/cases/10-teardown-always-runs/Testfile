@@ -1,0 +1,11 @@
+version: 1
+test:
+  name: root
+  sequence:
+    - name: fails
+      continueOnError: true
+      teardown:
+        command: touch teardown-ran
+      command: "false"
+    - name: check
+      command: test -f teardown-ran

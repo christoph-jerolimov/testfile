@@ -1,0 +1,9 @@
+version: 1
+test:
+  name: root
+  sequence:
+    - name: tolerated
+      continueOnError: true
+      command: "false"
+    - name: after
+      command: "true"
