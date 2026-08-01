@@ -43,7 +43,7 @@ afterwards — including when the user aborts the run with Ctrl+C.
 
 | Field      | Type   | Required | Description |
 | ---------- | ------ | -------- | ----------- |
-| `version`  | `1`    | yes      | Format version. Always `1` today. |
+| `version`  | `1`    | yes      | Format version. Always `1` today; see the [versioning policy](VERSIONING.md). |
 | `name`     | string | no       | Display name of the project/Testfile. |
 | `env`      | map    | no       | Environment variables for everything in this file. |
 | `envFile`  | string/array | no | Dotenv file(s), relative to the Testfile, loaded for the whole run. See [Env files](#env-files). |
