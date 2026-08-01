@@ -54,6 +54,28 @@ function resolveFilters(
   return { selection, active: session.activeSetFor(selection), leafCount: leaves.length, filtered: true };
 }
 
+// Shared by `list` and `run --dry-run`.
+function printTree(session: Session, active: Set<number>): void {
+  for (const [name] of Object.entries(session.doc.services ?? {})) {
+    console.log(`${color(36, "◆")} service ${name}`);
+  }
+  walk(session.tree, (node: RunNode) => {
+    if (!active.has(node.id)) return;
+    const marker = node.children.length > 0 ? color(90, node.kind) : "";
+    // Matrix instances share their wrapper's def; print tags only once.
+    const tags =
+      node.def.tags && node.parent?.def !== node.def
+        ? color(90, `[${node.def.tags.join(", ")}]`)
+        : "";
+    console.log(`${"  ".repeat(node.depth)}${node.name} ${tags} ${marker}`.replace(/ +$/, ""));
+    for (const [name] of Object.entries(node.def.services ?? {})) {
+      if (!node.isMatrixWrapper) {
+        console.log(`${"  ".repeat(node.depth + 1)}${color(36, "◆")} service ${name}`);
+      }
+    }
+  });
+}
+
 function addFilterOptions(command: Command): Command {
   return command
     .option("-f, --filter <value>", "only tests matching by name/path, tag, or key:value matrix (repeatable)", collect, [])
@@ -93,24 +115,7 @@ addFilterOptions(
       const session = new Session(doc, dirname(file));
       const { active, leafCount } = resolveFilters(session, flags);
       if (leafCount === 0) throw new Error("no tests match the given filters");
-      for (const [name] of Object.entries(doc.services ?? {})) {
-        console.log(`${color(36, "◆")} service ${name}`);
-      }
-      walk(session.tree, (node: RunNode) => {
-        if (!active.has(node.id)) return;
-        const marker = node.children.length > 0 ? color(90, node.kind) : "";
-        // Matrix instances share their wrapper's def; print tags only once.
-        const tags =
-          node.def.tags && node.parent?.def !== node.def
-            ? color(90, `[${node.def.tags.join(", ")}]`)
-            : "";
-        console.log(`${"  ".repeat(node.depth)}${node.name} ${tags} ${marker}`.replace(/ +$/, ""));
-        for (const [name] of Object.entries(node.def.services ?? {})) {
-          if (!node.isMatrixWrapper) {
-            console.log(`${"  ".repeat(node.depth + 1)}${color(36, "◆")} service ${name}`);
-          }
-        }
-      });
+      printTree(session, active);
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;
@@ -232,25 +237,55 @@ program
     console.log(color(90, `\nlogs: testfile history --run ${run.id} --log [test-path]`));
   });
 
+interface RunFlags extends FilterFlags {
+  tui: boolean;
+  verbose: boolean;
+  failFast: boolean;
+  maxParallel?: number;
+  dryRun: boolean;
+}
+
 addFilterOptions(
   program
     .command("run", { isDefault: true })
     .argument("[path]", "Testfile or directory containing one", ".")
     .option("--tui", "interactive terminal UI", false)
     .option("-v, --verbose", "also stream service output", false)
+    .option("--fail-fast", "abort the whole run at the first test failure", false)
+    .option(
+      "--max-parallel <n>",
+      "global cap on concurrently running tests",
+      (value: string) => Number.parseInt(value, 10),
+      undefined
+    )
+    .option("--dry-run", "print what would run (with filters applied) without running", false)
     .description("Run the test tree")
 )
-  .action(async (path: string, options: { tui: boolean; verbose: boolean } & FilterFlags) => {
+  .action(async (path: string, options: RunFlags) => {
     let session: Session;
     let filtered: ReturnType<typeof resolveFilters>;
     try {
+      if (options.maxParallel !== undefined && !(options.maxParallel >= 1)) {
+        throw new Error("--max-parallel must be a positive integer");
+      }
       const { path: file, doc } = loadTestfile(path);
-      session = new Session(doc, dirname(file));
+      session = new Session(doc, dirname(file), {
+        failFast: options.failFast,
+        maxParallel: options.maxParallel,
+      });
       filtered = resolveFilters(session, options);
       if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;
+      return;
+    }
+
+    if (options.dryRun) {
+      printTree(session, filtered.active);
+      console.log(
+        color(90, `\n${filtered.leafCount} test${filtered.leafCount === 1 ? "" : "s"} would run`)
+      );
       return;
     }
 

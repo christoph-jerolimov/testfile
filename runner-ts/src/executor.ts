@@ -15,6 +15,11 @@ import { formatMs, parseDurationMs, sleep } from "./util.js";
 export interface RunnerOptions {
   // When set, only these node ids are executed; other nodes stay untouched.
   active?: Set<number>;
+  // Abort the whole run at the first test failure.
+  failFast?: boolean;
+  // Global cap on concurrently running command/script tests, across all
+  // groups and matrix instances (group-level maxParallel still applies).
+  maxParallel?: number;
 }
 
 export class Runner extends EventEmitter {
@@ -25,9 +30,12 @@ export class Runner extends EventEmitter {
   // Values loaded from env files; masked when logs are persisted.
   readonly secrets = new Set<string>();
   interrupted = false;
+  failFastTriggered = false;
   readonly active?: Set<number>;
 
   private readonly abort = new AbortController();
+  private readonly failFast: boolean;
+  private readonly globalSlots?: Semaphore;
 
   constructor(
     readonly doc: TestfileDoc,
@@ -37,6 +45,8 @@ export class Runner extends EventEmitter {
   ) {
     super();
     this.active = options.active;
+    this.failFast = options.failFast ?? false;
+    if (options.maxParallel !== undefined) this.globalSlots = new Semaphore(options.maxParallel);
   }
 
   isActive(node: RunNode): boolean {
@@ -222,9 +232,34 @@ export class Runner extends EventEmitter {
     node.endedAt = Date.now();
     this.emit("node-end", node);
     this.emitUpdate();
+
+    if (
+      this.failFast &&
+      !this.failFastTriggered &&
+      node.status === "failed" &&
+      !node.def.continueOnError &&
+      node.children.length === 0
+    ) {
+      this.failFastTriggered = true;
+      node.output.system("fail-fast: aborting the remaining run");
+      this.abort.abort();
+    }
   }
 
   private async runShell(node: RunNode, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
+    if (this.globalSlots) {
+      await this.globalSlots.acquire();
+      try {
+        await this.runShellRetries(node, scopes, cwd, signal);
+      } finally {
+        this.globalSlots.release();
+      }
+      return;
+    }
+    await this.runShellRetries(node, scopes, cwd, signal);
+  }
+
+  private async runShellRetries(node: RunNode, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
     const retry = node.def.retry;
     const attempts = 1 + (typeof retry === "number" ? retry : (retry?.count ?? 0));
     const delayMs = typeof retry === "object" ? parseDurationMs(retry.delay, 0) : 0;
@@ -273,7 +308,11 @@ export class Runner extends EventEmitter {
         signal.removeEventListener("abort", onAbort);
         node.output.flush();
         if (signal.aborted) {
-          node.status = node.timedOut ? "failed" : this.interrupted ? "aborted" : "failed";
+          node.status = node.timedOut
+            ? "failed"
+            : this.interrupted || this.failFastTriggered
+              ? "aborted"
+              : "failed";
           if (!node.error) node.error = node.timedOut ? "timeout" : "aborted";
         } else if (code === 0) {
           node.status = "passed";

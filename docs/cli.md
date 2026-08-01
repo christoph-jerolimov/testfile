@@ -16,10 +16,20 @@ and installs a `testfile` binary.
 testfile run [path]        # run the tree (default command)
 testfile run --tui         # interactive terminal UI
 testfile run --verbose     # also stream service output
+testfile run --fail-fast   # abort everything at the first failure
+testfile run --max-parallel 4   # global cap on concurrently running tests
+testfile run --dry-run     # print what would run, without running
 testfile validate [path]   # validate against the JSON schema
 testfile list [path]       # print the expanded tree, incl. matrix instances
 testfile history [path]    # list or show recorded runs
 ```
+
+`--fail-fast` aborts running siblings and skips everything queued as soon as
+one test fails. `--max-parallel` limits how many tests run at the same time
+across the *whole* run (group-level `maxParallel` still applies on top).
+`--dry-run` combines with all filter flags, so you can preview exactly what
+a filter expression will run. All three also apply to runs started from the
+TUI.
 
 `path` may be a Testfile or a directory containing one (`Testfile`,
 `testfile.yaml` or `testfile.yml`); it defaults to the current directory.
