@@ -1,0 +1,85 @@
+name: "Testfile"
+description: "Run the tests described in a Testfile / testfile.yaml, with services, matrices and filters"
+branding:
+  icon: "check-square"
+  color: "green"
+
+inputs:
+  path:
+    description: "Testfile or directory containing one"
+    required: false
+    default: "."
+  filter:
+    description: "Generic filter (-f): name/path, tag, or key:value matrix"
+    required: false
+    default: ""
+  filter-name:
+    description: "Only tests whose path contains this (-n)"
+    required: false
+    default: ""
+  filter-tags:
+    description: "Comma-separated tags to run (-t)"
+    required: false
+    default: ""
+  filter-matrix:
+    description: "key:value matrix filter (-m)"
+    required: false
+    default: ""
+  fail-fast:
+    description: "Abort the whole run at the first failure"
+    required: false
+    default: "false"
+  max-parallel:
+    description: "Global cap on concurrently running tests"
+    required: false
+    default: ""
+  reporter:
+    description: "Write machine-readable results: junit or json"
+    required: false
+    default: ""
+  output:
+    description: "Report target file (used with reporter)"
+    required: false
+    default: ""
+  node-version:
+    description: "Node.js version used to run the Testfile runner"
+    required: false
+    default: "22"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Build the Testfile runner
+      shell: bash
+      run: |
+        cd "${{ github.action_path }}"
+        npm ci --no-audit --no-fund
+        npm run build --workspace runner-ts
+
+    - name: Run Testfile
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_FILTER: ${{ inputs.filter }}
+        INPUT_FILTER_NAME: ${{ inputs.filter-name }}
+        INPUT_FILTER_TAGS: ${{ inputs.filter-tags }}
+        INPUT_FILTER_MATRIX: ${{ inputs.filter-matrix }}
+        INPUT_FAIL_FAST: ${{ inputs.fail-fast }}
+        INPUT_MAX_PARALLEL: ${{ inputs.max-parallel }}
+        INPUT_REPORTER: ${{ inputs.reporter }}
+        INPUT_OUTPUT: ${{ inputs.output }}
+      run: |
+        ARGS=(run "$INPUT_PATH")
+        [ -n "$INPUT_FILTER" ] && ARGS+=(-f "$INPUT_FILTER")
+        [ -n "$INPUT_FILTER_NAME" ] && ARGS+=(-n "$INPUT_FILTER_NAME")
+        [ -n "$INPUT_FILTER_TAGS" ] && ARGS+=(-t "$INPUT_FILTER_TAGS")
+        [ -n "$INPUT_FILTER_MATRIX" ] && ARGS+=(-m "$INPUT_FILTER_MATRIX")
+        [ "$INPUT_FAIL_FAST" = "true" ] && ARGS+=(--fail-fast)
+        [ -n "$INPUT_MAX_PARALLEL" ] && ARGS+=(--max-parallel "$INPUT_MAX_PARALLEL")
+        [ -n "$INPUT_REPORTER" ] && ARGS+=(--reporter "$INPUT_REPORTER")
+        [ -n "$INPUT_OUTPUT" ] && ARGS+=(--output "$INPUT_OUTPUT")
+        node "${{ github.action_path }}/runner-ts/dist/cli.js" "${ARGS[@]}"
