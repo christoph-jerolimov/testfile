@@ -1,0 +1,5 @@
+# Invalid: tags may only contain letters and digits.
+version: 1
+test:
+  tags: [fast, "night-ly"]
+  command: npm test

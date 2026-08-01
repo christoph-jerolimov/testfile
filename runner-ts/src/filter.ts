@@ -1,15 +1,26 @@
 import { walk, type RunNode } from "./runtree.js";
 
-// --filter: a node matches when its path (names joined with "/", so a bare
-// test name works too) contains the value, case-insensitively.
-export function findMatchingNodes(tree: RunNode, filters: string[]): RunNode[] {
-  const needles = filters.map((f) => f.toLowerCase());
-  const matched: RunNode[] = [];
-  walk(tree, (node) => {
-    const path = node.path.toLowerCase();
-    if (needles.some((needle) => path.includes(needle))) matched.push(node);
-  });
-  return matched;
+export interface TestFilters {
+  // --filter-name: case-insensitive substrings matched against the leaf's
+  // path (names joined with "/"), so ancestor names match too.
+  names: string[];
+  // --filter-tags: a leaf matches when it or an ancestor carries any of
+  // these tags (case-insensitive).
+  tags: string[];
+  // --matrix-filter, see parseMatrixFilters.
+  matrix: Map<string, Set<string>>;
+}
+
+export function hasFilters(filters: TestFilters): boolean {
+  return filters.names.length > 0 || filters.tags.length > 0 || filters.matrix.size > 0;
+}
+
+// --filter-tags values: comma separated, trimmed; the flag may repeat.
+export function parseTagFilters(specs: string[]): string[] {
+  return specs
+    .flatMap((spec) => spec.split(","))
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
 }
 
 // --matrix-filter: "key:value" specs. Repeating the same key ORs its values;
@@ -38,4 +49,37 @@ export function matchesMatrixFilters(node: RunNode, filters: Map<string, Set<str
     if (value !== undefined && !allowed.has(value)) return false;
   }
   return true;
+}
+
+// Tags of the node and all its ancestors, lower-cased.
+export function effectiveTags(node: RunNode): Set<string> {
+  const tags = new Set<string>();
+  for (let n: RunNode | undefined = node; n; n = n.parent) {
+    for (const tag of n.def.tags ?? []) tags.add(tag.toLowerCase());
+  }
+  return tags;
+}
+
+// The leaf tests that satisfy all given filters (filters of different kinds
+// are ANDed). Selecting these leaves runs exactly the filtered subset; their
+// ancestors act as scaffolding.
+export function selectLeaves(tree: RunNode, filters: TestFilters): RunNode[] {
+  const needles = filters.names.map((name) => name.toLowerCase());
+  const wantedTags = filters.tags.map((tag) => tag.toLowerCase());
+  const leaves: RunNode[] = [];
+  walk(tree, (node) => {
+    if (node.children.length === 0) leaves.push(node);
+  });
+  return leaves.filter((leaf) => {
+    if (needles.length > 0) {
+      const path = leaf.path.toLowerCase();
+      if (!needles.some((needle) => path.includes(needle))) return false;
+    }
+    if (wantedTags.length > 0) {
+      const tags = effectiveTags(leaf);
+      if (!wantedTags.some((tag) => tags.has(tag))) return false;
+    }
+    if (filters.matrix.size > 0 && !matchesMatrixFilters(leaf, filters.matrix)) return false;
+    return true;
+  });
 }

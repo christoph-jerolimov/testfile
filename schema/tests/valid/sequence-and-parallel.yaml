@@ -9,6 +9,7 @@ test:
     - name: build
       command: npm run build
     - name: checks
+      tags: [fast]
       parallel:
         - name: lint
           command: npm run lint
@@ -17,6 +18,9 @@ test:
         - name: typecheck
           command: npx tsc --noEmit
       maxParallel: 2
+    - name: e2e
+      tags: [slow, nightly]
+      command: npm run test:e2e
     - name: cleanup
       continueOnError: true
       script: |

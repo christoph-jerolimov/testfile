@@ -130,6 +130,16 @@
         "description": {
           "type": "string"
         },
+        "tags": {
+          "description": "Optional labels (letters and digits only) to group tests, e.g. fast, slow, flaky, nightly, aws, gcp. A tag applies to the whole subtree; runners can filter by tag to execute a subset of tests.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9]+$"
+          }
+        },
         "env": {
           "description": "Environment variables for this test and its children. Merged over the parent environment.",
           "$ref": "#/$defs/envMap"
