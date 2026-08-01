@@ -1,0 +1,15 @@
+# Retries: shorthand and object form with a delay.
+version: 1
+test:
+  sequence:
+    - name: flaky check
+      tags: [flaky]
+      retry: 2
+      command: npm run test:flaky
+    - name: careful check
+      retry:
+        count: 3
+        delay: 5s
+      script: |
+        ./scripts/warmup.sh
+        npm run test:integration

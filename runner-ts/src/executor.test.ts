@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import { Runner } from "./executor.js";
 import type { TestfileDoc } from "./model.js";
@@ -155,6 +158,42 @@ test("test-scoped services stop when the subtree finishes", async () => {
   assert.equal(runner.services.length, 1);
   assert.equal(runner.services[0].owner, "with service");
   assert.equal(runner.services[0].status, "stopped");
+});
+
+test("retry re-runs a flaky command until it passes", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-retry-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      workdir: dir,
+      retry: 2,
+      // fails on the first attempt, passes on the second
+      command: "test -f flag || { touch flag; exit 1; }",
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.ok(runner.root.output.lines.some((l) => l.text.includes("attempt 1/3 failed")));
+});
+
+test("retry gives up after the configured attempts", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: { retry: { count: 2, delay: "100ms" }, command: "false" },
+  });
+  assert.equal(await runner.run(), "failed");
+  assert.match(runner.root.error ?? "", /after 3 attempts/);
+  const retries = runner.root.output.lines.filter((l) => l.text.includes("failed, retrying"));
+  assert.equal(retries.length, 2);
+});
+
+test("retry does not re-run a passing command", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: { retry: 5, command: "true" },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.equal(runner.root.output.lines.filter((l) => l.text.includes("retrying")).length, 0);
 });
 
 test("requestStop aborts the run gracefully", async () => {
