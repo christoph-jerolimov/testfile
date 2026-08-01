@@ -12,6 +12,7 @@ import {
   type TestFilters,
 } from "./filter.js";
 import { diffRuns, HISTORY_DIR, RunHistory, type RunRecord } from "./history.js";
+import { initTestfile } from "./init.js";
 import { loadTestfile } from "./loader.js";
 import { writeReport, type ReporterKind } from "./report.js";
 import { ConsoleReporter } from "./reporter.js";
@@ -97,6 +98,22 @@ program
   .name("testfile")
   .description("Run the tests described in a Testfile / testfile.yaml")
   .version("0.1.0");
+
+program
+  .command("init")
+  .argument("[path]", "directory to create the Testfile in", ".")
+  .description("Create a starter Testfile (from package.json scripts when present)")
+  .action((path: string) => {
+    try {
+      const { path: file, content } = initTestfile(path);
+      console.log(content);
+      console.log(`${color(32, "✔")} wrote ${file}`);
+      console.log(color(90, "run it with: testfile run   (or testfile run --tui)"));
+    } catch (err) {
+      console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
+      process.exitCode = 1;
+    }
+  });
 
 program
   .command("validate")
