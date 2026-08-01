@@ -14,7 +14,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: christoph-jerolimov/testfile@main
 ```
 
@@ -60,7 +60,7 @@ JUnit results for your test-report tooling:
   with:
     reporter: junit
     output: results.xml
-- uses: actions/upload-artifact@v4
+- uses: actions/upload-artifact@v7
   if: always()
   with:
     name: test-results
