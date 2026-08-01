@@ -31,6 +31,23 @@ across the *whole* run (group-level `maxParallel` still applies on top).
 a filter expression will run. All three also apply to runs started from the
 TUI.
 
+## Watch mode
+
+`testfile run --watch` (or `-w`) re-runs the current selection whenever a
+file in the project changes — combined with filters (`-w -t fast`) it makes
+a tight edit-test loop:
+
+```sh
+testfile run -w -f unit
+testfile run --tui --watch      # the TUI re-runs your last selection
+```
+
+Changes are debounced, edits made while a run is in progress trigger one
+re-run afterwards, and `.git/`, `node_modules/` and `.testfile/` are
+ignored. Every re-run is recorded in the history like a normal run. Ctrl+C
+while idle exits with the last run's exit code; during a run it stops the
+run first.
+
 `path` may be a Testfile or a directory containing one (`Testfile`,
 `testfile.yaml` or `testfile.yml`); it defaults to the current directory.
 
