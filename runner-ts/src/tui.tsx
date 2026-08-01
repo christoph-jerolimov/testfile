@@ -5,7 +5,14 @@ import type { OutputLine } from "./output.js";
 import type { RunNode, Status } from "./runtree.js";
 import type { ServiceInstance, ServiceStatus } from "./services.js";
 import type { Session } from "./session.js";
-import { failedLeafIds, logWindow, runningFocus, visibleNodes } from "./tui-model.js";
+import {
+  describeRun,
+  failedLeafIds,
+  logWindow,
+  runListLabel,
+  runningFocus,
+  visibleNodes,
+} from "./tui-model.js";
 import { formatMs } from "./util.js";
 
 const NODE_GLYPH: Record<Status, { glyph: string; color: string }> = {
@@ -62,6 +69,11 @@ export function App({
   const [logScroll, setLogScroll] = useState(0);
   const [message, setMessage] = useState<string | undefined>();
   const [stopRequested, setStopRequested] = useState(false);
+  // History browsing: pick a recorded run, view its detail or merged log.
+  const [historyMode, setHistoryMode] = useState(false);
+  const [historyCursor, setHistoryCursor] = useState(0);
+  const [historyLog, setHistoryLog] = useState(false);
+  const runLogs = useRef(new Map<string, OutputLine[]>());
   // Logs of previous runs, loaded lazily per test path (null = no log found).
   const previousLogs = useRef(new Map<string, PaneContent | null>());
   const lastRecordId = useRef<string | undefined>(undefined);
@@ -131,6 +143,27 @@ export function App({
   };
 
   useInput((input, key) => {
+    if (historyMode) {
+      const runs = session.history.runs;
+      if (key.upArrow || input === "k") {
+        setHistoryCursor((c) => Math.max(0, c - 1));
+        setLogScroll(0);
+      }
+      if (key.downArrow || input === "j") {
+        setHistoryCursor((c) => Math.min(Math.max(0, runs.length - 1), c + 1));
+        setLogScroll(0);
+      }
+      if (key.pageUp || input === "u") setLogScroll((s) => s + 10);
+      if (key.pageDown || input === "d") setLogScroll((s) => Math.max(0, s - 10));
+      if (key.return) {
+        setHistoryLog((v) => !v);
+        setLogScroll(0);
+      }
+      if (key.escape || input === "H") setHistoryMode(false);
+      if (input === "q" || (key.ctrl && input === "c")) exit();
+      return;
+    }
+
     if (searchInput) {
       if (key.escape) {
         setQuery("");
@@ -197,6 +230,17 @@ export function App({
         return next;
       });
     }
+    if (input === "H") {
+      if (session.history.runs.length === 0) {
+        setMessage("no recorded runs yet");
+      } else {
+        setHistoryMode(true);
+        setHistoryCursor(0);
+        setHistoryLog(false);
+        setLogScroll(0);
+      }
+      return;
+    }
     if (input === "r" && current?.kind === "service") {
       const service = current.service;
       if (service.status === "starting" || service.status === "stopping") {
@@ -240,18 +284,39 @@ export function App({
 
   const height = (stdout?.rows ?? 30) - 2;
   const outputHeight = Math.max(5, height - 4);
-  const pane = paneContent(current, session, previousLogs.current);
+  const historyRuns = session.history.runs;
+  const historyIndex = Math.min(historyCursor, Math.max(0, historyRuns.length - 1));
+  const selectedRun = historyMode ? historyRuns[historyIndex] : undefined;
+  const pane = selectedRun
+    ? historyLog
+      ? { title: `run ${selectedRun.id}`, note: "merged log", lines: loadRunLog(session, selectedRun, runLogs.current) }
+      : { title: `run ${selectedRun.id}`, note: "details — enter for the log", lines: describeRun(selectedRun) }
+    : paneContent(current, session, previousLogs.current);
   const { window: tail, above } = logWindow(pane.lines, outputHeight, logScroll);
 
   return (
     <Box flexDirection="column" height={height}>
       <Box flexGrow={1}>
         <Box flexDirection="column" width="42%" borderStyle="round" paddingX={1} overflow="hidden">
-          <Text bold color="cyan">
-            TESTS
-            {query !== "" ? <Text color="magenta"> /{query}</Text> : null}
-          </Text>
-          {visible.map((node) => {
+          {historyMode ? (
+            <>
+              <Text bold color="cyan">
+                RUNS
+              </Text>
+              {historyRuns.map((run, i) => (
+                <Text key={run.id} inverse={i === historyIndex} wrap="truncate">
+                  {runListLabel(run)}
+                </Text>
+              ))}
+            </>
+          ) : null}
+          {historyMode ? null : (
+            <Text bold color="cyan">
+              TESTS
+              {query !== "" ? <Text color="magenta"> /{query}</Text> : null}
+            </Text>
+          )}
+          {(historyMode ? [] : visible).map((node) => {
             const row = rows.find((r) => r.kind === "test" && r.node === node) as TestRow;
             const isCursor = rows.indexOf(row) === cursorIndex;
             const g = NODE_GLYPH[node.status];
@@ -287,12 +352,12 @@ export function App({
               </Text>
             );
           })}
-          {services.length > 0 ? (
+          {!historyMode && services.length > 0 ? (
             <Text bold color="cyan">
               SERVICES
             </Text>
           ) : null}
-          {services.map((service, i) => {
+          {(historyMode ? [] : services).map((service, i) => {
             const row = rows.find((r) => r.kind === "service" && r.service === service) as ServiceRow;
             const isCursor = rows.indexOf(row) === cursorIndex;
             const g = SERVICE_GLYPH[service.status];
@@ -339,14 +404,40 @@ export function App({
         {message ? <Text color="magenta"> · {message}</Text> : null}
       </Text>
       <Text dimColor>
-        {searchInput
-          ? "type to search · enter keep · esc clear"
-          : "space select · a all · c children · f failed · enter run · / search · ←/→ fold · u/d scroll · r restart svc · " +
-            (session.running ? (stopRequested ? "q force stop" : "q stop") : "q quit")}
+        {historyMode
+          ? "↑/↓ select run · enter log/details · u/d scroll · esc back · q quit"
+          : searchInput
+            ? "type to search · enter keep · esc clear"
+            : "space select · a all · c children · f failed · enter run · / search · ←/→ fold · u/d scroll · r restart svc · H history · " +
+              (session.running ? (stopRequested ? "q force stop" : "q stop") : "q quit")}
         {stopRequested && session.running ? " · stopping gracefully..." : ""}
       </Text>
     </Box>
   );
+}
+
+// Merged run logs for history browsing, cached per run id.
+function loadRunLog(
+  session: Session,
+  run: import("./history.js").RunRecord,
+  cache: Map<string, OutputLine[]>
+): OutputLine[] {
+  let lines = cache.get(run.id);
+  if (!lines) {
+    const text = session.history.readRunLog(run) ?? "(no log recorded)";
+    lines = text
+      .split("\n")
+      .filter((line, i, arr) => i < arr.length - 1 || line !== "")
+      .map((line) => ({
+        text: line.startsWith("# ") ? line.slice(2) : line,
+        stream:
+          line.startsWith("===") || line.startsWith("# ")
+            ? ("system" as const)
+            : ("stdout" as const),
+      }));
+    cache.set(run.id, lines);
+  }
+  return lines;
 }
 
 // The right pane shows the live log of the selection, or - when the test has

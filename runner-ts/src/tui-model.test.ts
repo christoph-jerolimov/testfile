@@ -7,7 +7,14 @@ import { RunHistory } from "./history.js";
 import type { TestfileDoc } from "./model.js";
 import { buildRunTree, walk, type RunNode } from "./runtree.js";
 import { Session } from "./session.js";
-import { failedLeafIds, logWindow, runningFocus, visibleNodes } from "./tui-model.js";
+import {
+  describeRun,
+  failedLeafIds,
+  logWindow,
+  runListLabel,
+  runningFocus,
+  visibleNodes,
+} from "./tui-model.js";
 
 const doc: TestfileDoc = {
   version: 1,
@@ -84,6 +91,25 @@ test("runningFocus prefers the first running leaf, then the deepest running node
   // a running leaf wins over running groups
   byName.get("e2e")!.status = "running";
   assert.equal(runningFocus(tree)!.name, "e2e");
+});
+
+test("describeRun and runListLabel render a recorded run", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-tui-hist-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const session = new Session(doc, dir);
+  await session.runAll();
+  const run = session.lastRecord!;
+
+  const lines = describeRun(run);
+  const text = lines.map((l) => l.text).join("\n");
+  assert.match(text, /status: {4}passed \(exit code 0\)/);
+  assert.match(text, /passed {3}all\/lint/);
+  const failedLine = lines.find((l) => l.text.includes("all/checks/e2e"));
+  assert.equal(failedLine?.stream, "stderr", "failed tests use the stderr stream");
+
+  const label = runListLabel(run);
+  assert.match(label, /passed/);
+  assert.match(label, /\d+ failed/);
 });
 
 test("logWindow follows the tail and scrolls back with clamping", () => {
