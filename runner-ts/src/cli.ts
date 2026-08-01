@@ -2,6 +2,7 @@
 import { existsSync, statSync, type FSWatcher } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
+import { predictCacheHits } from "./cache-predict.js";
 import { generateCompletion, type CompletionModel } from "./completion.js";
 import {
   filterByLastFailed,
@@ -65,7 +66,7 @@ function resolveFilters(
 }
 
 // Shared by `list` and `run --dry-run`.
-function printTree(session: Session, active: Set<number>): void {
+function printTree(session: Session, active: Set<number>, annotate?: (node: RunNode) => string): void {
   for (const [name] of Object.entries(session.doc.services ?? {})) {
     console.log(`${color(36, "◆")} service ${name}`);
   }
@@ -77,7 +78,8 @@ function printTree(session: Session, active: Set<number>): void {
       node.def.tags && node.parent?.def !== node.def
         ? color(90, `[${node.def.tags.join(", ")}]`)
         : "";
-    console.log(`${"  ".repeat(node.depth)}${node.name} ${tags} ${marker}`.replace(/ +$/, ""));
+    const extra = annotate?.(node) ?? "";
+    console.log(`${"  ".repeat(node.depth)}${node.name} ${tags} ${marker}${extra}`.replace(/ +$/, ""));
     for (const [name] of Object.entries(node.def.services ?? {})) {
       if (!node.isMatrixWrapper) {
         console.log(`${"  ".repeat(node.depth + 1)}${color(36, "◆")} service ${name}`);
@@ -386,9 +388,17 @@ addFilterOptions(
     }
 
     if (options.dryRun) {
-      printTree(session, filtered.active);
+      const hits = await predictCacheHits(session, filtered.active);
+      printTree(session, filtered.active, (node) =>
+        hits.has(node.id) ? ` ${color(90, "[cached]")}` : ""
+      );
+      const fresh = filtered.leafCount - hits.size;
       console.log(
-        color(90, `\n${filtered.leafCount} test${filtered.leafCount === 1 ? "" : "s"} would run`)
+        color(
+          90,
+          `\n${fresh} test${fresh === 1 ? "" : "s"} would run` +
+            (hits.size > 0 ? `, ${hits.size} served from the cache` : "")
+        )
       );
       return;
     }
