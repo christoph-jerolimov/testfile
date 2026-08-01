@@ -183,6 +183,16 @@ The detail view lists every recorded test with status, duration and whether
 a log is available. `history` only needs the `.testfile/` folder, so it also
 works when the Testfile itself has moved or changed.
 
+Compare two runs (older id first, unique prefixes are enough):
+
+```sh
+testfile history --diff 20260801-1040 20260801-1146
+```
+
+The diff lists newly failed, fixed and still-failing tests, tests added to
+or removed from the run, and significant duration changes (more than 100ms
+and more than 20%) of tests that passed in both runs.
+
 ## Interrupting a run
 
 The first Ctrl+C aborts running tests and shuts down all services through

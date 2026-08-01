@@ -172,6 +172,59 @@ export class RunHistory {
   }
 }
 
+export interface RunDiff {
+  newlyFailed: string[];
+  fixed: string[];
+  stillFailing: string[];
+  added: string[];
+  removed: string[];
+  // Significant duration changes of tests passing in both runs.
+  durations: { path: string; fromMs: number; toMs: number }[];
+}
+
+// Compares two recorded runs, `base` being the older one.
+export function diffRuns(base: RunRecord, compare: RunRecord): RunDiff {
+  const bad = (status: Status): boolean => status === "failed" || status === "aborted";
+  const baseTests = new Map(base.tests.map((t) => [t.path, t]));
+  const compareTests = new Map(compare.tests.map((t) => [t.path, t]));
+
+  const diff: RunDiff = {
+    newlyFailed: [],
+    fixed: [],
+    stillFailing: [],
+    added: [],
+    removed: [],
+    durations: [],
+  };
+
+  for (const [path, test] of compareTests) {
+    const before = baseTests.get(path);
+    if (!before) {
+      diff.added.push(path);
+      continue;
+    }
+    if (bad(test.status) && bad(before.status)) diff.stillFailing.push(path);
+    else if (bad(test.status)) diff.newlyFailed.push(path);
+    else if (bad(before.status)) diff.fixed.push(path);
+
+    if (
+      test.status === "passed" &&
+      before.status === "passed" &&
+      test.durationMs !== undefined &&
+      before.durationMs !== undefined
+    ) {
+      const delta = Math.abs(test.durationMs - before.durationMs);
+      if (delta > 100 && delta > before.durationMs * 0.2) {
+        diff.durations.push({ path, fromMs: before.durationMs, toMs: test.durationMs });
+      }
+    }
+  }
+  for (const path of baseTests.keys()) {
+    if (!compareTests.has(path)) diff.removed.push(path);
+  }
+  return diff;
+}
+
 // Merged stdout+stderr; runner messages are marked as comments.
 function renderLines(lines: OutputLine[]): string {
   return `${lines.map((l) => (l.stream === "system" ? `# ${l.text}` : l.text)).join("\n")}\n`;
