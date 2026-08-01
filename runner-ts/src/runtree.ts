@@ -20,6 +20,9 @@ export interface RunNode {
   isMatrixWrapper: boolean;
   children: RunNode[];
   status: Status;
+  // Why a node was skipped: a false `if` condition does not block dependents,
+  // a failed `needs` dependency does (failures cascade through chains).
+  skipReason?: "condition" | "needs";
   timedOut: boolean;
   output: OutputBuffer;
   error?: string;
@@ -34,7 +37,7 @@ function variantOf(def: TestDef): NodeKind {
   return "parallel";
 }
 
-function defaultName(def: TestDef): string {
+export function defaultName(def: TestDef): string {
   if (def.name) return def.name;
   if (def.command) return def.command.length > 40 ? `${def.command.slice(0, 37)}...` : def.command;
   return variantOf(def);
@@ -112,6 +115,7 @@ export function buildRunTree(doc: TestfileDoc): RunNode {
 // Puts a node back into its initial state so it can run again.
 export function resetNode(node: RunNode): void {
   node.status = "pending";
+  node.skipReason = undefined;
   node.timedOut = false;
   node.error = undefined;
   node.startedAt = undefined;

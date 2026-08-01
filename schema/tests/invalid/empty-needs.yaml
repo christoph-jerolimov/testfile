@@ -1,0 +1,9 @@
+# Invalid: needs must not be an empty list.
+version: 1
+test:
+  parallel:
+    - name: a
+      command: npm test
+    - name: b
+      needs: []
+      command: npm test

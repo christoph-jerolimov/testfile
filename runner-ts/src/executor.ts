@@ -133,6 +133,7 @@ export class Runner extends EventEmitter {
 
         if (node.def.if !== undefined && !evaluateCondition(node.def.if, nodeScopes, where)) {
           node.output.system(`skipped: condition not met (${node.def.if})`);
+          node.skipReason = "condition";
           this.markRemaining(node, "skipped");
           node.endedAt = Date.now();
           this.emit("node-end", node);
@@ -263,15 +264,62 @@ export class Runner extends EventEmitter {
     maxParallel: number | undefined
   ): Promise<void> {
     const children = node.children;
-    let index = 0;
-    const workerCount = Math.min(maxParallel ?? children.length, children.length);
-    const workers = Array.from({ length: Math.max(1, workerCount) }, async () => {
-      while (index < children.length) {
-        const child = children[index++];
-        await this.runNode(child, scopes, cwd, signal);
+    // Matrix instances share their test's def (including any needs meant for
+    // the wrapper's siblings), so needs scheduling only applies to real
+    // parallel groups.
+    const useNeeds = !node.isMatrixWrapper && children.some((child) => child.def.needs?.length);
+    if (!useNeeds) {
+      let index = 0;
+      const workerCount = Math.min(maxParallel ?? children.length, children.length);
+      const workers = Array.from({ length: Math.max(1, workerCount) }, async () => {
+        while (index < children.length) {
+          const child = children[index++];
+          await this.runNode(child, scopes, cwd, signal);
+        }
+      });
+      await Promise.all(workers);
+      return;
+    }
+
+    const byName = new Map(children.map((child) => [child.name, child]));
+    const semaphore = new Semaphore(maxParallel ?? children.length);
+    const promises = new Map<RunNode, Promise<void>>();
+    const runChild = (child: RunNode): Promise<void> => {
+      let promise = promises.get(child);
+      if (!promise) {
+        promise = (async () => {
+          // Siblings excluded by filters are treated as satisfied: the user
+          // deliberately chose to run a subset.
+          const needed = (child.def.needs ?? [])
+            .map((name) => byName.get(name))
+            .filter((n): n is RunNode => n !== undefined && this.isActive(n));
+          await Promise.all(needed.map(runChild));
+          // A condition-skip satisfies dependents; a needs-skip or failure
+          // cascades down the chain.
+          const blocker = needed.find(
+            (n) =>
+              n.status !== "passed" &&
+              !(n.status === "skipped" && n.skipReason === "condition")
+          );
+          if (blocker && !signal.aborted) {
+            child.output.system(`skipped: needs "${blocker.name}" which ${blocker.status}`);
+            child.skipReason = "needs";
+            this.markRemaining(child, "skipped");
+            this.emitUpdate();
+            return;
+          }
+          await semaphore.acquire();
+          try {
+            await this.runNode(child, scopes, cwd, signal);
+          } finally {
+            semaphore.release();
+          }
+        })();
+        promises.set(child, promise);
       }
-    });
-    await Promise.all(workers);
+      return promise;
+    };
+    await Promise.all(children.map(runChild));
   }
 
   private finishGroup(node: RunNode, signal: AbortSignal): void {
@@ -327,6 +375,26 @@ export class Runner extends EventEmitter {
       if (!this.isActive(n)) return;
       if (n.status === "pending" || n.status === "running") n.status = status;
     });
+  }
+}
+
+class Semaphore {
+  private queue: (() => void)[] = [];
+
+  constructor(private available: number) {}
+
+  acquire(): Promise<void> {
+    if (this.available > 0) {
+      this.available--;
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => this.queue.push(resolve));
+  }
+
+  release(): void {
+    const next = this.queue.shift();
+    if (next) next();
+    else this.available++;
   }
 }
 

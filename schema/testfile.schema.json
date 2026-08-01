@@ -224,6 +224,16 @@
           "description": "Maximum number of children of 'parallel' running at the same time. Defaults to unlimited.",
           "type": "integer",
           "minimum": 1
+        },
+        "needs": {
+          "description": "Only on children of a 'parallel' group: names of sibling tests that must finish first. The test starts once all named siblings passed (or were skipped); if one failed, this test is skipped. References must be unambiguous and cycle-free.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       },
       "oneOf": [

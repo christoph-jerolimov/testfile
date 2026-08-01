@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { Runner } from "./executor.js";
 import { RunHistory, type RunLogInput, type RunRecord } from "./history.js";
+import { validateSemantics } from "./loader.js";
 import type { TestfileDoc } from "./model.js";
 import { buildRunTree, resetNode, walk, type RunNode, type Status } from "./runtree.js";
 
@@ -20,6 +21,7 @@ export class Session extends EventEmitter {
     readonly baseDir: string
   ) {
     super();
+    validateSemantics(doc);
     this.tree = buildRunTree(doc);
     walk(this.tree, (node) => this.byId.set(node.id, node));
     this.history = new RunHistory(baseDir);
