@@ -34,6 +34,7 @@ export interface TestDef {
   sequence?: TestDef[];
   parallel?: TestDef[];
   maxParallel?: number;
+  needs?: string[];
 }
 
 export interface ServiceDef {

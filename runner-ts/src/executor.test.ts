@@ -160,6 +160,59 @@ test("test-scoped services stop when the subtree finishes", async () => {
   assert.equal(runner.services[0].status, "stopped");
 });
 
+test("needs orders parallel children and runs dependents after dependencies", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      parallel: [
+        { name: "late-start", needs: ["slow"], command: "true" },
+        { name: "slow", script: "sleep 0.3" },
+      ],
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  const [dependent, dependency] = runner.root.children;
+  assert.equal(dependent.name, "late-start");
+  assert.ok(
+    dependent.startedAt! >= dependency.endedAt!,
+    "dependent must start after its dependency finished"
+  );
+});
+
+test("a failing dependency skips its dependents but not unrelated siblings", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      parallel: [
+        { name: "broken", command: "false" },
+        { name: "dependent", needs: ["broken"], command: "true" },
+        { name: "chained", needs: ["dependent"], command: "true" },
+        { name: "unrelated", command: "true" },
+      ],
+    },
+  });
+  assert.equal(await runner.run(), "failed");
+  const byName = new Map(runner.root.children.map((c: RunNode) => [c.name, c]));
+  assert.equal(byName.get("broken")!.status, "failed");
+  assert.equal(byName.get("dependent")!.status, "skipped");
+  assert.equal(byName.get("chained")!.status, "skipped");
+  assert.equal(byName.get("unrelated")!.status, "passed");
+});
+
+test("a skipped (condition) dependency does not block its dependents", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      parallel: [
+        { name: "optional", if: "false", command: "false" },
+        { name: "dependent", needs: ["optional"], command: "true" },
+      ],
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.equal(runner.root.children[1].status, "passed");
+});
+
 test("a false if condition skips the test without failing the sequence", async () => {
   const runner = makeRunner({
     version: 1,

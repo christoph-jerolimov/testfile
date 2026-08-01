@@ -74,6 +74,7 @@ Common fields available on every test:
 | `services`        | map      | Services scoped to this subtree, see [Services](#services). |
 | `matrix`          | map      | Matrix expansion, see [Matrix](#matrix). |
 | `maxParallel`     | integer  | Only together with `parallel`: cap on concurrently running children. Default: unlimited. |
+| `needs`           | array    | Only on children of a `parallel` group: names of sibling tests that must finish first, turning the group into a DAG. The test starts once all named siblings passed or were skipped; if one failed, the test is skipped. References must name existing, unambiguous siblings and must not form cycles. |
 
 ### Execution semantics
 
@@ -83,6 +84,10 @@ Common fields available on every test:
 - A `parallel` group starts all children (bounded by `maxParallel`) and waits
   for all of them. It fails if any child failed (ignoring children with
   `continueOnError`). A failing child does **not** cancel its siblings.
+- Children of a `parallel` group may declare `needs` on sibling names; such a
+  child waits for the named siblings and is skipped when one of them failed.
+  `maxParallel` slots are only occupied by running tests, not by waiting
+  ones. Siblings excluded by runner filters count as satisfied.
 - `command` runs via the system shell (`sh -c`); `script` is executed with
   `sh -e`, so the first failing line fails the script.
 - The exit status of a test is one of `passed`, `failed`, `skipped` or

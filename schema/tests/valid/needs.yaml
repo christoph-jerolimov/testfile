@@ -1,0 +1,16 @@
+# A parallel group with dependencies between siblings (a DAG).
+version: 1
+test:
+  name: all
+  parallel:
+    - name: build
+      command: npm run build
+    - name: unit
+      needs: [build]
+      command: npm run test:unit
+    - name: e2e
+      needs: [build]
+      command: npm run test:e2e
+    - name: report
+      needs: [unit, e2e]
+      command: npm run report

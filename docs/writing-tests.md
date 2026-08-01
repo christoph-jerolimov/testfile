@@ -62,6 +62,32 @@ Children run concurrently; `maxParallel` caps how many run at once. A failing
 child does not cancel its siblings — the group waits for all children and
 fails if any of them failed.
 
+### Dependencies inside a parallel group
+
+When plain sequence/parallel nesting is too coarse, `needs` turns a parallel
+group into a dependency graph:
+
+```yaml
+test:
+  parallel:
+    - name: build
+      command: npm run build
+    - name: unit
+      needs: [build]
+      command: npm run test:unit
+    - name: e2e
+      needs: [build]
+      command: npm run test:e2e
+    - name: report
+      needs: [unit, e2e]
+      command: npm run report
+```
+
+`unit` and `e2e` start as soon as `build` passed (in parallel with each
+other); `report` waits for both. If a needed test fails, its dependents are
+skipped. Unknown names, ambiguous names and cycles are rejected when the
+Testfile is loaded.
+
 ## Tolerating failures
 
 `continueOnError: true` reports a test's failure without failing its parent —
