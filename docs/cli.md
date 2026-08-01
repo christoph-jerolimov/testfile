@@ -31,6 +31,22 @@ across the *whole* run (group-level `maxParallel` still applies on top).
 a filter expression will run. All three also apply to runs started from the
 TUI.
 
+## Machine-readable reports
+
+For CI systems, `--reporter` writes the run's result after it finished:
+
+```sh
+testfile run --reporter junit --output results.xml
+testfile run --reporter json --output results.json
+testfile run --reporter json           # ... or to stdout
+```
+
+The JUnit XML contains one `<testcase>` per executed test (group path as
+classname) with `<failure>` elements carrying the merged log and
+`<skipped/>` markers; the JSON report is the same record that `runs.yaml`
+stores. In watch mode the report is rewritten after every re-run; with
+`--tui` it is written when the TUI exits.
+
 ## Watch mode
 
 `testfile run --watch` (or `-w`) re-runs the current selection whenever a
