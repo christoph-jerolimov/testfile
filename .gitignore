@@ -1,5 +1,6 @@
 node_modules/
 dist/
+.testfile/
 .astro/
 *.log
 .DS_Store

@@ -28,6 +28,11 @@ export class OutputBuffer extends EventEmitter {
     this.push({ text, stream: "system" });
   }
 
+  clear(): void {
+    this.lines.length = 0;
+    this.partial = {};
+  }
+
   flush(): void {
     for (const stream of ["stdout", "stderr"] as const) {
       const rest = this.partial[stream];
