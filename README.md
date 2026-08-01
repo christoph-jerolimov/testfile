@@ -69,6 +69,18 @@ node runner-ts/dist/cli.js run --tui    # interactive TUI
 npm run build --workspace website
 ```
 
+## GitHub Action
+
+This repository doubles as a GitHub Action:
+
+```yaml
+- uses: christoph-jerolimov/testfile@main
+  with:
+    filter-tags: fast
+```
+
+See [docs/github-action.md](docs/github-action.md) for all inputs.
+
 ## Continuous integration
 
 - [`ci.yaml`](.github/workflows/ci.yaml) validates the schema against every

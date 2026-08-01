@@ -41,3 +41,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build --workspace website
+
+  action:
+    name: Self-test GitHub Action
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the action against the smoke Testfile
+        uses: ./
+        with:
+          path: .github/action-smoke
+          reporter: junit
+          output: results.xml
+      - name: Verify the JUnit report
+        run: |
+          test -f results.xml
+          grep -q '<testcase name="hello"' results.xml
+          grep -q 'failures="0"' results.xml

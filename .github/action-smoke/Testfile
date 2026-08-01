@@ -1,0 +1,16 @@
+# Minimal Testfile used by CI to self-test the GitHub Action.
+version: 1
+name: action-smoke
+test:
+  name: smoke
+  sequence:
+    - name: hello
+      command: echo hello from the testfile action
+    - name: checks
+      parallel:
+        - name: fast
+          tags: [fast]
+          command: "true"
+        - name: skipped in ci
+          if: "!${{ env.CI }}"
+          command: "false"
