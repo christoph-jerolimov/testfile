@@ -1,0 +1,5 @@
+# Invalid: artifacts must not be an empty list.
+version: 1
+test:
+  artifacts: []
+  command: npm test

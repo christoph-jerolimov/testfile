@@ -30,6 +30,7 @@ export interface TestDef {
   services?: Record<string, ServiceDef>;
   setup?: HookDef;
   teardown?: HookDef;
+  artifacts?: string[];
   matrix?: MatrixDef;
   command?: string;
   script?: string;

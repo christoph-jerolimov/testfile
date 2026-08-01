@@ -75,6 +75,7 @@ Common fields available on every test:
 | `matrix`          | map      | Matrix expansion, see [Matrix](#matrix). |
 | `maxParallel`     | integer  | Only together with `parallel`: cap on concurrently running children. Default: unlimited. |
 | `needs`           | array    | Only on children of a `parallel` group: names of sibling tests that must finish first, turning the group into a DAG. The test starts once all named siblings passed or were skipped; if one failed, the test is skipped. References must name existing, unambiguous siblings and must not form cycles. |
+| `artifacts`       | array    | Glob patterns, relative to the test's working directory, of files the test produces (coverage, screenshots, reports). Runners copy matching files into the recorded run — also when the test failed. |
 | `setup`           | hook     | Runs after the test's services are ready and before its body. A failing setup skips the body and fails the test; teardown still runs. See [Hooks](#hooks). |
 | `teardown`        | hook     | Always runs after the test's body — on success, failure and abort — before the test's services stop. A failing teardown fails an otherwise passing test. See [Hooks](#hooks). |
 

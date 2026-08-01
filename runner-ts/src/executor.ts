@@ -147,6 +147,7 @@ export class Runner extends EventEmitter {
         const nodeCwd = node.def.workdir
           ? resolvePath(cwd, resolveTemplate(node.def.workdir, nodeScopes, where))
           : cwd;
+        node.resolvedCwd = nodeCwd;
 
         if (node.def.teardown) {
           const hook = node.def.teardown;

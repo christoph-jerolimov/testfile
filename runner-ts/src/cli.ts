@@ -224,7 +224,10 @@ program
     for (const test of run.tests) {
       const duration = test.durationMs !== undefined ? ` (${formatMs(test.durationMs)})` : "";
       const log = test.log ? color(90, "  [log]") : "";
-      console.log(`  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${log}`);
+      const artifacts = test.artifacts?.length
+        ? color(90, `  [${test.artifacts.length} artifact${test.artifacts.length === 1 ? "" : "s"}]`)
+        : "";
+      console.log(`  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${log}${artifacts}`);
     }
     console.log(color(90, `\nlogs: testfile history --run ${run.id} --log [test-path]`));
   });

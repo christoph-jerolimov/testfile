@@ -20,6 +20,8 @@ export interface RunNode {
   isMatrixWrapper: boolean;
   children: RunNode[];
   status: Status;
+  // The working directory the node actually ran in; used to collect artifacts.
+  resolvedCwd?: string;
   // Why a node was skipped: a false `if` condition does not block dependents,
   // a failed `needs` dependency does (failures cascade through chains).
   skipReason?: "condition" | "needs";
@@ -116,6 +118,7 @@ export function buildRunTree(doc: TestfileDoc): RunNode {
 export function resetNode(node: RunNode): void {
   node.status = "pending";
   node.skipReason = undefined;
+  node.resolvedCwd = undefined;
   node.timedOut = false;
   node.error = undefined;
   node.startedAt = undefined;

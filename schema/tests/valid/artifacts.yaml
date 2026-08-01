@@ -1,0 +1,13 @@
+# Tests that declare produced files to be kept with the run record.
+version: 1
+test:
+  sequence:
+    - name: unit
+      artifacts:
+        - coverage/**
+      command: npm run test:unit -- --coverage
+    - name: e2e
+      artifacts:
+        - playwright-report/**
+        - test-results/**/*.png
+      command: npm run test:e2e

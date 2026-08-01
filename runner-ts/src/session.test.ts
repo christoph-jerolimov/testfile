@@ -62,6 +62,46 @@ test("a run is persisted with index, env, per-test logs and merged output", asyn
   assert.equal(readFileSync(join(dir, ".testfile", ".gitignore"), "utf8"), "*\n");
 });
 
+test("artifacts are collected into the run folder and recorded", async () => {
+  const dir = tempDir();
+  const session = new Session(
+    {
+      version: 1,
+      test: {
+        name: "produce",
+        artifacts: ["out/**/*.txt"],
+        script: "mkdir -p out/nested\necho hello > out/a.txt\necho deep > out/nested/b.txt\necho ignored > out/c.log",
+      },
+    },
+    dir
+  );
+  assert.equal(await session.runAll(), "passed");
+  const record = session.lastRecord!;
+  const entry = record.tests.find((t) => t.path === "produce")!;
+  assert.equal(entry.artifacts?.length, 2);
+  const runDir = join(dir, ".testfile", "runs", record.id);
+  for (const artifact of entry.artifacts!) {
+    assert.ok(existsSync(join(runDir, artifact)), artifact);
+  }
+  assert.ok(entry.artifacts!.some((a) => a.endsWith("a.txt")));
+  assert.ok(entry.artifacts!.some((a) => a.endsWith(join("nested", "b.txt"))));
+  assert.ok(!entry.artifacts!.some((a) => a.endsWith("c.log")));
+});
+
+test("artifacts are collected from failing tests too", async () => {
+  const dir = tempDir();
+  const session = new Session(
+    {
+      version: 1,
+      test: { name: "fails", artifacts: ["report.txt"], script: "echo partial > report.txt\nfalse" },
+    },
+    dir
+  );
+  assert.equal(await session.runAll(), "failed");
+  const entry = session.lastRecord!.tests.find((t) => t.path === "fails")!;
+  assert.equal(entry.artifacts?.length, 1);
+});
+
 test("runs can be found by id prefix and their merged log read back", async () => {
   const dir = tempDir();
   const session = new Session(doc, dir);
