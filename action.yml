@@ -45,6 +45,10 @@ inputs:
     description: "Node.js version used to run the Testfile runner"
     required: false
     default: "22"
+  annotations:
+    description: "Emit GitHub annotations for failed tests (shown on the PR)"
+    required: false
+    default: "true"
 
 runs:
   using: "composite"
@@ -83,3 +87,10 @@ runs:
         [ -n "$INPUT_REPORTER" ] && ARGS+=(--reporter "$INPUT_REPORTER")
         [ -n "$INPUT_OUTPUT" ] && ARGS+=(--output "$INPUT_OUTPUT")
         node "${{ github.action_path }}/runner-ts/dist/cli.js" "${ARGS[@]}"
+
+    - name: Annotate failed tests
+      if: ${{ always() && inputs.annotations == 'true' }}
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+      run: node "${{ github.action_path }}/action/annotate.mjs" "$INPUT_PATH"
