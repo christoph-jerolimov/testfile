@@ -15,7 +15,7 @@ export function writeReport(session: Session, kind: ReporterKind, output: string
   else writeFileSync(output, content);
 }
 
-// The last run as JSON: exactly what runs.yaml records for it.
+// The last run as JSON: exactly what the run's run.yaml records.
 export function buildJsonReport(session: Session): string {
   if (!session.lastRecord) throw new Error("no run to report");
   return `${JSON.stringify(session.lastRecord, null, 2)}\n`;
