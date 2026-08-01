@@ -19,27 +19,24 @@ const target = resolve(process.argv[2] ?? ".");
 const baseDir = existsSync(target) && statSync(target).isFile() ? dirname(target) : target;
 
 // Each run is self-contained in .testfile/runs/<id>/ with its own run.yaml;
-// ids start with their UTC timestamp, so the newest run has the largest id.
+// the newest run is the one with the latest startedAt timestamp.
 const runsDir = join(baseDir, ".testfile", "runs");
-let runIds = [];
+const records = [];
 try {
-  runIds = readdirSync(runsDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort()
-    .reverse();
+  for (const entry of readdirSync(runsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    try {
+      const record = parse(readFileSync(join(runsDir, entry.name, "run.yaml"), "utf8"));
+      if (record) records.push(record);
+    } catch {
+      // a run folder without a readable run.yaml is not a run
+    }
+  }
 } catch {
   process.exit(0); // no recorded runs (e.g. the Testfile failed validation)
 }
-let run;
-for (const id of runIds) {
-  try {
-    run = parse(readFileSync(join(runsDir, id, "run.yaml"), "utf8"));
-    if (run) break;
-  } catch {
-    // a run folder without a readable run.yaml is not a run
-  }
-}
+records.sort((a, b) => String(b.startedAt).localeCompare(String(a.startedAt)));
+const run = records[0];
 if (!run) process.exit(0);
 
 // %, CR and LF must be escaped in workflow command data

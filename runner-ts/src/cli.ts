@@ -109,23 +109,12 @@ function printTree(session: Session, active: Set<number>, annotate?: (node: RunN
   });
 }
 
-type TuiView = "tests" | "history" | "services";
+type TuiView = "tests" | "runs" | "results" | "services";
 
-const NO_FILTERS: FilterFlags = {
-  filter: [],
-  filterName: [],
-  filterTags: [],
-  filterMatrix: [],
-  failed: false,
-  changed: false,
-};
-
-// The one place the TUI is started from: `testfile tui`, `run --tui` and
-// `history --tui` all end up here, only with a different initial view.
 async function launchTui(
   session: Session,
   filtered: { filtered: boolean; active: Set<number> },
-  flags: { watch?: boolean; reporter?: ReporterKind; output?: string },
+  flags: { watch?: boolean },
   view: TuiView
 ): Promise<void> {
   // The TUI starts idle: the user selects tests and runs them with enter.
@@ -174,12 +163,6 @@ async function launchTui(
   await tui.waitUntilExit();
   scheduler?.close();
   watcher?.close();
-  if (flags.reporter && session.lastRecord) {
-    writeReport(session, flags.reporter, flags.output ?? "-");
-    if (flags.output !== undefined && flags.output !== "-") {
-      console.log(color(90, `${flags.reporter} report written to ${flags.output}`));
-    }
-  }
   const status = session.runner?.root.status;
   process.exitCode =
     session.runner === undefined
@@ -300,34 +283,12 @@ program
   .option("--last <n>", "with --flaky: only consider the most recent n runs", (v: string) =>
     Number.parseInt(v, 10)
   )
-  .option("--tui", "open the interactive terminal UI on the history view", false)
   .description("List, show or compare recorded test runs")
   .action(
-    async (
+    (
       path: string,
-      options: {
-        run?: string;
-        log?: string | boolean;
-        diff?: string[];
-        flaky: boolean;
-        last?: number;
-        tui: boolean;
-      }
+      options: { run?: string; log?: string | boolean; diff?: string[]; flaky: boolean; last?: number }
     ) => {
-    if (options.tui) {
-      try {
-        if (!process.stdout.isTTY) {
-          throw new Error("the TUI needs an interactive terminal (use: testfile history)");
-        }
-        const { path: file, doc } = loadTestfile(path);
-        const session = new Session(doc, dirname(file));
-        await launchTui(session, resolveFilters(session, NO_FILTERS), {}, "history");
-      } catch (err) {
-        console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
-        process.exitCode = 1;
-      }
-      return;
-    }
     const history = new RunHistory(resolveHistoryBase(path));
     if (history.runs.length === 0) {
       console.error(`no recorded runs in ${HISTORY_DIR}/`);
@@ -459,7 +420,6 @@ program
   });
 
 interface RunFlags extends FilterFlags {
-  tui: boolean;
   verbose: boolean;
   failFast: boolean;
   maxParallel?: number;
@@ -474,7 +434,6 @@ addFilterOptions(
   program
     .command("run", { isDefault: true })
     .argument("[path]", "Testfile or directory containing one", ".")
-    .option("--tui", "interactive terminal UI", false)
     .option("-v, --verbose", "also stream service output", false)
     .option("--fail-fast", "abort the whole run at the first test failure", false)
     .option(
@@ -531,16 +490,6 @@ addFilterOptions(
       return;
     }
 
-    if (options.tui && process.stdout.isTTY) {
-      await launchTui(
-        session,
-        filtered,
-        { watch: options.watch, reporter: options.reporter, output: options.output },
-        "tests"
-      );
-      return;
-    }
-
     // Watch mode: re-run the last selection when files change (debounced;
     // changes during a run re-trigger once it finished).
     let scheduler: WatchScheduler | undefined;
@@ -580,7 +529,6 @@ addFilterOptions(
     process.on("SIGTERM", onSignal);
 
     {
-      if (options.tui) console.error("not a TTY, falling back to plain output");
       process.on("SIGINT", onSignal);
       let reporter: ConsoleReporter | undefined;
       session.on("runner", (runner) => {
@@ -623,7 +571,7 @@ addFilterOptions(
   program
     .command("tui")
     .argument("[path]", "Testfile or directory containing one", ".")
-    .option("--view <view>", "initial view: tests, history or services", "tests")
+    .option("--view <view>", "initial view: tests, runs, results or services", "tests")
     .option("--fail-fast", "abort the whole run at the first test failure", false)
     .option(
       "--max-parallel <n>",
@@ -640,8 +588,8 @@ addFilterOptions(
       if (!process.stdout.isTTY) {
         throw new Error("the TUI needs an interactive terminal (use: testfile run)");
       }
-      if (!["tests", "history", "services"].includes(options.view)) {
-        throw new Error(`unknown --view "${options.view}", expected tests, history or services`);
+      if (!["tests", "runs", "results", "services"].includes(options.view)) {
+        throw new Error(`unknown --view "${options.view}", expected tests, runs, results or services`);
       }
       if (options.maxParallel !== undefined && !(options.maxParallel >= 1)) {
         throw new Error("--max-parallel must be a positive integer");

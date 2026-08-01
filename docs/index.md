@@ -58,7 +58,7 @@ Run it with the [`testfile` CLI](./cli):
 
 ```sh
 testfile run          # plain output
-testfile tui          # interactive terminal UI (tests, history, services)
+testfile tui          # interactive terminal UI (tests, runs, results, services)
 ```
 
 Continue with [Getting started](./getting-started), or read the

@@ -15,8 +15,9 @@ import {
   failedLeafIds,
   findMatches,
   logWindow,
-  runListLabel,
+  recordedTests,
   runningFocus,
+  runsTable,
   scrollToLine,
   serviceRows,
   testHistoryLines,
@@ -101,7 +102,7 @@ test("runningFocus prefers the first running leaf, then the deepest running node
   assert.equal(runningFocus(tree)!.name, "e2e");
 });
 
-test("describeRun and runListLabel render a recorded run", async () => {
+test("describeRun and runsTable render recorded runs", async () => {
   const dir = mkdtempSync(join(tmpdir(), "testfile-tui-hist-"));
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   const session = new Session(doc, dir);
@@ -115,9 +116,31 @@ test("describeRun and runListLabel render a recorded run", async () => {
   const failedLine = lines.find((l) => l.text.includes("all/checks/e2e"));
   assert.equal(failedLine?.stream, "stderr", "failed tests use the stderr stream");
 
-  const label = runListLabel(run);
-  assert.match(label, /passed/);
-  assert.match(label, /\d+ failed/);
+  const table = runsTable(session.history.runs);
+  assert.match(table.header, /STARTED\s+STATUS\s+DURATION\s+TESTS/);
+  assert.equal(table.rows.length, 1);
+  assert.match(table.rows[0], /passed/);
+  assert.match(table.rows[0], /\d+ failed/);
+});
+
+test("recordedTests aggregates the tests of all recorded runs", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-tui-rec-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const session = new Session(doc, dir);
+  await session.runAll();
+  await session.runAll();
+
+  // built from the run records alone: a fresh history is enough
+  const fresh = new Session(doc, dir);
+  const recorded = recordedTests(fresh.history);
+  const e2e = recorded.find((t) => t.path === "all/checks/e2e");
+  assert.ok(e2e);
+  assert.equal(e2e.occurrences, 2);
+  assert.equal(e2e.fails, 2);
+  assert.equal(e2e.lastStatus, "failed");
+  const lint = recorded.find((t) => t.path === "all/lint");
+  assert.equal(lint?.passes, 2);
+  assert.equal(lint?.lastStatus, "passed");
 });
 
 test("findMatches and scrollToLine locate lines in a log", () => {

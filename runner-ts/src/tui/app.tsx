@@ -8,6 +8,7 @@ import {
   failedLeafIds,
   findMatches,
   logWindow,
+  recordedTests,
   runningFocus,
   scrollToLine,
   serviceRows,
@@ -15,16 +16,19 @@ import {
   type PaneContent,
 } from "./model.js";
 import { isMouseSequence, parseWheelEvents, type WheelEvent } from "./mouse.js";
-import { HistoryPane, historyPaneContent } from "./history-view.js";
+import { ResultsPane, resultsPaneContent } from "./results-view.js";
+import { RunsPane, runsPaneContent } from "./runs-view.js";
 import { ServicesPane, servicePaneContent } from "./services-view.js";
 import { TestsPane, testPaneContent, TEST_TABS, type TestTab } from "./tests-view.js";
+import { watchRuns } from "./watch-runs.js";
 
-export type TuiView = "tests" | "history" | "services";
+export type TuiView = "tests" | "runs" | "results" | "services";
 
 const VIEWS: { view: TuiView; label: string }[] = [
   { view: "tests", label: "1 tests" },
-  { view: "history", label: "2 history" },
-  { view: "services", label: "3 services" },
+  { view: "runs", label: "2 runs" },
+  { view: "results", label: "3 results" },
+  { view: "services", label: "4 services" },
 ];
 
 export function App({
@@ -49,10 +53,12 @@ export function App({
   const [query, setQuery] = useState("");
   const [searchInput, setSearchInput] = useState(false);
   const [testTab, setTestTab] = useState<TestTab>("log");
-  // History view: pick a recorded run, view its detail or merged log.
-  const [historyCursor, setHistoryCursor] = useState(0);
-  const [historyLog, setHistoryLog] = useState(false);
+  // Runs view: pick a recorded run, view its detail or merged log.
+  const [runsCursor, setRunsCursor] = useState(0);
+  const [runLog, setRunLog] = useState(false);
   const runLogs = useRef(new Map<string, OutputLine[]>());
+  // Results view: pick a recorded test, view its executions across runs.
+  const [resultsCursor, setResultsCursor] = useState(0);
   // Services view.
   const [servicesCursor, setServicesCursor] = useState(0);
   // Detail pane: scroll, wrap toggle and in-log search with match navigation.
@@ -84,6 +90,19 @@ export function App({
       clearInterval(timer);
     };
   }, [session]);
+
+  // Runs recorded by other processes appear live: watch .testfile/runs/
+  // and re-read the run records on changes.
+  useEffect(
+    () =>
+      watchRuns(session.baseDir, () => {
+        session.history.reload();
+        runLogs.current.clear();
+        previousLogs.current.clear();
+        setTick((t) => t + 1);
+      }),
+    [session]
+  );
 
   const visible = visibleNodes(session.tree, collapsed, query);
 
@@ -127,8 +146,10 @@ export function App({
   const height = (stdout?.rows ?? 30) - 2;
   const outputHeight = Math.max(5, height - 5);
 
-  const historyRuns = session.history.runs;
-  const historyIndex = Math.min(historyCursor, Math.max(0, historyRuns.length - 1));
+  const runs = session.history.runs;
+  const runsIndex = Math.min(runsCursor, Math.max(0, runs.length - 1));
+  const recorded = recordedTests(session.history);
+  const resultsIndex = Math.min(resultsCursor, Math.max(0, recorded.length - 1));
   const svcRows = serviceRows(
     collectServiceDefs(session.doc, session.tree),
     session.runner?.services ?? []
@@ -136,11 +157,13 @@ export function App({
   const servicesIndex = Math.min(servicesCursor, Math.max(0, svcRows.length - 1));
 
   const pane: PaneContent =
-    view === "history"
-      ? historyPaneContent(session, historyRuns[historyIndex], historyLog, runLogs.current)
-      : view === "services"
-        ? servicePaneContent(svcRows[servicesIndex], session)
-        : testPaneContent(currentNode, testTab, session, previousLogs.current);
+    view === "runs"
+      ? runsPaneContent(session, runs[runsIndex], runLog, runLogs.current)
+      : view === "results"
+        ? resultsPaneContent(recorded[resultsIndex], session)
+        : view === "services"
+          ? servicePaneContent(svcRows[servicesIndex], session)
+          : testPaneContent(currentNode, testTab, session, previousLogs.current);
   const logMatches = findMatches(pane.lines, logQuery);
   const matchIndex = Math.min(matchPos, Math.max(0, logMatches.length - 1));
   const currentMatchLine = logMatches.length > 0 ? logMatches[matchIndex] : undefined;
@@ -235,8 +258,9 @@ export function App({
       return;
     }
     if (input === "1") return switchView("tests");
-    if (input === "2" || input === "H") return switchView(view === "history" ? "tests" : "history");
-    if (input === "3") return switchView(view === "services" ? "tests" : "services");
+    if (input === "2" || input === "H") return switchView(view === "runs" ? "tests" : "runs");
+    if (input === "3") return switchView(view === "results" ? "tests" : "results");
+    if (input === "4") return switchView(view === "services" ? "tests" : "services");
     if (input === "q" || (key.ctrl && input === "c")) {
       if (!session.running) {
         exit();
@@ -250,17 +274,30 @@ export function App({
       return;
     }
 
-    if (view === "history") {
+    if (view === "runs") {
       if (key.upArrow || input === "k") {
-        setHistoryCursor(Math.max(0, historyIndex - 1));
+        setRunsCursor(Math.max(0, runsIndex - 1));
         setLogScroll(0);
       }
       if (key.downArrow || input === "j") {
-        setHistoryCursor(Math.min(Math.max(0, historyRuns.length - 1), historyIndex + 1));
+        setRunsCursor(Math.min(Math.max(0, runs.length - 1), runsIndex + 1));
         setLogScroll(0);
       }
       if (key.return) {
-        setHistoryLog((v) => !v);
+        setRunLog((v) => !v);
+        setLogScroll(0);
+      }
+      if (key.escape) switchView("tests");
+      return;
+    }
+
+    if (view === "results") {
+      if (key.upArrow || input === "k") {
+        setResultsCursor(Math.max(0, resultsIndex - 1));
+        setLogScroll(0);
+      }
+      if (key.downArrow || input === "j") {
+        setResultsCursor(Math.min(Math.max(0, recorded.length - 1), resultsIndex + 1));
         setLogScroll(0);
       }
       if (key.escape) switchView("tests");
@@ -373,12 +410,14 @@ export function App({
     ? "type to search the log · enter jump · esc cancel"
     : searchInput
       ? "type to search · enter keep · esc clear"
-      : view === "history"
+      : view === "runs"
         ? "↑/↓ select run · enter log/details · ? log search · w wrap · u/d scroll · esc back · q quit"
-        : view === "services"
-          ? "↑/↓ select service · r restart · ? log search · w wrap · u/d scroll · esc back · q quit"
-          : "space select · a all · c children · f failed · enter run · tab info/log/history · / tree · ? log · w wrap · ←/→ fold · u/d scroll · " +
-            (session.running ? (stopRequested ? "q force stop" : "q stop") : "q quit");
+        : view === "results"
+          ? "↑/↓ select test · ? log search · w wrap · u/d scroll · esc back · q quit"
+          : view === "services"
+            ? "↑/↓ select service · r restart · ? log search · w wrap · u/d scroll · esc back · q quit"
+            : "space select · a all · c children · f failed · enter run · tab info/log/history · / tree · ? log · w wrap · ←/→ fold · u/d scroll · " +
+              (session.running ? (stopRequested ? "q force stop" : "q stop") : "q quit");
 
   return (
     <Box flexDirection="column" height={height}>
@@ -398,7 +437,8 @@ export function App({
       </Text>
       <Box flexGrow={1}>
         <Box flexDirection="column" width="42%" borderStyle="round" paddingX={1} overflow="hidden">
-          {view === "history" ? <HistoryPane runs={historyRuns} index={historyIndex} /> : null}
+          {view === "runs" ? <RunsPane runs={runs} index={runsIndex} /> : null}
+          {view === "results" ? <ResultsPane tests={recorded} index={resultsIndex} /> : null}
           {view === "services" ? <ServicesPane rows={svcRows} index={servicesIndex} /> : null}
           {view === "tests" ? (
             <TestsPane

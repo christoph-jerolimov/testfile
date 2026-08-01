@@ -104,6 +104,20 @@ test("pruning removes the oldest run folders beyond the keep limit", () => {
   assert.ok(!existsSync(join(dir, ".testfile", "runs", runs[0].id)));
 });
 
+test("reload picks up runs recorded by another process", () => {
+  const dir = tempDir();
+  const history = new RunHistory(dir);
+  assert.equal(history.runs.length, 0);
+  const other = new RunHistory(dir);
+  const saved = other.saveRun(meta(Date.UTC(2026, 0, 5)), [{ path: "a", status: "passed", lines }], []);
+  assert.equal(history.runs.length, 0, "not visible before reload");
+  history.reload();
+  assert.deepEqual(
+    history.runs.map((run) => run.id),
+    [saved.id]
+  );
+});
+
 test("folders without a readable run.yaml are skipped", () => {
   const dir = tempDir();
   new RunHistory(dir).saveRun(meta(Date.UTC(2026, 0, 1)), [{ path: "a", status: "passed", lines }], []);
