@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { resolve as resolvePath } from "node:path";
 import { evaluateCondition } from "./condition.js";
-import type { ServiceDef, TestfileDoc } from "./model.js";
+import type { HookDef, ServiceDef, TestfileDoc } from "./model.js";
 import { resolvePorts } from "./ports.js";
 import { walk, type RunNode, type Status } from "./runtree.js";
 import { ServiceInstance } from "./services.js";
@@ -116,6 +116,9 @@ export class Runner extends EventEmitter {
     }
 
     const started: ServiceInstance[] = [];
+    // Assigned once the node's scopes exist; runs in finally so teardown
+    // happens on success, failure and abort, before services stop.
+    let teardown: (() => Promise<void>) | undefined;
     try {
       if (node.isMatrixWrapper) {
         // The wrapper only fans out; env/services/workdir apply per instance.
@@ -145,20 +148,42 @@ export class Runner extends EventEmitter {
           ? resolvePath(cwd, resolveTemplate(node.def.workdir, nodeScopes, where))
           : cwd;
 
+        if (node.def.teardown) {
+          const hook = node.def.teardown;
+          teardown = async () => {
+            // No abort signal: cleanup runs to completion even on Ctrl+C.
+            const ok = await this.runHook(node, hook, "teardown", nodeScopes, nodeCwd, undefined);
+            if (!ok && node.status === "passed") {
+              node.status = "failed";
+              node.error = "teardown failed";
+            }
+          };
+        }
+
         await this.startServices(node.def.services, nodeScopes, nodeCwd, started, controller, node.name);
-        switch (node.kind) {
-          case "command":
-          case "script":
-            await this.runShell(node, nodeScopes, nodeCwd, controller.signal);
-            break;
-          case "sequence":
-            await this.runSequence(node, nodeScopes, nodeCwd, controller.signal);
-            this.finishGroup(node, controller.signal);
-            break;
-          case "parallel":
-            await this.runChildrenParallel(node, nodeScopes, nodeCwd, controller.signal, node.def.maxParallel);
-            this.finishGroup(node, controller.signal);
-            break;
+
+        if (
+          node.def.setup &&
+          !(await this.runHook(node, node.def.setup, "setup", nodeScopes, nodeCwd, controller.signal))
+        ) {
+          for (const child of node.children) this.markRemaining(child, "skipped");
+          node.status = this.interrupted ? "aborted" : "failed";
+          node.error = "setup failed";
+        } else {
+          switch (node.kind) {
+            case "command":
+            case "script":
+              await this.runShell(node, nodeScopes, nodeCwd, controller.signal);
+              break;
+            case "sequence":
+              await this.runSequence(node, nodeScopes, nodeCwd, controller.signal);
+              this.finishGroup(node, controller.signal);
+              break;
+            case "parallel":
+              await this.runChildrenParallel(node, nodeScopes, nodeCwd, controller.signal, node.def.maxParallel);
+              this.finishGroup(node, controller.signal);
+              break;
+          }
         }
       }
     } catch (err) {
@@ -170,6 +195,7 @@ export class Runner extends EventEmitter {
     } finally {
       if (timeoutHandle) clearTimeout(timeoutHandle);
       parentSignal.removeEventListener("abort", onParentAbort);
+      if (teardown) await teardown();
       await this.stopServices(started);
     }
 
@@ -237,6 +263,73 @@ export class Runner extends EventEmitter {
           node.output.system(node.error);
         }
         resolve();
+      });
+    });
+  }
+
+  // Runs a setup/teardown hook, streaming into the node's output. Returns
+  // whether the hook succeeded. Without a signal the hook cannot be aborted.
+  private runHook(
+    node: RunNode,
+    hook: HookDef,
+    label: "setup" | "teardown",
+    scopes: Scopes,
+    cwd: string,
+    signal: AbortSignal | undefined
+  ): Promise<boolean> {
+    const where = `${label} of test "${node.name}"`;
+    const env = { ...scopes.env, ...resolveEnvMap(hook.env, scopes, where) };
+    const hookScopes: Scopes = { ...scopes, env };
+    const hookCwd = hook.workdir
+      ? resolvePath(cwd, resolveTemplate(hook.workdir, hookScopes, where))
+      : cwd;
+    const source = hook.script ?? hook.command;
+    if (!source) return Promise.resolve(false);
+    const resolved = resolveTemplate(source, hookScopes, where);
+    node.output.system(`--- ${label} ---`);
+    if (signal?.aborted) {
+      node.output.system(`${label} not run (aborted)`);
+      return Promise.resolve(false);
+    }
+    return new Promise((resolve) => {
+      const child = spawn("sh", hook.script ? ["-e", "-c", resolved] : ["-c", resolved], {
+        cwd: hookCwd,
+        env,
+        detached: true,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      child.stdout.on("data", (d) => node.output.append(d, "stdout"));
+      child.stderr.on("data", (d) => node.output.append(d, "stderr"));
+
+      let killTimer: NodeJS.Timeout | undefined;
+      let timedOut = false;
+      const terminate = () => {
+        signalGroup(child.pid, "SIGTERM");
+        killTimer = setTimeout(() => signalGroup(child.pid, "SIGKILL"), 5000);
+      };
+      const timeoutMs = hook.timeout !== undefined ? parseDurationMs(hook.timeout, 0) : undefined;
+      const timeoutTimer =
+        timeoutMs !== undefined
+          ? setTimeout(() => {
+              timedOut = true;
+              terminate();
+            }, timeoutMs)
+          : undefined;
+      signal?.addEventListener("abort", terminate, { once: true });
+
+      child.once("error", () => resolve(false));
+      child.once("close", (code, sig) => {
+        if (killTimer) clearTimeout(killTimer);
+        if (timeoutTimer) clearTimeout(timeoutTimer);
+        signal?.removeEventListener("abort", terminate);
+        node.output.flush();
+        const ok = code === 0 && !timedOut && !signal?.aborted;
+        if (!ok) {
+          node.output.system(
+            `${label} failed (${timedOut ? "timeout" : (sig ?? `exit code ${code}`)})`
+          );
+        }
+        resolve(ok);
       });
     });
   }

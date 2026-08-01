@@ -191,6 +191,14 @@
           "description": "Services scoped to this subtree: started before this test runs, gracefully stopped when it finishes.",
           "$ref": "#/$defs/servicesMap"
         },
+        "setup": {
+          "description": "Runs after this test's services are ready and before its body. If setup fails, the body is skipped and the test fails (teardown still runs).",
+          "$ref": "#/$defs/hook"
+        },
+        "teardown": {
+          "description": "Always runs after this test's body - on success, failure and abort - before the test's services are stopped. A failing teardown fails an otherwise passing test.",
+          "$ref": "#/$defs/hook"
+        },
         "matrix": {
           "$ref": "#/$defs/matrix"
         },
@@ -254,6 +262,36 @@
           ]
         }
       }
+    },
+    "hook": {
+      "type": "object",
+      "description": "A command or script that runs around a test. Exactly one of 'command' or 'script' must be set.",
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "description": "A single shell command.",
+          "type": "string",
+          "minLength": 1
+        },
+        "script": {
+          "description": "A multi-line shell script (executed with 'sh -e').",
+          "type": "string",
+          "minLength": 1
+        },
+        "env": {
+          "$ref": "#/$defs/envMap"
+        },
+        "workdir": {
+          "type": "string"
+        },
+        "timeout": {
+          "$ref": "#/$defs/duration"
+        }
+      },
+      "oneOf": [
+        { "required": ["command"] },
+        { "required": ["script"] }
+      ]
     },
     "servicesMap": {
       "type": "object",

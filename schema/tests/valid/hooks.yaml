@@ -1,0 +1,20 @@
+# setup/teardown hooks around a test and around a group.
+version: 1
+test:
+  name: all
+  setup:
+    command: ./scripts/prepare-workspace.sh
+  teardown:
+    script: |
+      rm -rf tmp
+      echo cleaned up
+    timeout: 30s
+  sequence:
+    - name: db tests
+      setup:
+        command: npm run db:migrate
+        env:
+          DATABASE_URL: postgres://localhost/test
+      teardown:
+        command: npm run db:drop
+      command: npm run test:db

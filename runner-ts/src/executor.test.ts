@@ -295,6 +295,75 @@ test("retry does not re-run a passing command", async () => {
   assert.equal(runner.root.output.lines.filter((l) => l.text.includes("retrying")).length, 0);
 });
 
+test("setup runs before the body and teardown after it", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      setup: { command: "echo setup-ran" },
+      teardown: { command: "echo teardown-ran" },
+      command: "echo body-ran",
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  const texts = runner.root.output.lines.filter((l) => l.stream === "stdout").map((l) => l.text);
+  assert.deepEqual(texts, ["setup-ran", "body-ran", "teardown-ran"]);
+});
+
+test("a failing setup skips the body but still runs teardown", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      setup: { command: "false" },
+      teardown: { command: "echo teardown-ran" },
+      sequence: [{ name: "child", command: "echo child-ran" }],
+    },
+  });
+  assert.equal(await runner.run(), "failed");
+  assert.equal(runner.root.error, "setup failed");
+  assert.equal(runner.root.children[0].status, "skipped");
+  const texts = runner.root.output.lines.map((l) => l.text);
+  assert.ok(texts.includes("teardown-ran"));
+  assert.ok(!texts.includes("child-ran"));
+});
+
+test("a failing teardown fails an otherwise passing test", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: { teardown: { script: "echo cleaning\nfalse" }, command: "true" },
+  });
+  assert.equal(await runner.run(), "failed");
+  assert.equal(runner.root.error, "teardown failed");
+});
+
+test("teardown runs on body failure and keeps the original error", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: { teardown: { command: "echo teardown-ran" }, command: "exit 7" },
+  });
+  assert.equal(await runner.run(), "failed");
+  assert.match(runner.root.error ?? "", /exit code 7/);
+  assert.ok(runner.root.output.lines.some((l) => l.text === "teardown-ran"));
+});
+
+test("hook env and timeout are honored", async () => {
+  const runner = makeRunner({
+    version: 1,
+    env: { OUTER: "o" },
+    test: {
+      setup: { command: 'test "$OUTER" = o && test "$INNER" = i', env: { INNER: "i" } },
+      command: "true",
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+
+  const slow = makeRunner({
+    version: 1,
+    test: { setup: { command: "sleep 10", timeout: "300ms" }, command: "true" },
+  });
+  assert.equal(await slow.run(), "failed");
+  assert.equal(slow.root.error, "setup failed");
+});
+
 test("requestStop aborts the run gracefully", async () => {
   const runner = makeRunner({
     version: 1,

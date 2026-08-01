@@ -28,6 +28,8 @@ export interface TestDef {
   continueOnError?: boolean;
   retry?: number | { count: number; delay?: Duration };
   services?: Record<string, ServiceDef>;
+  setup?: HookDef;
+  teardown?: HookDef;
   matrix?: MatrixDef;
   command?: string;
   script?: string;
@@ -35,6 +37,14 @@ export interface TestDef {
   parallel?: TestDef[];
   maxParallel?: number;
   needs?: string[];
+}
+
+export interface HookDef {
+  command?: string;
+  script?: string;
+  env?: EnvMap;
+  workdir?: string;
+  timeout?: Duration;
 }
 
 export interface ServiceDef {
