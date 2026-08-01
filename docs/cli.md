@@ -23,6 +23,7 @@ testfile run --dry-run     # print what would run, without running
 testfile validate [path]   # validate against the JSON schema
 testfile list [path]       # print the expanded tree, incl. matrix instances
 testfile history [path]    # list or show recorded runs
+testfile runs <cmd>        # pack/import/push/pull/sync recorded runs
 testfile completion bash   # shell completions (bash, zsh, fish)
 ```
 
@@ -286,6 +287,47 @@ A test is flagged when it both passed and failed across the considered runs
 rate, how often the outcome *flipped* between consecutive occurrences — the
 strongest flakiness signal — and the latest status. Flagged tests are good
 candidates for a `flaky` tag and a [`retry`](./writing-tests#retries).
+
+## Sharing runs
+
+Because every run is a self-contained `runs/<id>/` folder, runs can move
+between machines. `testfile runs` packs them as `.tgz` archives and brings
+them into the local history, where `history`, `--diff`, `--flaky` and the
+TUI treat them like local runs:
+
+```sh
+testfile runs pack                       # latest run -> testfile-run-<id>.tgz
+testfile runs pack --run 20260801 -o ci.tgz
+testfile runs import ci.tgz              # import into ./.testfile/runs/
+```
+
+Importing skips runs that already exist locally (same id), so repeated
+imports are safe.
+
+With the [aws CLI](https://aws.amazon.com/cli/) configured, runs can be
+shared through S3 — for example a CI job pushes, developers pull:
+
+```sh
+testfile runs push s3://my-bucket/testfile-runs        # latest run
+testfile runs push s3://my-bucket/testfile-runs --run 20260801
+testfile runs pull s3://my-bucket/testfile-runs        # newest archive
+testfile runs pull s3://my-bucket/testfile-runs --run <full-id>
+```
+
+And when CI is the [GitHub Action](./github-action) (which uploads every
+recorded run as a `testfile-run` artifact), `sync` pulls the artifacts of
+the latest *n* workflow runs straight into the local history:
+
+```sh
+export GITHUB_TOKEN=...                  # a token with actions:read
+testfile runs sync owner/repo            # latest 5 workflow runs
+testfile runs sync owner/repo --latest 20
+testfile runs sync owner/repo --artifact my-artifact-name
+```
+
+Already-imported runs are skipped, so `sync` is incremental — run it again
+any time to top up the local history with the newest CI results. The TUI's
+[runs and results views](#runs-view) pick imported runs up live.
 
 ## Interrupting a run
 

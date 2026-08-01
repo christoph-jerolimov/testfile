@@ -20,6 +20,7 @@ import { writeReport, type ReporterKind } from "./report.js";
 import { ConsoleReporter } from "./reporter.js";
 import { walk, type RunNode } from "./runtree.js";
 import { Session } from "./session.js";
+import { importRunArchive, packRun, s3Pull, s3Push, syncFromGithub } from "./transfer.js";
 import { color, formatMs } from "./util.js";
 import { watchDirectory, WatchScheduler } from "./watch.js";
 
@@ -609,6 +610,138 @@ addFilterOptions(
       process.exitCode = 1;
     }
   });
+
+// --- testfile runs: pack, share and sync recorded runs --------------------
+
+const runsCommand = program
+  .command("runs")
+  .description("Pack, share and sync recorded runs (inspect them with: history)");
+
+function commandFailed(err: unknown): void {
+  console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
+  process.exitCode = 1;
+}
+
+// The run to operate on: an id prefix when given, the latest run otherwise.
+function pickRun(base: string, idOrPrefix: string | undefined): RunRecord {
+  const history = new RunHistory(base);
+  if (idOrPrefix !== undefined) {
+    const run = history.find(idOrPrefix);
+    if (!run) throw new Error(`no recorded run matches "${idOrPrefix}"`);
+    return run;
+  }
+  const run = history.runs[0];
+  if (!run) throw new Error(`no recorded runs in ${HISTORY_DIR}/`);
+  return run;
+}
+
+function reportImport(result: { imported: string[]; skipped: string[] }): void {
+  for (const id of result.imported) console.log(`${color(32, "✔")} imported run ${id}`);
+  for (const id of result.skipped) {
+    console.log(color(90, `- run ${id} already exists locally, skipped`));
+  }
+}
+
+runsCommand
+  .command("pack")
+  .argument("[path]", "Testfile or directory containing one", ".")
+  .option("--run <id>", "run to pack, id prefix is enough (default: the latest run)")
+  .option("-o, --output <file>", "target file (default: testfile-run-<id>.tgz)")
+  .description("Pack a recorded run as a .tgz archive")
+  .action((path: string, options: { run?: string; output?: string }) => {
+    try {
+      const base = resolveHistoryBase(path);
+      const run = pickRun(base, options.run);
+      const out = options.output ?? `testfile-run-${run.id}.tgz`;
+      packRun(base, run.id, out);
+      console.log(`${color(32, "✔")} packed run ${run.id} into ${out}`);
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
+
+runsCommand
+  .command("import")
+  .argument("<archive>", '.tgz created by "testfile runs pack"')
+  .argument("[path]", "Testfile or directory containing one", ".")
+  .description("Import a packed run into the local history")
+  .action((archive: string, path: string) => {
+    try {
+      reportImport(importRunArchive(resolveHistoryBase(path), resolve(archive)));
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
+
+runsCommand
+  .command("push")
+  .argument("<s3-prefix>", "s3://bucket/prefix to upload to (uses the aws CLI)")
+  .argument("[path]", "Testfile or directory containing one", ".")
+  .option("--run <id>", "run to push, id prefix is enough (default: the latest run)")
+  .description("Pack a recorded run and upload it to S3")
+  .action((prefix: string, path: string, options: { run?: string }) => {
+    try {
+      const base = resolveHistoryBase(path);
+      const run = pickRun(base, options.run);
+      const url = s3Push(base, run.id, prefix);
+      console.log(`${color(32, "✔")} pushed run ${run.id} to ${url}`);
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
+
+runsCommand
+  .command("pull")
+  .argument("<s3-prefix>", "s3://bucket/prefix to download from (uses the aws CLI)")
+  .argument("[path]", "Testfile or directory containing one", ".")
+  .option("--run <id>", "exact run id to pull (default: the newest archive)")
+  .description("Download a run archive from S3 into the local history")
+  .action((prefix: string, path: string, options: { run?: string }) => {
+    try {
+      const result = s3Pull(resolveHistoryBase(path), prefix, options.run);
+      reportImport(result);
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
+
+runsCommand
+  .command("sync")
+  .argument("<owner/repo>", "GitHub repository whose workflow runs to sync from")
+  .argument("[path]", "Testfile or directory containing one", ".")
+  .option(
+    "--latest <n>",
+    "number of recent workflow runs to consider",
+    (value: string) => Number.parseInt(value, 10),
+    5
+  )
+  .option("--artifact <name>", "artifact name the action uploads", "testfile-run")
+  .description("Download the run artifacts of recent GitHub Actions runs (needs GITHUB_TOKEN)")
+  .action(
+    async (repo: string, path: string, options: { latest: number; artifact: string }) => {
+      try {
+        if (!(options.latest >= 1)) throw new Error("--latest must be a positive integer");
+        const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+        if (!token) {
+          throw new Error("set GITHUB_TOKEN (or GH_TOKEN) to download workflow artifacts");
+        }
+        const result = await syncFromGithub(resolveHistoryBase(path), {
+          repo,
+          latest: options.latest,
+          artifact: options.artifact,
+          token,
+        });
+        if (result.archives === 0) {
+          console.log(
+            color(90, `no "${options.artifact}" artifacts in the last ${options.latest} workflow runs`)
+          );
+        }
+        reportImport(result);
+      } catch (err) {
+        commandFailed(err);
+      }
+    }
+  );
 
 program
   .command("completion")
