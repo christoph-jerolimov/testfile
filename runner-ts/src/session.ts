@@ -38,10 +38,19 @@ export class Session extends EventEmitter {
     return active;
   }
 
-  async runSelected(selection: Iterable<number>): Promise<Status | undefined> {
+  async runSelected(
+    selection: Iterable<number>,
+    options: { exclude?: (node: RunNode) => boolean } = {}
+  ): Promise<Status | undefined> {
     if (this.running) return undefined;
     const selectedIds = [...selection];
     const active = this.activeSetFor(selectedIds);
+    if (options.exclude) {
+      for (const id of [...active]) {
+        const node = this.byId.get(id);
+        if (node && options.exclude(node)) active.delete(id);
+      }
+    }
     if (active.size === 0) return undefined;
 
     walk(this.tree, (node) => {

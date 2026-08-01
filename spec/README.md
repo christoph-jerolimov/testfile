@@ -64,6 +64,7 @@ Common fields available on every test:
 | ----------------- | -------- | ----------- |
 | `name`            | string   | Display name. Matrix instances get their combination appended, e.g. `integration (postgres=16)`. |
 | `description`     | string   | Free-form description. |
+| `tags`            | array    | Optional labels made of letters and digits only (`[A-Za-z0-9]+`), e.g. `fast`, `slow`, `flaky`, `nightly`, `aws`, `gcp`. A tag applies to the test and its whole subtree. Runners use tags to execute a subset of tests. |
 | `env`             | map      | Environment variables, merged over the parent's environment (child wins). |
 | `workdir`         | string   | Working directory for this subtree, relative to the Testfile (or absolute). |
 | `timeout`         | duration | Abort and fail this test (and its children) after this time. |

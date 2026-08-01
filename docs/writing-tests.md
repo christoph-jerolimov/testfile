@@ -76,6 +76,26 @@ sequence:
     command: rm -rf tmp
 ```
 
+## Tags
+
+Tag tests with any labels made of letters and digits — `fast`/`slow`,
+`flaky`, `nightly`, `aws`/`gcp`, whatever fits your suite — to run subsets
+later:
+
+```yaml
+test:
+  sequence:
+    - name: unit
+      tags: [fast]
+      command: npm run test:unit
+    - name: e2e
+      tags: [slow, nightly]
+      command: npm run test:e2e
+```
+
+A tag on a group applies to all tests below it. Run a subset with
+[`testfile run -t fast`](./cli#filtering) (or just `-f fast`).
+
 ## Timeouts, env, workdir
 
 Every test can set a `timeout` (fails the subtree when exceeded), `env`

@@ -1,14 +1,65 @@
 #!/usr/bin/env node
 import { dirname } from "node:path";
 import { Command } from "commander";
+import {
+  hasFilters,
+  parseMatrixFilters,
+  parseTagFilters,
+  selectLeaves,
+  splitGenericFilters,
+  type TestFilters,
+} from "./filter.js";
 import { HISTORY_DIR } from "./history.js";
 import { loadTestfile } from "./loader.js";
 import { ConsoleReporter } from "./reporter.js";
-import { buildRunTree, walk, type RunNode } from "./runtree.js";
+import { walk, type RunNode } from "./runtree.js";
 import { Session } from "./session.js";
 import { color } from "./util.js";
 
 const program = new Command();
+
+const collect = (value: string, previous: string[]) => [...previous, value];
+
+interface FilterFlags {
+  filter: string[];
+  filterName: string[];
+  filterTags: string[];
+  filterMatrix: string[];
+}
+
+// Turns the filter flags into the selection Session.runSelected expects,
+// plus the resulting active set for display.
+function resolveFilters(
+  session: Session,
+  flags: FilterFlags
+): { selection: number[]; active: Set<number>; leafCount: number; filtered: boolean } {
+  const generic = splitGenericFilters(flags.filter);
+  const filters: TestFilters = {
+    any: generic.nameOrTag,
+    names: flags.filterName,
+    tags: parseTagFilters(flags.filterTags),
+    matrix: parseMatrixFilters([...flags.filterMatrix, ...generic.matrixSpecs]),
+  };
+  if (!hasFilters(filters)) {
+    const active = session.activeSetFor([session.tree.id]);
+    let leafCount = 0;
+    for (const id of active) {
+      if (session.byId.get(id)?.children.length === 0) leafCount++;
+    }
+    return { selection: [session.tree.id], active, leafCount, filtered: false };
+  }
+  const leaves = selectLeaves(session.tree, filters);
+  const selection = leaves.map((leaf) => leaf.id);
+  return { selection, active: session.activeSetFor(selection), leafCount: leaves.length, filtered: true };
+}
+
+function addFilterOptions(command: Command): Command {
+  return command
+    .option("-f, --filter <value>", "only tests matching by name/path, tag, or key:value matrix (repeatable)", collect, [])
+    .option("-n, --filter-name <name-or-path>", "only tests whose path contains this (repeatable)", collect, [])
+    .option("-t, --filter-tags <tags>", "only tests tagged with any of these comma-separated tags (repeatable)", collect, [])
+    .option("-m, --filter-matrix <key:value>", "only matrix instances with this value (repeatable)", collect, []);
+}
 
 program
   .name("testfile")
@@ -29,20 +80,30 @@ program
     }
   });
 
-program
-  .command("list")
-  .argument("[path]", "Testfile or directory containing one", ".")
-  .description("Print the expanded test tree (including matrix instances)")
-  .action((path: string) => {
+addFilterOptions(
+  program
+    .command("list")
+    .argument("[path]", "Testfile or directory containing one", ".")
+    .description("Print the expanded test tree (including matrix instances)")
+)
+  .action((path: string, flags: FilterFlags) => {
     try {
-      const { doc } = loadTestfile(path);
-      const tree = buildRunTree(doc);
+      const { path: file, doc } = loadTestfile(path);
+      const session = new Session(doc, dirname(file));
+      const { active, leafCount } = resolveFilters(session, flags);
+      if (leafCount === 0) throw new Error("no tests match the given filters");
       for (const [name] of Object.entries(doc.services ?? {})) {
         console.log(`${color(36, "◆")} service ${name}`);
       }
-      walk(tree, (node: RunNode) => {
+      walk(session.tree, (node: RunNode) => {
+        if (!active.has(node.id)) return;
         const marker = node.children.length > 0 ? color(90, node.kind) : "";
-        console.log(`${"  ".repeat(node.depth)}${node.name} ${marker}`.trimEnd());
+        // Matrix instances share their wrapper's def; print tags only once.
+        const tags =
+          node.def.tags && node.parent?.def !== node.def
+            ? color(90, `[${node.def.tags.join(", ")}]`)
+            : "";
+        console.log(`${"  ".repeat(node.depth)}${node.name} ${tags} ${marker}`.replace(/ +$/, ""));
         for (const [name] of Object.entries(node.def.services ?? {})) {
           if (!node.isMatrixWrapper) {
             console.log(`${"  ".repeat(node.depth + 1)}${color(36, "◆")} service ${name}`);
@@ -55,17 +116,22 @@ program
     }
   });
 
-program
-  .command("run", { isDefault: true })
-  .argument("[path]", "Testfile or directory containing one", ".")
-  .option("--tui", "interactive terminal UI", false)
-  .option("-v, --verbose", "also stream service output", false)
-  .description("Run the test tree")
-  .action(async (path: string, options: { tui: boolean; verbose: boolean }) => {
+addFilterOptions(
+  program
+    .command("run", { isDefault: true })
+    .argument("[path]", "Testfile or directory containing one", ".")
+    .option("--tui", "interactive terminal UI", false)
+    .option("-v, --verbose", "also stream service output", false)
+    .description("Run the test tree")
+)
+  .action(async (path: string, options: { tui: boolean; verbose: boolean } & FilterFlags) => {
     let session: Session;
+    let filtered: ReturnType<typeof resolveFilters>;
     try {
       const { path: file, doc } = loadTestfile(path);
       session = new Session(doc, dirname(file));
+      filtered = resolveFilters(session, options);
+      if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;
@@ -89,13 +155,19 @@ program
 
     if (options.tui && process.stdout.isTTY) {
       // The TUI starts idle: the user selects tests and runs them with enter.
-      // Ctrl+C is handled inside the TUI (the terminal is in raw mode).
+      // Filter flags pre-select the matching tests. Ctrl+C is handled inside
+      // the TUI (the terminal is in raw mode).
+      const initialSelection = filtered.filtered
+        ? [...filtered.active].filter((id) => session.byId.get(id)?.children.length === 0)
+        : [];
       const [{ render }, React, { App }] = await Promise.all([
         import("ink"),
         import("react"),
         import("./tui.js"),
       ]);
-      const app = render(React.createElement(App, { session }), { exitOnCtrlC: false });
+      const app = render(React.createElement(App, { session, initialSelection }), {
+        exitOnCtrlC: false,
+      });
       await app.waitUntilExit();
       const status = session.runner?.root.status;
       process.exitCode =
@@ -107,7 +179,7 @@ program
       session.on("runner", (runner) => {
         reporter = new ConsoleReporter(runner, { verbose: options.verbose });
       });
-      const status = await session.runAll();
+      const status = await session.runSelected(filtered.selection);
       reporter?.summary();
       if (session.lastRecord) {
         console.log(color(90, `run recorded in ${HISTORY_DIR}/runs/${session.lastRecord.id}`));
