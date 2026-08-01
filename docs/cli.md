@@ -40,7 +40,9 @@ tests with `inputs` (fresh results still refresh the cache).
 one test fails. `--max-parallel` limits how many tests run at the same time
 across the *whole* run (group-level `maxParallel` still applies on top).
 `--dry-run` combines with all filter flags, so you can preview exactly what
-a filter expression will run. All three also apply to runs started from the
+a filter expression will run; tests whose [inputs](./writing-tests#result-caching)
+are unchanged are marked `[cached]`, with a would-run/served-from-cache
+summary. All three also apply to runs started from the
 TUI.
 
 ## Machine-readable reports

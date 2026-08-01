@@ -108,3 +108,38 @@ test("cache entries survive via cache.json and are gitignored", async () => {
   // history helper still loads fine alongside the cache file
   assert.equal(new RunHistory(dir).runs.length, 1);
 });
+
+test("predictCacheHits marks unchanged tests without running them", async () => {
+  const { predictCacheHits } = await import("./cache-predict.js");
+  const dir = tempDir();
+  writeFileSync(join(dir, "input.txt"), "good");
+  const doc: TestfileDoc = {
+    version: 1,
+    test: {
+      name: "root",
+      sequence: [
+        { name: "cachable", inputs: ["input.txt"], script: "echo ran >> ran.log\ngrep -q good input.txt" },
+        { name: "plain", command: "true" },
+      ],
+    },
+  };
+  await new Session(doc, dir).runAll();
+
+  const session = new Session(doc, dir);
+  const active = session.activeSetFor([session.tree.id]);
+  const before = readFileSync(join(dir, "ran.log"), "utf8");
+  const hits = await predictCacheHits(session, active);
+  assert.equal(readFileSync(join(dir, "ran.log"), "utf8"), before, "prediction must not execute anything");
+  assert.equal(hits.size, 1);
+  const hitNode = session.byId.get([...hits][0])!;
+  assert.equal(hitNode.name, "cachable");
+
+  // change the input: no longer predicted as a hit
+  writeFileSync(join(dir, "input.txt"), "good v2");
+  const after = await predictCacheHits(session, active);
+  assert.equal(after.size, 0);
+
+  // --no-cache sessions predict nothing
+  const forced = new Session(doc, dir, { noCache: true });
+  assert.equal((await predictCacheHits(forced, forced.activeSetFor([forced.tree.id]))).size, 0);
+});
