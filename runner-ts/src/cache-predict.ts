@@ -12,6 +12,18 @@ import { resolve as resolvePath } from "node:path";
 // env files, workdir, matrix); a node whose resolution fails - or that uses
 // values only known at run time, like a freshly allocated random port in its
 // command - simply counts as "would run".
+// The active leaves that would actually execute: everything that is not a
+// predicted cache hit. Tests without `inputs` always count as changed.
+export async function changedLeafIds(session: Session, active: Set<number>): Promise<number[]> {
+  const hits = await predictCacheHits(session, active);
+  const changed: number[] = [];
+  for (const id of active) {
+    const node = session.byId.get(id);
+    if (node && node.children.length === 0 && !hits.has(id)) changed.push(id);
+  }
+  return changed;
+}
+
 export async function predictCacheHits(session: Session, active: Set<number>): Promise<Set<number>> {
   const hits = new Set<number>();
   if (!session.cache.enabled) return hits;
