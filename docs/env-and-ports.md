@@ -31,6 +31,31 @@ test:
 The runner's own shell environment is the base layer, so `PATH`, `HOME` etc.
 stay available.
 
+## Env files and secrets
+
+Load dotenv files instead of hard-coding values — at the top level or per
+test:
+
+```yaml
+version: 1
+envFile: .env.test          # relative to the Testfile
+test:
+  sequence:
+    - name: integration
+      envFile:              # relative to the test's workdir, later wins
+        - .env.integration
+        - .env.integration.local
+      command: npm run test:integration
+```
+
+Files use the usual dotenv format (`KEY=VALUE`, `#` comments, optional
+`export `, quoted values) and may contain `${{ ... }}` templates. Explicit
+`env` entries win over env file values; a missing file is an error.
+
+Values loaded from env files are treated as **secrets**: they are masked as
+`***` in the logs recorded under `.testfile/` and never written into
+`runs.yaml` — so tokens and passwords don't end up in your run history.
+
 ## Named ports
 
 Hard-coded ports make test runs collide — with each other and with whatever

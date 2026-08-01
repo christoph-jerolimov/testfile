@@ -1,7 +1,9 @@
 import { EventEmitter } from "node:events";
 import { globSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { maskSecrets } from "./envfile.js";
 import { Runner } from "./executor.js";
+import type { OutputLine } from "./output.js";
 import { RunHistory, type RunLogInput, type RunRecord } from "./history.js";
 import { validateSemantics } from "./loader.js";
 import type { TestfileDoc } from "./model.js";
@@ -91,6 +93,13 @@ export class Session extends EventEmitter {
     startedAtMs: number,
     durationMs: number
   ): void {
+    // Values loaded from env files never reach the recorded logs or record.
+    const secrets = [...runner.secrets].filter((secret) => secret.length >= 4);
+    const mask = (lines: OutputLine[]): OutputLine[] =>
+      secrets.length === 0
+        ? lines
+        : lines.map((line) => ({ ...line, text: maskSecrets(line.text, secrets) }));
+
     const tests: RunLogInput[] = [];
     walk(this.tree, (node) => {
       if (!active.has(node.id) || node.status === "pending") return;
@@ -101,7 +110,7 @@ export class Session extends EventEmitter {
           node.startedAt !== undefined && node.endedAt !== undefined
             ? node.endedAt - node.startedAt
             : undefined,
-        lines: node.output.lines,
+        lines: mask(node.output.lines),
         artifacts: collectArtifacts(node),
       });
     });
@@ -114,14 +123,16 @@ export class Session extends EventEmitter {
         status: ok ? "passed" : runner.interrupted ? "aborted" : "failed",
         exitCode: runner.interrupted ? 130 : ok ? 0 : 1,
         cancelled: runner.interrupted,
-        env: runner.docEnv,
+        env: Object.fromEntries(
+          Object.entries(runner.docEnv).map(([key, value]) => [key, maskSecrets(value, secrets)])
+        ),
         ports: runner.ports,
         selected: selectedIds
           .map((id) => this.byId.get(id)?.path)
           .filter((path): path is string => path !== undefined),
       },
       tests,
-      runner.services.map((service) => ({ name: service.name, lines: service.output.lines }))
+      runner.services.map((service) => ({ name: service.name, lines: mask(service.output.lines) }))
     );
   }
 }

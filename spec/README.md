@@ -41,6 +41,7 @@ afterwards — including when the user aborts the run with Ctrl+C.
 | `version`  | `1`    | yes      | Format version. Always `1` today. |
 | `name`     | string | no       | Display name of the project/Testfile. |
 | `env`      | map    | no       | Environment variables for everything in this file. |
+| `envFile`  | string/array | no | Dotenv file(s), relative to the Testfile, loaded for the whole run. See [Env files](#env-files). |
 | `ports`    | map    | no       | Named ports, see [Ports](#ports). |
 | `services` | map    | no       | Services for the whole run, see [Services](#services). |
 | `test`     | test   | yes      | The root test. |
@@ -68,6 +69,7 @@ Common fields available on every test:
 | `tags`            | array    | Optional labels made of letters and digits only (`[A-Za-z0-9]+`), e.g. `fast`, `slow`, `flaky`, `nightly`, `aws`, `gcp`. A tag applies to the test and its whole subtree. Runners use tags to execute a subset of tests. |
 | `if`              | string   | Condition deciding whether the test (and subtree) runs, see [Conditions](#conditions). A false condition marks the test `skipped` without failing the parent. |
 | `env`             | map      | Environment variables, merged over the parent's environment (child wins). |
+| `envFile`         | string/array | Dotenv file(s), relative to the test's working directory, loaded for this subtree. See [Env files](#env-files). |
 | `workdir`         | string   | Working directory for this subtree, relative to the Testfile (or absolute). |
 | `timeout`         | duration | Abort and fail this test (and its children) after this time. |
 | `continueOnError` | boolean  | The failure of this test is reported but does not fail the parent group. Default `false`. |
@@ -301,6 +303,21 @@ String values anywhere in the document may contain templates of the form
 
 Referencing an undefined name is an error at run start. `duration` values are
 either plain integers (seconds) or strings like `500ms`, `30s`, `5m`, `1h`.
+
+## Env files
+
+`envFile` loads dotenv-format files: `KEY=VALUE` lines, blank lines and
+`#` comments, an optional `export ` prefix, single/double quoted values, and
+`${{ ... }}` templates in values. Multiple files load in order; later files
+win. A missing file is an error.
+
+Precedence, lowest to highest: runner environment < env file(s) < explicit
+`env` of the same level. Top-level `envFile` paths resolve relative to the
+Testfile; test-level paths resolve relative to the test's working directory.
+
+Values loaded from env files are treated as **secrets**: runners must mask
+them in recorded logs (and never write them into run records). Note that the
+live terminal output is not masked.
 
 ## Exit code
 

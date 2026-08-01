@@ -8,6 +8,7 @@ export interface TestfileDoc {
   version: 1;
   name?: string;
   env?: EnvMap;
+  envFile?: string | string[];
   ports?: Record<string, number | "random">;
   services?: Record<string, ServiceDef>;
   test: TestDef;
@@ -23,6 +24,7 @@ export interface TestDef {
   if?: string;
   tags?: string[];
   env?: EnvMap;
+  envFile?: string | string[];
   workdir?: string;
   timeout?: Duration;
   continueOnError?: boolean;
