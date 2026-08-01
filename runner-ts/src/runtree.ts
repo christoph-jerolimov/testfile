@@ -8,9 +8,12 @@ export type NodeKind = "command" | "script" | "sequence" | "parallel" | "matrix"
 export interface RunNode {
   id: number;
   name: string;
+  // Stable identifier across runs: names joined with "/" from the root.
+  path: string;
   kind: NodeKind;
   def: TestDef;
   depth: number;
+  parent?: RunNode;
   // Matrix values effective for this node (own combination merged over ancestors').
   matrix: Combination;
   // True for the synthetic wrapper that holds one child per matrix combination.
@@ -40,12 +43,21 @@ function defaultName(def: TestDef): string {
 export function buildRunTree(doc: TestfileDoc): RunNode {
   let nextId = 0;
 
-  function build(def: TestDef, inheritedMatrix: Combination, depth: number, expandOwnMatrix: boolean): RunNode {
+  function build(
+    def: TestDef,
+    inheritedMatrix: Combination,
+    depth: number,
+    parentPath: string,
+    expandOwnMatrix: boolean,
+    nameOverride?: string
+  ): RunNode {
+    const name = nameOverride ?? defaultName(def);
+    const path = parentPath ? `${parentPath}/${name}` : name;
     if (def.matrix && expandOwnMatrix) {
-      const combos = expandMatrix(def.matrix);
       const wrapper: RunNode = {
         id: nextId++,
-        name: defaultName(def),
+        name,
+        path,
         kind: "matrix",
         def,
         depth,
@@ -56,19 +68,26 @@ export function buildRunTree(doc: TestfileDoc): RunNode {
         timedOut: false,
         output: new OutputBuffer(),
       };
-      wrapper.children = combos.map((combo) => {
-        const instance = build(def, { ...inheritedMatrix, ...combo }, depth + 1, false);
-        instance.name = `${defaultName(def)} (${comboLabel(combo)})`;
+      wrapper.children = expandMatrix(def.matrix).map((combo) => {
+        const instance = build(
+          def,
+          { ...inheritedMatrix, ...combo },
+          depth + 1,
+          path,
+          false,
+          `${defaultName(def)} (${comboLabel(combo)})`
+        );
+        instance.parent = wrapper;
         return instance;
       });
       return wrapper;
     }
 
-    const kind = variantOf(def);
     const node: RunNode = {
       id: nextId++,
-      name: defaultName(def),
-      kind,
+      name,
+      path,
+      kind: variantOf(def),
       def,
       depth,
       matrix: inheritedMatrix,
@@ -79,11 +98,25 @@ export function buildRunTree(doc: TestfileDoc): RunNode {
       output: new OutputBuffer(),
     };
     const children = def.sequence ?? def.parallel ?? [];
-    node.children = children.map((child) => build(child, inheritedMatrix, depth + 1, true));
+    node.children = children.map((child) => {
+      const childNode = build(child, inheritedMatrix, depth + 1, path, true);
+      childNode.parent = node;
+      return childNode;
+    });
     return node;
   }
 
-  return build(doc.test, {}, 0, true);
+  return build(doc.test, {}, 0, "", true);
+}
+
+// Puts a node back into its initial state so it can run again.
+export function resetNode(node: RunNode): void {
+  node.status = "pending";
+  node.timedOut = false;
+  node.error = undefined;
+  node.startedAt = undefined;
+  node.endedAt = undefined;
+  node.output.clear();
 }
 
 export function walk(node: RunNode, visit: (node: RunNode) => void): void {

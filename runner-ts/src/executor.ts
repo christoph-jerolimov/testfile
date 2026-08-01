@@ -10,19 +10,33 @@ import { formatMs, parseDurationMs } from "./util.js";
 
 // Events: "update" (any state change), "node-start"/"node-end" (RunNode),
 // "service-added" (ServiceInstance).
+export interface RunnerOptions {
+  // When set, only these node ids are executed; other nodes stay untouched.
+  active?: Set<number>;
+}
+
 export class Runner extends EventEmitter {
   readonly services: ServiceInstance[] = [];
   ports: Record<string, number> = {};
+  // The Testfile's own top-level env (resolved), for run records.
+  docEnv: Record<string, string> = {};
   interrupted = false;
+  readonly active?: Set<number>;
 
   private readonly abort = new AbortController();
 
   constructor(
     readonly doc: TestfileDoc,
     readonly root: RunNode,
-    readonly baseDir: string
+    readonly baseDir: string,
+    options: RunnerOptions = {}
   ) {
     super();
+    this.active = options.active;
+  }
+
+  isActive(node: RunNode): boolean {
+    return !this.active || this.active.has(node.id);
   }
 
   get finished(): boolean {
@@ -53,17 +67,15 @@ export class Runner extends EventEmitter {
     try {
       this.ports = await resolvePorts(this.doc.ports);
       const bootstrap: Scopes = { env: baseEnv, ports: this.ports, matrix: {} };
-      const scopes: Scopes = {
-        ...bootstrap,
-        env: { ...baseEnv, ...resolveEnvMap(this.doc.env, bootstrap, "Testfile") },
-      };
+      this.docEnv = resolveEnvMap(this.doc.env, bootstrap, "Testfile");
+      const scopes: Scopes = { ...bootstrap, env: { ...baseEnv, ...this.docEnv } };
       await this.startServices(this.doc.services, scopes, this.baseDir, started, this.abort);
       await this.runNode(this.root, scopes, this.baseDir, this.abort.signal);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.root.error = message;
       this.root.output.system(message);
-      markRemaining(this.root, this.interrupted ? "aborted" : "failed");
+      this.markRemaining(this.root, this.interrupted ? "aborted" : "failed");
       if (!this.interrupted) this.root.status = "failed";
     } finally {
       await this.stopServices(started);
@@ -73,8 +85,9 @@ export class Runner extends EventEmitter {
   }
 
   private async runNode(node: RunNode, scopes: Scopes, cwd: string, parentSignal: AbortSignal): Promise<void> {
+    if (!this.isActive(node)) return;
     if (parentSignal.aborted) {
-      markRemaining(node, this.interrupted ? "aborted" : "skipped");
+      this.markRemaining(node, this.interrupted ? "aborted" : "skipped");
       this.emitUpdate();
       return;
     }
@@ -137,7 +150,7 @@ export class Runner extends EventEmitter {
       const message = err instanceof Error ? err.message : String(err);
       node.error = message;
       node.output.system(message);
-      markRemaining(node, this.interrupted ? "aborted" : "skipped");
+      this.markRemaining(node, this.interrupted ? "aborted" : "skipped");
       node.status = this.interrupted ? "aborted" : "failed";
     } finally {
       if (timeoutHandle) clearTimeout(timeoutHandle);
@@ -172,7 +185,8 @@ export class Runner extends EventEmitter {
       if (signal.aborted) onAbort();
       else signal.addEventListener("abort", onAbort, { once: true });
 
-      child.once("exit", (code, sig) => {
+      // "close" (not "exit") so stdout/stderr are fully drained first.
+      child.once("close", (code, sig) => {
         if (killTimer) clearTimeout(killTimer);
         signal.removeEventListener("abort", onAbort);
         node.output.flush();
@@ -195,7 +209,7 @@ export class Runner extends EventEmitter {
     let failed = false;
     for (const child of node.children) {
       if (failed || signal.aborted) {
-        markRemaining(child, signal.aborted && this.interrupted ? "aborted" : "skipped");
+        this.markRemaining(child, signal.aborted && this.interrupted ? "aborted" : "skipped");
         this.emitUpdate();
         continue;
       }
@@ -268,6 +282,14 @@ export class Runner extends EventEmitter {
   private emitUpdate(): void {
     this.emit("update");
   }
+
+  // Marks a node and its not-yet-finished active descendants with a final status.
+  private markRemaining(node: RunNode, status: Status): void {
+    walk(node, (n) => {
+      if (!this.isActive(n)) return;
+      if (n.status === "pending" || n.status === "running") n.status = status;
+    });
+  }
 }
 
 function signalGroup(pid: number | undefined, signal: NodeJS.Signals): void {
@@ -283,9 +305,3 @@ function signalGroup(pid: number | undefined, signal: NodeJS.Signals): void {
   }
 }
 
-// Marks a node and all its not-yet-finished descendants with a final status.
-function markRemaining(node: RunNode, status: Status): void {
-  walk(node, (n) => {
-    if (n.status === "pending" || n.status === "running") n.status = status;
-  });
-}

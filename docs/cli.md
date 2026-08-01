@@ -35,21 +35,51 @@ A summary tree with per-test durations is printed at the end.
 
 ## The TUI
 
-`testfile run --tui` opens a two-pane terminal UI:
+`testfile run --tui` opens a two-pane terminal UI. It does **not** start any
+tests by itself: pick the tests you want with the selection keys, then press
+enter to run them — as often as you like within one session.
 
 - The **left pane** lists the whole test tree (including matrix instances)
-  and, below it, every service with its state — starting, ready, stopping,
-  stopped, failed.
-- The **right pane** follows the output of whatever is selected. Switch
-  between running tests and services with the arrow keys (or `j`/`k`) to
-  watch any of them live.
+  with a selection checkbox per test — `[x]` selected, `[~]` covered by a
+  selected ancestor — and, once a run started, every service with its state
+  (starting, ready, stopping, stopped, failed). Tests that have not run in
+  this session show the result and duration of their most recent recorded
+  run (`last ✔ 1.2s`).
+- The **right pane** shows the log of whatever the cursor is on: the live
+  (or queued) log while a run is in progress, otherwise the merged
+  stdout+stderr of the test's previous recorded run.
+- The **summary line** counts selected, running, queued, passed and failed
+  tests.
 
 Keys:
 
 | Key       | Action |
 | --------- | ------ |
-| `↑`/`↓` (`k`/`j`) | Select a test or service. |
-| `q` / Ctrl+C      | Stop the run gracefully; press again to force-kill. After the run: quit. |
+| `↑`/`↓` (`k`/`j`) | Move the cursor over tests and services. |
+| Space     | Toggle selection of the current test (its subtree runs with it). |
+| `a`       | Select all tests (or clear the selection). |
+| `c`       | Select all children of the current test. |
+| Enter     | Run the selected tests. |
+| `q` / Ctrl+C | While running: stop gracefully, press again to force-kill. Otherwise: quit. |
+
+## Run history
+
+Every run — CLI and TUI alike — is recorded in a `.testfile/` folder next to
+the Testfile (the folder ignores itself via a generated `.gitignore`):
+
+```
+.testfile/
+  runs.yaml            # index of the most recent runs (newest first)
+  runs/<run-id>/
+    output.log         # merged stdout+stderr of the whole run
+    tests/<test>.log   # merged stdout+stderr per test
+```
+
+`runs.yaml` stores for each run: start time, duration, status
+(passed/failed/aborted), exit code, whether it was cancelled, the env
+variables and ports provided by the Testfile, which tests were selected, and
+the status/duration/log of every test that ran. The last 50 runs are kept;
+older run folders are pruned automatically.
 
 ## Interrupting a run
 
