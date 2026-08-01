@@ -12,6 +12,8 @@ export interface WaitReadyOptions {
   where: string;
   // Working directory for exec checks.
   cwd?: string;
+  // Log checks only match lines appended at or after this index.
+  logFrom?: number;
   // Lets the wait fail fast when the service process already exited.
   isRunning?: () => boolean;
 }
@@ -107,5 +109,5 @@ function checkExec(def: NonNullable<ReadyDef["exec"]>, opts: WaitReadyOptions): 
 function checkLog(def: NonNullable<ReadyDef["log"]>, opts: WaitReadyOptions): boolean {
   const spec = typeof def === "string" ? { pattern: def } : def;
   const stream = spec.stream === "stdout" || spec.stream === "stderr" ? spec.stream : undefined;
-  return new RegExp(spec.pattern).test(opts.output.text(stream));
+  return new RegExp(spec.pattern).test(opts.output.text(stream, opts.logFrom ?? 0));
 }

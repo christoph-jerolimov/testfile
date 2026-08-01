@@ -142,7 +142,9 @@ enter to run them — as often as you like within one session.
   run (`last ✔ 1.2s`).
 - The **right pane** shows the log of whatever the cursor is on: the live
   (or queued) log while a run is in progress, otherwise the merged
-  stdout+stderr of the test's previous recorded run.
+  stdout+stderr of the test's previous recorded run. For services it starts
+  with the resolved details — image, port mappings and the service's env
+  (secret values masked) — followed by the live log.
 - The **summary line** counts selected, running, queued, passed and failed
   tests.
 
@@ -159,6 +161,7 @@ Keys:
 | `/`       | Search: type to filter the tree (matches with their ancestors); enter keeps the filter, esc clears it. |
 | `←`/`→` (`h`/`l`) | Collapse / expand the current group. |
 | PgUp/PgDn (`u`/`d`) | Scroll the log pane; it follows the tail when at the bottom. |
+| `r`       | On a service: stop it and start it again with the same configuration. |
 | `q` / Ctrl+C | While running: stop gracefully, press again to force-kill. Otherwise: quit. |
 
 ## Run history

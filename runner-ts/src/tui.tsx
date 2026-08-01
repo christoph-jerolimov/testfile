@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Box, Text, useApp, useInput, useStdout } from "ink";
+import { maskSecrets } from "./envfile.js";
 import type { OutputLine } from "./output.js";
 import type { RunNode, Status } from "./runtree.js";
 import type { ServiceInstance, ServiceStatus } from "./services.js";
@@ -196,6 +197,15 @@ export function App({
         return next;
       });
     }
+    if (input === "r" && current?.kind === "service") {
+      const service = current.service;
+      if (service.status === "starting" || service.status === "stopping") {
+        setMessage(`service ${service.name} is busy`);
+      } else {
+        setMessage(`restarting service ${service.name}`);
+        void service.restart();
+      }
+    }
     if (input === "f" || input === "F") {
       const failed = failedLeafIds(session.tree, session.history);
       if (failed.length === 0) {
@@ -331,7 +341,7 @@ export function App({
       <Text dimColor>
         {searchInput
           ? "type to search · enter keep · esc clear"
-          : "space select · a all · c children · f failed · enter run · / search · ←/→ fold · u/d scroll · " +
+          : "space select · a all · c children · f failed · enter run · / search · ←/→ fold · u/d scroll · r restart svc · " +
             (session.running ? (stopRequested ? "q force stop" : "q stop") : "q quit")}
         {stopRequested && session.running ? " · stopping gracefully..." : ""}
       </Text>
@@ -348,7 +358,21 @@ function paneContent(
 ): PaneContent {
   if (!current) return { title: "", lines: [] };
   if (current.kind === "service") {
-    return { title: `service ${current.service.name}`, lines: current.service.output.lines };
+    const service = current.service;
+    const secrets = [...(session.runner?.secrets ?? [])].filter((s) => s.length >= 4);
+    const details: OutputLine[] = [];
+    if (service.details.image) details.push({ text: `image: ${service.details.image}`, stream: "system" });
+    if (service.details.ports?.length) {
+      details.push({ text: `ports: ${service.details.ports.join(", ")}`, stream: "system" });
+    }
+    for (const [key, value] of Object.entries(service.details.env ?? {})) {
+      details.push({ text: `env: ${key}=${maskSecrets(value, secrets)}`, stream: "system" });
+    }
+    return {
+      title: `service ${service.name}`,
+      note: `${service.status}${service.error ? ` — ${service.error}` : ""}`,
+      lines: [...details, ...service.output.lines],
+    };
   }
   const node = current.node;
   if (node.status !== "pending" || node.output.lines.length > 0) {
