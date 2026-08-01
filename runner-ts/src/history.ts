@@ -71,6 +71,14 @@ export class RunHistory {
     return this.index;
   }
 
+  // Looks a run up by its id; a unique prefix is sufficient.
+  find(idOrPrefix: string): RunRecord | undefined {
+    const exact = this.index.find((run) => run.id === idOrPrefix);
+    if (exact) return exact;
+    const matches = this.index.filter((run) => run.id.startsWith(idOrPrefix));
+    return matches.length === 1 ? matches[0] : undefined;
+  }
+
   latestFor(path: string): { run: RunRecord; test: RunRecordTest } | undefined {
     for (const run of this.index) {
       const test = run.tests.find((t) => t.path === path);
@@ -83,6 +91,15 @@ export class RunHistory {
     if (!test.log) return undefined;
     try {
       return readFileSync(join(this.dir, "runs", run.id, test.log), "utf8");
+    } catch {
+      return undefined;
+    }
+  }
+
+  // The merged stdout+stderr of the whole run.
+  readRunLog(run: RunRecord): string | undefined {
+    try {
+      return readFileSync(join(this.dir, "runs", run.id, "output.log"), "utf8");
     } catch {
       return undefined;
     }

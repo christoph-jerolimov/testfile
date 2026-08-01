@@ -62,6 +62,20 @@ test("a run is persisted with index, env, per-test logs and merged output", asyn
   assert.equal(readFileSync(join(dir, ".testfile", ".gitignore"), "utf8"), "*\n");
 });
 
+test("runs can be found by id prefix and their merged log read back", async () => {
+  const dir = tempDir();
+  const session = new Session(doc, dir);
+  await session.runAll();
+  const id = session.lastRecord!.id;
+  const history = new RunHistory(dir);
+  assert.equal(history.find(id)?.id, id);
+  assert.equal(history.find(id.slice(0, 15))?.id, id, "unique prefix matches");
+  assert.equal(history.find("nope"), undefined);
+  const merged = history.readRunLog(history.find(id)!) ?? "";
+  assert.match(merged, /=== root\/one \(passed/);
+  assert.match(merged, /one-out/);
+});
+
 test("newer runs are prepended and become the latest result", async () => {
   const dir = tempDir();
   const session = new Session(doc, dir);
