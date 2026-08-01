@@ -76,6 +76,30 @@ sequence:
     command: rm -rf tmp
 ```
 
+## Conditional tests
+
+`if` decides whether a test (and its subtree) runs. A false condition marks
+it *skipped* without failing anything:
+
+```yaml
+- name: only in ci
+  if: ${{ env.CI }}
+  command: npm run test:ci
+- name: only on linux
+  if: ${{ env.TESTFILE_OS }} == linux
+  command: npm run test:linux
+- name: not in ci
+  if: "!${{ env.CI }}"
+  command: npm run test:local
+```
+
+Bare values are truthiness checks (`""`, `false`, `0`, `no`, `off` are
+false), `==`/`!=` compare strings, and a leading `!` negates the whole
+expression. Unknown references like an unset `env.CI` resolve to `""`
+instead of erroring. The runner provides `TESTFILE_OS` and `TESTFILE_ARCH`
+for platform conditions, and matrix values work too:
+`if: ${{ matrix.db }} == postgres`.
+
 ## Retries
 
 Flaky tests can be retried instead of failing the run:

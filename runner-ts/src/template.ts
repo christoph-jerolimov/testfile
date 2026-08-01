@@ -9,13 +9,22 @@ export interface Scopes {
 
 const TEMPLATE_RE = /\$\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_-]*)\s*\}\}/g;
 
-export function resolveTemplate(value: string, scopes: Scopes, where: string): string {
+// With lenient: true, unknown references resolve to "" instead of throwing —
+// used for `if` conditions, where e.g. env.CI is legitimately unset locally.
+export function resolveTemplate(
+  value: string,
+  scopes: Scopes,
+  where: string,
+  options: { lenient?: boolean } = {}
+): string {
   return value.replace(TEMPLATE_RE, (_all, scope: string, name: string) => {
     if (scope !== "env" && scope !== "ports" && scope !== "matrix") {
+      if (options.lenient) return "";
       throw new Error(`${where}: unknown template scope "${scope}" in "${value}"`);
     }
     const bucket: Record<string, string | number> = scopes[scope];
     if (!(name in bucket)) {
+      if (options.lenient) return "";
       throw new Error(`${where}: "${scope}.${name}" is not defined (in "${value}")`);
     }
     return String(bucket[name]);

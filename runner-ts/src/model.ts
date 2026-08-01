@@ -20,6 +20,7 @@ export type MatrixDef = Record<string, Scalar[] | Record<string, Scalar>[]>;
 export interface TestDef {
   name?: string;
   description?: string;
+  if?: string;
   tags?: string[];
   env?: EnvMap;
   workdir?: string;
