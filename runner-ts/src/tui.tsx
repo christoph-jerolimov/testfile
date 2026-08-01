@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import { Box, Text, useApp, useInput, useStdout } from "ink";
 import type { OutputLine } from "./output.js";
 import type { RunNode, Status } from "./runtree.js";
-import { walk } from "./runtree.js";
 import type { ServiceInstance, ServiceStatus } from "./services.js";
 import type { Session } from "./session.js";
+import { failedLeafIds, logWindow, visibleNodes } from "./tui-model.js";
 import { formatMs } from "./util.js";
 
 const NODE_GLYPH: Record<Status, { glyph: string; color: string }> = {
@@ -35,12 +35,7 @@ interface ServiceRow {
   service: ServiceInstance;
 }
 
-interface HeaderRow {
-  kind: "header";
-  label: string;
-}
-
-type Row = TestRow | ServiceRow | HeaderRow;
+type SelectableRow = TestRow | ServiceRow;
 
 interface PaneContent {
   title: string;
@@ -60,11 +55,14 @@ export function App({
   const [, setTick] = useState(0);
   const [cursor, setCursor] = useState(0);
   const [selection, setSelection] = useState<Set<number>>(new Set(initialSelection));
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
+  const [query, setQuery] = useState("");
+  const [searchInput, setSearchInput] = useState(false);
+  const [logScroll, setLogScroll] = useState(0);
   const [message, setMessage] = useState<string | undefined>();
   const [stopRequested, setStopRequested] = useState(false);
   // Logs of previous runs, loaded lazily per test path (null = no log found).
   const previousLogs = useRef(new Map<string, PaneContent | null>());
-
   const lastRecordId = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -83,16 +81,12 @@ export function App({
     };
   }, [session]);
 
-  const rows: Row[] = [{ kind: "header", label: "TESTS" }];
-  walk(session.tree, (node) => rows.push({ kind: "test", node }));
+  const visible = visibleNodes(session.tree, collapsed, query);
+  const rows: SelectableRow[] = visible.map((node) => ({ kind: "test", node }));
   const services = session.runner?.services ?? [];
-  if (services.length > 0) {
-    rows.push({ kind: "header", label: "SERVICES" });
-    for (const service of services) rows.push({ kind: "service", service });
-  }
-  const selectable = rows.filter((row): row is TestRow | ServiceRow => row.kind !== "header");
-  const cursorIndex = Math.min(cursor, selectable.length - 1);
-  const current = selectable[cursorIndex];
+  for (const service of services) rows.push({ kind: "service", service });
+  const cursorIndex = Math.min(cursor, Math.max(0, rows.length - 1));
+  const current: SelectableRow | undefined = rows[cursorIndex];
 
   const isEffectivelySelected = (node: RunNode): boolean => {
     for (let n: RunNode | undefined = node; n; n = n.parent) {
@@ -102,9 +96,11 @@ export function App({
   };
 
   const leaves: RunNode[] = [];
-  walk(session.tree, (node) => {
+  const collectLeaves = (node: RunNode): void => {
     if (node.children.length === 0) leaves.push(node);
-  });
+    node.children.forEach(collectLeaves);
+  };
+  collectLeaves(session.tree);
   const selectedCount = leaves.filter(isEffectivelySelected).length;
   const runningCount = leaves.filter((l) => l.status === "running").length;
   const queuedCount = session.running
@@ -113,10 +109,54 @@ export function App({
   const passedCount = leaves.filter((l) => l.status === "passed").length;
   const failedCount = leaves.filter((l) => l.status === "failed" || l.status === "aborted").length;
 
+  const moveCursor = (delta: number): void => {
+    setCursor(Math.max(0, Math.min(rows.length - 1, cursorIndex + delta)));
+    setLogScroll(0);
+  };
+
   useInput((input, key) => {
+    if (searchInput) {
+      if (key.escape) {
+        setQuery("");
+        setSearchInput(false);
+      } else if (key.return) {
+        setSearchInput(false);
+      } else if (key.backspace || key.delete) {
+        setQuery((q) => q.slice(0, -1));
+      } else if (input && !key.ctrl && !key.meta) {
+        setQuery((q) => q + input);
+      }
+      setCursor(0);
+      return;
+    }
+
     setMessage(undefined);
-    if (key.upArrow || input === "k") setCursor(Math.max(0, cursorIndex - 1));
-    if (key.downArrow || input === "j") setCursor(Math.min(selectable.length - 1, cursorIndex + 1));
+    if (key.upArrow || input === "k") moveCursor(-1);
+    if (key.downArrow || input === "j") moveCursor(1);
+    if (key.pageUp || input === "u") setLogScroll((s) => s + 10);
+    if (key.pageDown || input === "d") setLogScroll((s) => Math.max(0, s - 10));
+
+    if (input === "/") {
+      setSearchInput(true);
+      setQuery("");
+      return;
+    }
+    if (key.escape && query !== "") {
+      setQuery("");
+      return;
+    }
+
+    if ((key.leftArrow || input === "h" || key.rightArrow || input === "l") && current?.kind === "test") {
+      const node = current.node;
+      if (node.children.length > 0) {
+        setCollapsed((old) => {
+          const next = new Set(old);
+          if (key.leftArrow || input === "h") next.add(node.id);
+          else next.delete(node.id);
+          return next;
+        });
+      }
+    }
 
     if (input === " " && current?.kind === "test") {
       setSelection((old) => {
@@ -141,11 +181,20 @@ export function App({
         return next;
       });
     }
+    if (input === "f" || input === "F") {
+      const failed = failedLeafIds(session.tree, session.history);
+      if (failed.length === 0) {
+        setMessage("no failed tests to select");
+      } else {
+        setSelection(new Set(failed));
+        setMessage(`selected ${failed.length} failed test${failed.length === 1 ? "" : "s"}`);
+      }
+    }
     if (key.return) {
       if (session.running) {
         setMessage("a run is already in progress");
       } else if (selectedCount === 0) {
-        setMessage("no tests selected — space selects, a selects all");
+        setMessage("no tests selected — space selects, a selects all, f selects failed");
       } else {
         setStopRequested(false);
         void session.runSelected(selection);
@@ -164,42 +213,28 @@ export function App({
     }
   });
 
-  const pane = paneContent(current, session, previousLogs.current);
   const height = (stdout?.rows ?? 30) - 2;
   const outputHeight = Math.max(5, height - 4);
-  const tail = pane.lines.slice(-outputHeight);
+  const pane = paneContent(current, session, previousLogs.current);
+  const { window: tail, above } = logWindow(pane.lines, outputHeight, logScroll);
 
   return (
     <Box flexDirection="column" height={height}>
       <Box flexGrow={1}>
         <Box flexDirection="column" width="42%" borderStyle="round" paddingX={1} overflow="hidden">
-          {rows.map((row) => {
-            if (row.kind === "header") {
-              return (
-                <Text key={`h-${row.label}`} bold color="cyan">
-                  {row.label}
-                </Text>
-              );
-            }
-            const isCursor = selectable.indexOf(row) === cursorIndex;
-            if (row.kind === "service") {
-              const g = SERVICE_GLYPH[row.service.status];
-              return (
-                <Text key={`s-${row.service.name}-${row.service.owner}`} inverse={isCursor} wrap="truncate">
-                  {"    "}
-                  <Text color={g.color}>{g.glyph}</Text> {row.service.name}
-                  <Text dimColor>
-                    {" "}
-                    {row.service.status} ({row.service.owner})
-                  </Text>
-                </Text>
-              );
-            }
-            const node = row.node;
+          <Text bold color="cyan">
+            TESTS
+            {query !== "" ? <Text color="magenta"> /{query}</Text> : null}
+          </Text>
+          {visible.map((node) => {
+            const row = rows.find((r) => r.kind === "test" && r.node === node) as TestRow;
+            const isCursor = rows.indexOf(row) === cursorIndex;
             const g = NODE_GLYPH[node.status];
             const explicit = selection.has(node.id);
             const inherited = !explicit && isEffectivelySelected(node);
             const checkbox = explicit ? "[x]" : inherited ? "[~]" : "[ ]";
+            const fold =
+              node.children.length > 0 ? (collapsed.has(node.id) && query === "" ? "▸ " : "▾ ") : "";
             const duration =
               node.startedAt !== undefined && node.endedAt !== undefined
                 ? formatMs(node.endedAt - node.startedAt)
@@ -212,6 +247,7 @@ export function App({
               <Text key={`n-${node.id}`} inverse={isCursor} wrap="truncate">
                 <Text color={explicit || inherited ? "cyan" : "gray"}>{checkbox}</Text>{" "}
                 {"  ".repeat(node.depth)}
+                {fold}
                 <Text color={g.color}>{g.glyph}</Text> {node.name}
                 {duration ? <Text dimColor> {duration}</Text> : null}
                 {last ? (
@@ -224,11 +260,32 @@ export function App({
               </Text>
             );
           })}
+          {services.length > 0 ? (
+            <Text bold color="cyan">
+              SERVICES
+            </Text>
+          ) : null}
+          {services.map((service, i) => {
+            const row = rows.find((r) => r.kind === "service" && r.service === service) as ServiceRow;
+            const isCursor = rows.indexOf(row) === cursorIndex;
+            const g = SERVICE_GLYPH[service.status];
+            return (
+              <Text key={`s-${i}`} inverse={isCursor} wrap="truncate">
+                {"    "}
+                <Text color={g.color}>{g.glyph}</Text> {service.name}
+                <Text dimColor>
+                  {" "}
+                  {service.status} ({service.owner})
+                </Text>
+              </Text>
+            );
+          })}
         </Box>
         <Box flexDirection="column" flexGrow={1} borderStyle="round" paddingX={1} overflow="hidden">
           <Text bold wrap="truncate">
             {pane.title}
             {pane.note ? <Text dimColor> — {pane.note}</Text> : null}
+            {above > 0 ? <Text color="magenta"> ↑{above} more</Text> : null}
           </Text>
           {tail.map((line, i) => (
             <Text
@@ -255,8 +312,10 @@ export function App({
         {message ? <Text color="magenta"> · {message}</Text> : null}
       </Text>
       <Text dimColor>
-        space select · a all · c children · enter run ·{" "}
-        {session.running ? (stopRequested ? "q force stop" : "q stop") : "q quit"}
+        {searchInput
+          ? "type to search · enter keep · esc clear"
+          : "space select · a all · c children · f failed · enter run · / search · ←/→ fold · u/d scroll · " +
+            (session.running ? (stopRequested ? "q force stop" : "q stop") : "q quit")}
         {stopRequested && session.running ? " · stopping gracefully..." : ""}
       </Text>
     </Box>
@@ -266,7 +325,7 @@ export function App({
 // The right pane shows the live log of the selection, or - when the test has
 // not run in this session - the log of its most recent recorded run.
 function paneContent(
-  current: TestRow | ServiceRow | undefined,
+  current: SelectableRow | undefined,
   session: Session,
   cache: Map<string, PaneContent | null>
 ): PaneContent {

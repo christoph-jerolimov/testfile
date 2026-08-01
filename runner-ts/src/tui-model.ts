@@ -1,0 +1,60 @@
+import type { RunHistory } from "./history.js";
+import { walk, type RunNode } from "./runtree.js";
+
+// The nodes shown in the TUI tree, honoring collapsed groups and the search
+// query. A non-empty query overrides collapsing: it shows every node whose
+// path contains the query (case-insensitive) plus its ancestors for context.
+export function visibleNodes(tree: RunNode, collapsed: Set<number>, query: string): RunNode[] {
+  if (query !== "") {
+    const q = query.toLowerCase();
+    const keep = new Set<number>();
+    walk(tree, (node) => {
+      if (node.path.toLowerCase().includes(q)) {
+        keep.add(node.id);
+        for (let parent = node.parent; parent; parent = parent.parent) keep.add(parent.id);
+      }
+    });
+    const out: RunNode[] = [];
+    walk(tree, (node) => {
+      if (keep.has(node.id)) out.push(node);
+    });
+    return out;
+  }
+  const out: RunNode[] = [];
+  const visit = (node: RunNode): void => {
+    out.push(node);
+    if (!collapsed.has(node.id)) node.children.forEach(visit);
+  };
+  visit(tree);
+  return out;
+}
+
+// Leaves to select for "re-run failed": failures of the current session, or -
+// when nothing ran yet - failures of the most recent recorded run.
+export function failedLeafIds(tree: RunNode, history: RunHistory): number[] {
+  const failed: number[] = [];
+  walk(tree, (node) => {
+    if (node.children.length === 0 && (node.status === "failed" || node.status === "aborted")) {
+      failed.push(node.id);
+    }
+  });
+  if (failed.length > 0) return failed;
+  walk(tree, (node) => {
+    if (node.children.length !== 0) return;
+    const latest = history.latestFor(node.path);
+    if (latest && (latest.test.status === "failed" || latest.test.status === "aborted")) {
+      failed.push(node.id);
+    }
+  });
+  return failed;
+}
+
+// Slices the tail of a log for display: scroll = 0 follows the end, larger
+// values scroll back. Returns the window plus how many lines are above it.
+export function logWindow<T>(lines: T[], height: number, scroll: number): { window: T[]; above: number } {
+  const maxScroll = Math.max(0, lines.length - height);
+  const clamped = Math.min(scroll, maxScroll);
+  const end = lines.length - clamped;
+  const start = Math.max(0, end - height);
+  return { window: lines.slice(start, end), above: start };
+}

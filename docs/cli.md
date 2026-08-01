@@ -128,7 +128,11 @@ Keys:
 | Space     | Toggle selection of the current test (its subtree runs with it). |
 | `a`       | Select all tests (or clear the selection). |
 | `c`       | Select all children of the current test. |
+| `f`       | Select the failed tests — from this session, or from the last recorded run. |
 | Enter     | Run the selected tests. |
+| `/`       | Search: type to filter the tree (matches with their ancestors); enter keeps the filter, esc clears it. |
+| `←`/`→` (`h`/`l`) | Collapse / expand the current group. |
+| PgUp/PgDn (`u`/`d`) | Scroll the log pane; it follows the tail when at the bottom. |
 | `q` / Ctrl+C | While running: stop gracefully, press again to force-kill. Otherwise: quit. |
 
 ## Run history
