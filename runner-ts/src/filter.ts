@@ -1,3 +1,4 @@
+import type { RunRecord } from "./history.js";
 import { walk, type RunNode } from "./runtree.js";
 
 export interface TestFilters {
@@ -80,6 +81,20 @@ export function effectiveTags(node: RunNode): Set<string> {
     for (const tag of n.def.tags ?? []) tags.add(tag.toLowerCase());
   }
   return tags;
+}
+
+// --failed: keeps only leaves that failed (or were aborted) in the given
+// recorded run, usually the most recent one.
+export function filterByLastFailed(leaves: RunNode[], lastRun: RunRecord | undefined): RunNode[] {
+  if (!lastRun) {
+    throw new Error("no recorded runs to take failures from (--failed)");
+  }
+  const failedPaths = new Set(
+    lastRun.tests
+      .filter((test) => test.status === "failed" || test.status === "aborted")
+      .map((test) => test.path)
+  );
+  return leaves.filter((leaf) => failedPaths.has(leaf.path));
 }
 
 // The leaf tests that satisfy all given filters (filters of different kinds

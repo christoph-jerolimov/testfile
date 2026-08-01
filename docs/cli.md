@@ -68,6 +68,11 @@ testfile run -t slow -m db:postgres -m node:22
   different keys are ANDed; tests outside a matrix with that key are
   unaffected.
 
+`--failed` re-runs what broke last time: it keeps only tests that failed (or
+were aborted) in the most recent recorded run, and combines with the other
+filters — `testfile run --failed -t integration` re-runs only the failed
+integration tests.
+
 Different filter kinds are ANDed. Filters that match nothing are an error.
 With `--tui`, filters pre-select the matching tests instead of running them
 immediately. `testfile list` shows each test's tags, so it's an easy way to

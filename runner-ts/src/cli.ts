@@ -3,6 +3,7 @@ import { existsSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
 import {
+  filterByLastFailed,
   hasFilters,
   parseMatrixFilters,
   parseTagFilters,
@@ -26,6 +27,7 @@ interface FilterFlags {
   filterName: string[];
   filterTags: string[];
   filterMatrix: string[];
+  failed: boolean;
 }
 
 // Turns the filter flags into the selection Session.runSelected expects,
@@ -41,7 +43,7 @@ function resolveFilters(
     tags: parseTagFilters(flags.filterTags),
     matrix: parseMatrixFilters([...flags.filterMatrix, ...generic.matrixSpecs]),
   };
-  if (!hasFilters(filters)) {
+  if (!hasFilters(filters) && !flags.failed) {
     const active = session.activeSetFor([session.tree.id]);
     let leafCount = 0;
     for (const id of active) {
@@ -49,7 +51,11 @@ function resolveFilters(
     }
     return { selection: [session.tree.id], active, leafCount, filtered: false };
   }
-  const leaves = selectLeaves(session.tree, filters);
+  let leaves = selectLeaves(session.tree, filters);
+  if (flags.failed) {
+    leaves = filterByLastFailed(leaves, session.history.runs[0]);
+    if (leaves.length === 0) throw new Error("nothing failed in the last recorded run");
+  }
   const selection = leaves.map((leaf) => leaf.id);
   return { selection, active: session.activeSetFor(selection), leafCount: leaves.length, filtered: true };
 }
@@ -81,7 +87,8 @@ function addFilterOptions(command: Command): Command {
     .option("-f, --filter <value>", "only tests matching by name/path, tag, or key:value matrix (repeatable)", collect, [])
     .option("-n, --filter-name <name-or-path>", "only tests whose path contains this (repeatable)", collect, [])
     .option("-t, --filter-tags <tags>", "only tests tagged with any of these comma-separated tags (repeatable)", collect, [])
-    .option("-m, --filter-matrix <key:value>", "only matrix instances with this value (repeatable)", collect, []);
+    .option("-m, --filter-matrix <key:value>", "only matrix instances with this value (repeatable)", collect, [])
+    .option("--failed", "only tests that failed in the last recorded run", false);
 }
 
 program
