@@ -49,6 +49,19 @@ export function failedLeafIds(tree: RunNode, history: RunHistory): number[] {
   return failed;
 }
 
+// The test the cursor should follow while a run is in progress: the first
+// running leaf, or - between leaves - the deepest running node.
+export function runningFocus(tree: RunNode): RunNode | undefined {
+  let leaf: RunNode | undefined;
+  let deepest: RunNode | undefined;
+  walk(tree, (node) => {
+    if (node.status !== "running") return;
+    if (node.children.length === 0 && !leaf) leaf = node;
+    if (!deepest || node.depth > deepest.depth) deepest = node;
+  });
+  return leaf ?? deepest;
+}
+
 // Slices the tail of a log for display: scroll = 0 follows the end, larger
 // values scroll back. Returns the window plus how many lines are above it.
 export function logWindow<T>(lines: T[], height: number, scroll: number): { window: T[]; above: number } {

@@ -7,7 +7,7 @@ import { RunHistory } from "./history.js";
 import type { TestfileDoc } from "./model.js";
 import { buildRunTree, walk, type RunNode } from "./runtree.js";
 import { Session } from "./session.js";
-import { failedLeafIds, logWindow, visibleNodes } from "./tui-model.js";
+import { failedLeafIds, logWindow, runningFocus, visibleNodes } from "./tui-model.js";
 
 const doc: TestfileDoc = {
   version: 1,
@@ -67,6 +67,23 @@ test("failedLeafIds prefers session results and falls back to history", async ()
   // no session state and no history -> nothing
   const empty = new Session(doc, mkdtempSync(join(tmpdir(), "testfile-tui2-")));
   assert.deepEqual(failedLeafIds(empty.tree, empty.history), []);
+});
+
+test("runningFocus prefers the first running leaf, then the deepest running node", () => {
+  const tree = buildRunTree(doc);
+  assert.equal(runningFocus(tree), undefined);
+
+  const byName = new Map<string, RunNode>();
+  walk(tree, (n) => byName.set(n.name, n));
+
+  // only groups running (between leaves): deepest running node wins
+  tree.status = "running";
+  byName.get("checks")!.status = "running";
+  assert.equal(runningFocus(tree)!.name, "checks");
+
+  // a running leaf wins over running groups
+  byName.get("e2e")!.status = "running";
+  assert.equal(runningFocus(tree)!.name, "e2e");
 });
 
 test("logWindow follows the tail and scrolls back with clamping", () => {

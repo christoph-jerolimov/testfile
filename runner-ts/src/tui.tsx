@@ -4,7 +4,7 @@ import type { OutputLine } from "./output.js";
 import type { RunNode, Status } from "./runtree.js";
 import type { ServiceInstance, ServiceStatus } from "./services.js";
 import type { Session } from "./session.js";
-import { failedLeafIds, logWindow, visibleNodes } from "./tui-model.js";
+import { failedLeafIds, logWindow, runningFocus, visibleNodes } from "./tui-model.js";
 import { formatMs } from "./util.js";
 
 const NODE_GLYPH: Record<Status, { glyph: string; color: string }> = {
@@ -64,6 +64,10 @@ export function App({
   // Logs of previous runs, loaded lazily per test path (null = no log found).
   const previousLogs = useRef(new Map<string, PaneContent | null>());
   const lastRecordId = useRef<string | undefined>(undefined);
+  // Auto-follow: while a run is in progress the cursor tracks the running
+  // test, until the user navigates manually. Re-armed on every new run.
+  const manualNav = useRef(false);
+  const wasRunning = useRef(false);
 
   useEffect(() => {
     const bump = () => {
@@ -85,7 +89,17 @@ export function App({
   const rows: SelectableRow[] = visible.map((node) => ({ kind: "test", node }));
   const services = session.runner?.services ?? [];
   for (const service of services) rows.push({ kind: "service", service });
-  const cursorIndex = Math.min(cursor, Math.max(0, rows.length - 1));
+
+  if (session.running && !wasRunning.current) manualNav.current = false;
+  wasRunning.current = session.running;
+  let cursorIndex = Math.min(cursor, Math.max(0, rows.length - 1));
+  if (session.running && !manualNav.current) {
+    const focus = runningFocus(session.tree);
+    const focusIndex = focus
+      ? rows.findIndex((row) => row.kind === "test" && row.node === focus)
+      : -1;
+    if (focusIndex >= 0) cursorIndex = focusIndex;
+  }
   const current: SelectableRow | undefined = rows[cursorIndex];
 
   const isEffectivelySelected = (node: RunNode): boolean => {
@@ -110,6 +124,7 @@ export function App({
   const failedCount = leaves.filter((l) => l.status === "failed" || l.status === "aborted").length;
 
   const moveCursor = (delta: number): void => {
+    manualNav.current = true;
     setCursor(Math.max(0, Math.min(rows.length - 1, cursorIndex + delta)));
     setLogScroll(0);
   };
@@ -236,9 +251,11 @@ export function App({
             const fold =
               node.children.length > 0 ? (collapsed.has(node.id) && query === "" ? "▸ " : "▾ ") : "";
             const duration =
-              node.startedAt !== undefined && node.endedAt !== undefined
-                ? formatMs(node.endedAt - node.startedAt)
-                : undefined;
+              node.status === "running" && node.startedAt !== undefined
+                ? formatMs(Date.now() - node.startedAt)
+                : node.startedAt !== undefined && node.endedAt !== undefined
+                  ? formatMs(node.endedAt - node.startedAt)
+                  : undefined;
             const last =
               node.status === "pending" && duration === undefined
                 ? session.history.latestFor(node.path)
