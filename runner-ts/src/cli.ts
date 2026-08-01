@@ -12,7 +12,7 @@ import {
   splitGenericFilters,
   type TestFilters,
 } from "./filter.js";
-import { diffRuns, HISTORY_DIR, RunHistory, type RunRecord } from "./history.js";
+import { detectFlaky, diffRuns, HISTORY_DIR, RunHistory, type RunRecord } from "./history.js";
 import { initTestfile } from "./init.js";
 import { loadTestfile } from "./loader.js";
 import { writeReport, type ReporterKind } from "./report.js";
@@ -189,12 +189,41 @@ program
   .option("--run <id>", "show one recorded run (a unique id prefix is enough)")
   .option("--log [test-path]", "with --run: print the run's merged log, or a single test's log")
   .option("--diff <ids...>", "compare two recorded runs (older id first)")
+  .option("--flaky", "find tests that both passed and failed across recorded runs", false)
+  .option("--last <n>", "with --flaky: only consider the most recent n runs", (v: string) =>
+    Number.parseInt(v, 10)
+  )
   .description("List, show or compare recorded test runs")
-  .action((path: string, options: { run?: string; log?: string | boolean; diff?: string[] }) => {
+  .action(
+    (
+      path: string,
+      options: { run?: string; log?: string | boolean; diff?: string[]; flaky: boolean; last?: number }
+    ) => {
     const history = new RunHistory(resolveHistoryBase(path));
     if (history.runs.length === 0) {
       console.error(`no recorded runs in ${HISTORY_DIR}/`);
       process.exitCode = 1;
+      return;
+    }
+
+    if (options.flaky) {
+      const considered =
+        options.last !== undefined ? Math.min(options.last, history.runs.length) : history.runs.length;
+      const reports = detectFlaky(history.runs, options.last);
+      if (reports.length === 0) {
+        console.log(`no flaky tests detected across ${considered} run${considered === 1 ? "" : "s"}`);
+        return;
+      }
+      console.log(color(1, `flaky tests across ${considered} run${considered === 1 ? "" : "s"}:`));
+      for (const report of reports) {
+        const rate = `${report.fails}/${report.occurrences} failed`;
+        const flips = `${report.flips} flip${report.flips === 1 ? "" : "s"}`;
+        const last = `last ${colorStatus(report.lastStatus)}`;
+        console.log(`  ${pad(color(33, report.path), 40)} ${rate}, ${flips}, ${last}`);
+      }
+      console.log(
+        color(90, '\nconsider tagging these tests [flaky] and adding "retry" (see docs/writing-tests)')
+      );
       return;
     }
 
