@@ -23,6 +23,15 @@ testfile run --dry-run     # print what would run, without running
 testfile validate [path]   # validate against the JSON schema
 testfile list [path]       # print the expanded tree, incl. matrix instances
 testfile history [path]    # list or show recorded runs
+testfile completion bash   # shell completions (bash, zsh, fish)
+```
+
+Tab completion for commands and flags:
+
+```sh
+source <(testfile completion bash)                        # bash
+testfile completion zsh > "${fpath[1]}/_testfile"         # zsh
+testfile completion fish > ~/.config/fish/completions/testfile.fish
 ```
 
 `--fail-fast` aborts running siblings and skips everything queued as soon as
