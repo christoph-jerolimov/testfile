@@ -28,9 +28,12 @@ export class OutputBuffer extends EventEmitter {
     this.push({ text, stream: "system" });
   }
 
+  // Reset for a re-run. Also drops "line" subscribers: the next run's
+  // reporter attaches its own listener, and stale ones would duplicate lines.
   clear(): void {
     this.lines.length = 0;
     this.partial = {};
+    this.removeAllListeners("line");
   }
 
   flush(): void {

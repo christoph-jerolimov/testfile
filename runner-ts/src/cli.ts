@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, statSync } from "node:fs";
+import { existsSync, statSync, type FSWatcher } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
 import {
@@ -17,6 +17,7 @@ import { ConsoleReporter } from "./reporter.js";
 import { walk, type RunNode } from "./runtree.js";
 import { Session } from "./session.js";
 import { color, formatMs } from "./util.js";
+import { watchDirectory, WatchScheduler } from "./watch.js";
 
 const program = new Command();
 
@@ -250,6 +251,7 @@ interface RunFlags extends FilterFlags {
   failFast: boolean;
   maxParallel?: number;
   dryRun: boolean;
+  watch: boolean;
 }
 
 addFilterOptions(
@@ -266,6 +268,7 @@ addFilterOptions(
       undefined
     )
     .option("--dry-run", "print what would run (with filters applied) without running", false)
+    .option("-w, --watch", "re-run the selection when files change", false)
     .description("Run the test tree")
 )
   .action(async (path: string, options: RunFlags) => {
@@ -296,13 +299,36 @@ addFilterOptions(
       return;
     }
 
+    // Watch mode: re-run the last selection when files change (debounced;
+    // changes during a run re-trigger once it finished).
+    let scheduler: WatchScheduler | undefined;
+    let watcher: FSWatcher | undefined;
+    const startWatching = (rerun: () => void): void => {
+      if (!options.watch) return;
+      scheduler = new WatchScheduler({
+        debounceMs: 300,
+        isRunning: () => session.running,
+        trigger: rerun,
+      });
+      watcher = watchDirectory(session.baseDir, () => scheduler?.notify());
+      session.on("update", () => {
+        if (!session.running) scheduler?.runFinished();
+      });
+    };
+    const stopWatching = (): void => {
+      scheduler?.close();
+      watcher?.close();
+    };
+
     let interrupts = 0;
     const onSignal = () => {
       interrupts += 1;
       if (!session.running || !session.runner) {
-        process.exit(130);
+        // idle (e.g. waiting in watch mode): exit with the last run's code
+        process.exit(typeof process.exitCode === "number" ? process.exitCode : 130);
       } else if (interrupts === 1) {
         console.error("\nstopping gracefully (Ctrl+C again to force)...");
+        stopWatching();
         session.runner.requestStop();
       } else {
         session.runner.forceStop();
@@ -326,7 +352,14 @@ addFilterOptions(
       const app = render(React.createElement(App, { session, initialSelection }), {
         exitOnCtrlC: false,
       });
+      startWatching(() => {
+        void session.runSelected(
+          session.lastSelection ??
+            (initialSelection.length > 0 ? initialSelection : [session.tree.id])
+        );
+      });
       await app.waitUntilExit();
+      stopWatching();
       const status = session.runner?.root.status;
       process.exitCode =
         session.runner === undefined
@@ -343,13 +376,24 @@ addFilterOptions(
       session.on("runner", (runner) => {
         reporter = new ConsoleReporter(runner, { verbose: options.verbose });
       });
-      const status = await session.runSelected(filtered.selection);
-      reporter?.summary();
-      if (session.lastRecord) {
-        console.log(color(90, `run recorded in ${HISTORY_DIR}/runs/${session.lastRecord.id}`));
+      const runOnce = async (): Promise<void> => {
+        const status = await session.runSelected(filtered.selection);
+        if (status === undefined) return;
+        reporter?.summary();
+        if (session.lastRecord) {
+          console.log(color(90, `run recorded in ${HISTORY_DIR}/runs/${session.lastRecord.id}`));
+        }
+        process.exitCode =
+          session.runner!.interrupted ? 130 : status === "passed" || status === "skipped" ? 0 : 1;
+      };
+      await runOnce();
+      if (options.watch && !session.runner?.interrupted) {
+        startWatching(() => {
+          console.log(color(36, "\nchange detected, re-running..."));
+          void runOnce();
+        });
+        console.log(color(36, "watching for changes... (Ctrl+C to exit)"));
       }
-      process.exitCode =
-        session.runner!.interrupted ? 130 : status === "passed" || status === "skipped" ? 0 : 1;
     }
   });
 

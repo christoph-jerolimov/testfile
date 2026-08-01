@@ -19,6 +19,8 @@ export class Session extends EventEmitter {
   runner?: Runner;
   running = false;
   lastRecord?: RunRecord;
+  // The selection of the most recent run, e.g. for watch-mode re-runs.
+  lastSelection?: number[];
 
   constructor(
     readonly doc: TestfileDoc,
@@ -61,6 +63,7 @@ export class Session extends EventEmitter {
       }
     }
     if (active.size === 0) return undefined;
+    this.lastSelection = selectedIds;
 
     walk(this.tree, (node) => {
       if (active.has(node.id)) resetNode(node);
