@@ -6,7 +6,7 @@ import { resolvePorts } from "./ports.js";
 import { walk, type RunNode, type Status } from "./runtree.js";
 import { ServiceInstance } from "./services.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
-import { formatMs, parseDurationMs } from "./util.js";
+import { formatMs, parseDurationMs, sleep } from "./util.js";
 
 // Events: "update" (any state change), "node-start"/"node-end" (RunNode),
 // "service-added" (ServiceInstance).
@@ -163,7 +163,28 @@ export class Runner extends EventEmitter {
     this.emitUpdate();
   }
 
-  private runShell(node: RunNode, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
+  private async runShell(node: RunNode, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
+    const retry = node.def.retry;
+    const attempts = 1 + (typeof retry === "number" ? retry : (retry?.count ?? 0));
+    const delayMs = typeof retry === "object" ? parseDurationMs(retry.delay, 0) : 0;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      await this.runShellAttempt(node, scopes, cwd, signal);
+      if (node.status !== "failed" || signal.aborted || attempt === attempts) {
+        if (node.status === "failed" && attempts > 1 && node.error) {
+          node.error = `${node.error} (after ${attempt} attempts)`;
+        }
+        return;
+      }
+      node.output.system(
+        `attempt ${attempt}/${attempts} failed, retrying${delayMs > 0 ? ` in ${formatMs(delayMs)}` : ""}`
+      );
+      node.status = "running";
+      this.emitUpdate();
+      if (delayMs > 0) await sleep(delayMs, signal);
+    }
+  }
+
+  private runShellAttempt(node: RunNode, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
     const source = node.kind === "script" ? node.def.script! : node.def.command!;
     const resolved = resolveTemplate(source, scopes, `test "${node.name}"`);
     return new Promise((resolve, reject) => {

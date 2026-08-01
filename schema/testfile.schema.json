@@ -157,6 +157,31 @@
           "type": "boolean",
           "default": false
         },
+        "retry": {
+          "description": "Retry a failing command/script test. A plain integer is the number of additional attempts; the object form adds a delay between attempts.",
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["count"],
+              "properties": {
+                "count": {
+                  "description": "Number of additional attempts after the first failure.",
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "delay": {
+                  "description": "Wait between attempts. Default: none.",
+                  "$ref": "#/$defs/duration"
+                }
+              }
+            }
+          ]
+        },
         "services": {
           "description": "Services scoped to this subtree: started before this test runs, gracefully stopped when it finishes.",
           "$ref": "#/$defs/servicesMap"
@@ -204,6 +229,15 @@
       ],
       "dependentRequired": {
         "maxParallel": ["parallel"]
+      },
+      "dependentSchemas": {
+        "retry": {
+          "description": "retry only applies to command/script tests, not to groups.",
+          "anyOf": [
+            { "required": ["command"] },
+            { "required": ["script"] }
+          ]
+        }
       }
     },
     "servicesMap": {

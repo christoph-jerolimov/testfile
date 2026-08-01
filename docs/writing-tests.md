@@ -76,6 +76,26 @@ sequence:
     command: rm -rf tmp
 ```
 
+## Retries
+
+Flaky tests can be retried instead of failing the run:
+
+```yaml
+- name: flaky check
+  tags: [flaky]
+  retry: 2                 # up to 2 additional attempts
+  command: npm run test:flaky
+- name: careful check
+  retry:
+    count: 3
+    delay: 5s              # wait between attempts
+  command: npm run test:integration
+```
+
+`retry` only applies to `command`/`script` tests. The test passes as soon as
+one attempt passes and fails when the last attempt fails; each retry is
+noted in the test's log.
+
 ## Tags
 
 Tag tests with any labels made of letters and digits — `fast`/`slow`,

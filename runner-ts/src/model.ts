@@ -25,6 +25,7 @@ export interface TestDef {
   workdir?: string;
   timeout?: Duration;
   continueOnError?: boolean;
+  retry?: number | { count: number; delay?: Duration };
   services?: Record<string, ServiceDef>;
   matrix?: MatrixDef;
   command?: string;
