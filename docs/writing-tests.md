@@ -122,6 +122,28 @@ directory, keep their own `env` and `services` (scoped to the embedded
 subtree), and their named `ports` merge into the root file's ports.
 Includes nest; cycles and conflicting port definitions are rejected.
 
+## Result caching
+
+Declare what a test depends on, and unchanged inputs skip the test on the
+next run:
+
+```yaml
+- name: unit
+  inputs:
+    - src/**/*.ts
+    - package.json
+  command: npm run test:unit
+```
+
+The runner hashes the matched files' content together with the test's
+configuration; when nothing changed since the last **passing** run, the test
+is reported as passed with a `cached` marker instead of re-running.
+Failures are never cached, and any change to the files, the command, the
+env or the matrix combination re-runs the test. `testfile run --no-cache`
+forces execution (and refreshes the cache); combined with
+[watch mode](./cli#watch-mode) caching makes the edit-test loop touch only
+what actually changed.
+
 ## Artifacts
 
 Declare files a test produces — coverage, screenshots, reports — and the

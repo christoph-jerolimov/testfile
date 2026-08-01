@@ -17,6 +17,8 @@ export interface RunRecordTest {
   log?: string;
   // Collected artifact files, relative to the run's folder.
   artifacts?: string[];
+  // True when the result was reused from the cache (inputs unchanged).
+  cached?: boolean;
 }
 
 export interface RunRecord {
@@ -52,6 +54,7 @@ export interface RunLogInput {
   lines: OutputLine[];
   // Files to copy into the run's artifacts folder.
   artifacts?: { absolute: string; relative: string }[];
+  cached?: boolean;
 }
 
 export class RunHistory {
@@ -134,6 +137,7 @@ export class RunHistory {
     for (const test of tests) {
       const entry: RunRecordTest = { path: test.path, status: test.status };
       if (test.durationMs !== undefined) entry.durationMs = test.durationMs;
+      if (test.cached) entry.cached = true;
       if (test.lines.length > 0) {
         entry.log = join("tests", `${slugify(test.path)}.log`);
         writeFileSync(join(runDir, entry.log), renderLines(test.lines));

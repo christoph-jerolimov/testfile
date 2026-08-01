@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { globSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { ResultCache } from "./cache.js";
 import { maskSecrets } from "./envfile.js";
 import { Runner } from "./executor.js";
 import type { OutputLine } from "./output.js";
@@ -27,14 +28,17 @@ export class Session extends EventEmitter {
     readonly baseDir: string,
     // Defaults applied to every run started from this session (CLI flags
     // like --fail-fast / --max-parallel, honored by TUI-started runs too).
-    readonly runDefaults: { failFast?: boolean; maxParallel?: number } = {}
+    readonly runDefaults: { failFast?: boolean; maxParallel?: number; noCache?: boolean } = {}
   ) {
     super();
     validateSemantics(doc);
     this.tree = buildRunTree(doc);
     walk(this.tree, (node) => this.byId.set(node.id, node));
     this.history = new RunHistory(baseDir);
+    this.cache = new ResultCache(baseDir, !(runDefaults.noCache ?? false));
   }
+
+  readonly cache: ResultCache;
 
   // A selected node runs with its whole subtree; ancestors run as scaffolding
   // (their sequence/parallel semantics and services still apply).
@@ -72,6 +76,7 @@ export class Session extends EventEmitter {
       active,
       failFast: this.runDefaults.failFast,
       maxParallel: this.runDefaults.maxParallel,
+      cache: this.cache,
     });
     this.runner = runner;
     runner.on("update", () => this.emit("update"));
@@ -86,6 +91,7 @@ export class Session extends EventEmitter {
     } finally {
       this.running = false;
     }
+    this.cache.flush();
     this.persist(runner, active, selectedIds, status, startedAtMs, Date.now() - startedAtMs);
     this.emit("update");
     return status;
@@ -122,6 +128,7 @@ export class Session extends EventEmitter {
             : undefined,
         lines: mask(node.output.lines),
         artifacts: collectArtifacts(node),
+        cached: node.cached === true ? true : undefined,
       });
     });
     // A fully condition-skipped run counts as success: nothing failed.

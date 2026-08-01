@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { resolve as resolvePath } from "node:path";
+import { ResultCache } from "./cache.js";
 import { evaluateCondition } from "./condition.js";
 import { loadEnvFiles } from "./envfile.js";
 import type { HookDef, ServiceDef, TestfileDoc } from "./model.js";
@@ -20,6 +21,8 @@ export interface RunnerOptions {
   // Global cap on concurrently running command/script tests, across all
   // groups and matrix instances (group-level maxParallel still applies).
   maxParallel?: number;
+  // Result cache for tests declaring `inputs`.
+  cache?: ResultCache;
 }
 
 // A started service as seen by one test: releasing it stops the service, or
@@ -42,6 +45,7 @@ export class Runner extends EventEmitter {
 
   private readonly abort = new AbortController();
   private readonly failFast: boolean;
+  private readonly cache?: ResultCache;
   private readonly globalSlots?: Semaphore;
   // Running shared services, keyed by name + resolved configuration.
   private readonly sharedPool = new Map<
@@ -63,6 +67,7 @@ export class Runner extends EventEmitter {
     super();
     this.active = options.active;
     this.failFast = options.failFast ?? false;
+    this.cache = options.cache;
     if (options.maxParallel !== undefined) this.globalSlots = new Semaphore(options.maxParallel);
   }
 
@@ -151,6 +156,7 @@ export class Runner extends EventEmitter {
     // Assigned once the node's scopes exist; runs in finally so teardown
     // happens on success, failure and abort, before services stop.
     let teardown: (() => Promise<void>) | undefined;
+    let nodeCache: { key: string; hash: string } | undefined;
     try {
       if (node.isMatrixWrapper) {
         // The wrapper only fans out; env/services/workdir apply per instance.
@@ -193,6 +199,32 @@ export class Runner extends EventEmitter {
             merged[`TESTFILE_MATRIX_${key.toUpperCase()}`] = value;
           }
           nodeScopes = { ...withMatrix, env: merged };
+        }
+
+        if (
+          this.cache &&
+          node.def.inputs &&
+          (node.kind === "command" || node.kind === "script")
+        ) {
+          const source = resolveTemplate(node.def.script ?? node.def.command!, nodeScopes, where);
+          const key = ResultCache.configKey(
+            node.path,
+            source,
+            resolveEnvMap(node.def.env, withMatrix, where),
+            node.matrix
+          );
+          const hash = ResultCache.inputsHash(nodeCwd, node.def.inputs);
+          const entry = this.cache.get(key);
+          if (entry && entry.hash === hash) {
+            node.status = "passed";
+            node.cached = true;
+            node.output.system(`cached: inputs unchanged (last passed ${entry.savedAt})`);
+            node.endedAt = Date.now();
+            this.emit("node-end", node);
+            this.emitUpdate();
+            return;
+          }
+          nodeCache = { key, hash };
         }
 
         if (node.def.teardown) {
@@ -244,6 +276,15 @@ export class Runner extends EventEmitter {
       parentSignal.removeEventListener("abort", onParentAbort);
       if (teardown) await teardown();
       await this.stopServices(started);
+    }
+
+    if (nodeCache && this.cache) {
+      // only passing, actually-executed results are reusable
+      // (assertion: the body methods assign the final status out of
+      // TypeScript's narrowing sight)
+      const finalStatus = node.status as Status;
+      if (finalStatus === "passed") this.cache.put(nodeCache.key, nodeCache.hash);
+      else this.cache.invalidate(nodeCache.key);
     }
 
     node.endedAt = Date.now();

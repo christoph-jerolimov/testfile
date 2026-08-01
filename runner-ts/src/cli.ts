@@ -323,7 +323,8 @@ program
       const artifacts = test.artifacts?.length
         ? color(90, `  [${test.artifacts.length} artifact${test.artifacts.length === 1 ? "" : "s"}]`)
         : "";
-      console.log(`  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${log}${artifacts}`);
+      const cached = test.cached ? color(90, "  [cached]") : "";
+      console.log(`  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${log}${artifacts}${cached}`);
     }
     console.log(color(90, `\nlogs: testfile history --run ${run.id} --log [test-path]`));
   });
@@ -335,6 +336,7 @@ interface RunFlags extends FilterFlags {
   maxParallel?: number;
   dryRun: boolean;
   watch: boolean;
+  cache: boolean;
   reporter?: ReporterKind;
   output: string;
 }
@@ -354,6 +356,7 @@ addFilterOptions(
     )
     .option("--dry-run", "print what would run (with filters applied) without running", false)
     .option("-w, --watch", "re-run the selection when files change", false)
+    .option("--no-cache", "ignore cached results (fresh results still refresh the cache)")
     .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
     .option("--output <file>", 'report target file, or "-" for stdout', "-")
     .description("Run the test tree")
@@ -372,6 +375,7 @@ addFilterOptions(
       session = new Session(doc, dirname(file), {
         failFast: options.failFast,
         maxParallel: options.maxParallel,
+        noCache: !options.cache,
       });
       filtered = resolveFilters(session, options);
       if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
