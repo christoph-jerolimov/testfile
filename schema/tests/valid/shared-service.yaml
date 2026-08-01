@@ -1,0 +1,21 @@
+# One postgres shared by all matrix instances; per-version containers when
+# the matrix variable appears in the config.
+version: 1
+ports:
+  db: random
+test:
+  name: integration
+  matrix:
+    node: ["20", "22"]
+  services:
+    postgres:
+      shared: true
+      container:
+        image: docker.io/library/postgres:16
+        ports:
+          - "${{ ports.db }}:5432"
+        env:
+          POSTGRES_PASSWORD: test
+      ready:
+        log: ready to accept connections
+  command: npm run test:integration

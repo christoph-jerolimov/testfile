@@ -56,6 +56,32 @@ function waitExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
   });
 }
 
+// Identity of a service's fully resolved configuration. Shared services with
+// the same name and key reuse one running instance; a config that differs
+// (e.g. a matrix variable in the image) yields a different key.
+export function sharedServiceKey(def: ServiceDef, scopes: Scopes, cwd: string): string {
+  const where = "shared service";
+  const opt = (value?: string): string | undefined =>
+    value === undefined ? undefined : resolveTemplate(value, scopes, where);
+  const container = def.container;
+  return JSON.stringify({
+    cwd: def.workdir ? resolvePath(cwd, opt(def.workdir)!) : cwd,
+    command: opt(def.command),
+    script: opt(def.script),
+    env: resolveEnvMap(def.env, scopes, where),
+    container: container
+      ? {
+          image: resolveTemplate(container.image, scopes, where),
+          engine: container.engine,
+          ports: (container.ports ?? []).map((p) => resolveTemplate(p, scopes, where)),
+          env: resolveEnvMap(container.env, scopes, where),
+          volumes: (container.volumes ?? []).map((v) => resolveTemplate(v, scopes, where)),
+          command: (container.command ?? []).map((a) => resolveTemplate(a, scopes, where)),
+        }
+      : undefined,
+  });
+}
+
 // One running service: a local process or a container. Emits "update" on
 // status changes.
 export class ServiceInstance extends EventEmitter {

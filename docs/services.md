@@ -49,6 +49,29 @@ test:
 
 A service runs either a local `command`/`script` or a `container`.
 
+## Sharing services
+
+By default every test (and every matrix instance) starts its own copy of the
+services it declares. With `shared: true` a single instance is reused by all
+tests whose *resolved* configuration is identical:
+
+```yaml
+test:
+  matrix:
+    node: ["20", "22"]
+  services:
+    postgres:
+      shared: true              # one postgres for both node versions
+      container:
+        image: docker.io/library/postgres:16
+        ports: ["${{ ports.db }}:5432"]
+```
+
+The service starts with the first test that needs it and stops after the
+last one finished. If the configuration depends on a matrix variable (say,
+`image: postgres:${{ matrix.postgres }}`), each distinct configuration still
+gets its own instance — sharing only kicks in where it is safe.
+
 ## Containers
 
 ```yaml

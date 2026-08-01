@@ -6,7 +6,7 @@ import { loadEnvFiles } from "./envfile.js";
 import type { HookDef, ServiceDef, TestfileDoc } from "./model.js";
 import { resolvePorts } from "./ports.js";
 import { walk, type RunNode, type Status } from "./runtree.js";
-import { ServiceInstance } from "./services.js";
+import { ServiceInstance, sharedServiceKey } from "./services.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
 import { formatMs, parseDurationMs, sleep } from "./util.js";
 
@@ -20,6 +20,13 @@ export interface RunnerOptions {
   // Global cap on concurrently running command/script tests, across all
   // groups and matrix instances (group-level maxParallel still applies).
   maxParallel?: number;
+}
+
+// A started service as seen by one test: releasing it stops the service, or
+// - for shared services - decrements the reference count.
+interface ServiceHandle {
+  instance: ServiceInstance;
+  release: () => Promise<void>;
 }
 
 export class Runner extends EventEmitter {
@@ -36,6 +43,16 @@ export class Runner extends EventEmitter {
   private readonly abort = new AbortController();
   private readonly failFast: boolean;
   private readonly globalSlots?: Semaphore;
+  // Running shared services, keyed by name + resolved configuration.
+  private readonly sharedPool = new Map<
+    string,
+    {
+      instance: ServiceInstance;
+      refs: number;
+      controllers: Set<AbortController>;
+      started: Promise<void>;
+    }
+  >();
 
   constructor(
     readonly doc: TestfileDoc,
@@ -80,7 +97,7 @@ export class Runner extends EventEmitter {
     // Platform facts for `if` conditions, e.g. ${{ env.TESTFILE_OS }} == linux.
     baseEnv.TESTFILE_OS = process.platform;
     baseEnv.TESTFILE_ARCH = process.arch;
-    const started: ServiceInstance[] = [];
+    const started: ServiceHandle[] = [];
     try {
       this.ports = await resolvePorts(this.doc.ports);
       const bootstrap: Scopes = { env: baseEnv, ports: this.ports, matrix: {} };
@@ -130,7 +147,7 @@ export class Runner extends EventEmitter {
       }, ms);
     }
 
-    const started: ServiceInstance[] = [];
+    const started: ServiceHandle[] = [];
     // Assigned once the node's scopes exist; runs in finally so teardown
     // happens on success, failure and abort, before services stop.
     let teardown: (() => Promise<void>) | undefined;
@@ -491,29 +508,84 @@ export class Runner extends EventEmitter {
     defs: Record<string, ServiceDef> | undefined,
     scopes: Scopes,
     cwd: string,
-    sink: ServiceInstance[],
+    sink: ServiceHandle[],
     controller: AbortController,
     owner = "Testfile"
   ): Promise<void> {
     const entries = Object.entries(defs ?? {});
     if (entries.length === 0) return;
-    const instances = entries.map(([name, def]) => new ServiceInstance(name, def));
-    for (const instance of instances) {
-      instance.owner = owner;
-      // A service dying while its tests run aborts the dependent subtree.
-      instance.onUnexpectedExit = () => controller.abort();
-      instance.on("update", () => this.emitUpdate());
-      this.services.push(instance);
-      sink.push(instance);
-      this.emit("service-added", instance);
+    const waits: Promise<void>[] = [];
+    for (const [name, def] of entries) {
+      if (def.shared) {
+        waits.push(this.acquireShared(name, def, scopes, cwd, sink, controller, owner));
+      } else {
+        const instance = this.registerInstance(name, def, owner);
+        // A service dying while its tests run aborts the dependent subtree.
+        instance.onUnexpectedExit = () => controller.abort();
+        sink.push({ instance, release: () => instance.stop().catch(() => {}) });
+        waits.push(instance.start(scopes, cwd, controller.signal));
+      }
     }
     this.emitUpdate();
-    await Promise.all(instances.map((instance) => instance.start(scopes, cwd, controller.signal)));
+    await Promise.all(waits);
   }
 
-  private async stopServices(started: ServiceInstance[]): Promise<void> {
-    for (const service of [...started].reverse()) {
-      await service.stop().catch(() => {});
+  // Shared services: one running instance per name + resolved configuration,
+  // reference-counted across all tests that declare it.
+  private acquireShared(
+    name: string,
+    def: ServiceDef,
+    scopes: Scopes,
+    cwd: string,
+    sink: ServiceHandle[],
+    controller: AbortController,
+    owner: string
+  ): Promise<void> {
+    const key = `${name} ${sharedServiceKey(def, scopes, cwd)}`;
+    let entry = this.sharedPool.get(key);
+    if (!entry) {
+      const instance = this.registerInstance(name, def, `${owner}, shared`);
+      const controllers = new Set<AbortController>();
+      instance.onUnexpectedExit = () => {
+        for (const c of controllers) c.abort();
+      };
+      entry = {
+        instance,
+        refs: 0,
+        controllers,
+        started: instance.start(scopes, cwd, controller.signal),
+      };
+      this.sharedPool.set(key, entry);
+    }
+    const acquired = entry;
+    acquired.refs++;
+    acquired.controllers.add(controller);
+    sink.push({
+      instance: acquired.instance,
+      release: async () => {
+        acquired.controllers.delete(controller);
+        acquired.refs--;
+        if (acquired.refs === 0) {
+          this.sharedPool.delete(key);
+          await acquired.instance.stop().catch(() => {});
+        }
+      },
+    });
+    return acquired.started;
+  }
+
+  private registerInstance(name: string, def: ServiceDef, owner: string): ServiceInstance {
+    const instance = new ServiceInstance(name, def);
+    instance.owner = owner;
+    instance.on("update", () => this.emitUpdate());
+    this.services.push(instance);
+    this.emit("service-added", instance);
+    return instance;
+  }
+
+  private async stopServices(started: ServiceHandle[]): Promise<void> {
+    for (const handle of [...started].reverse()) {
+      await handle.release();
     }
   }
 

@@ -54,6 +54,7 @@ export interface HookDef {
 
 export interface ServiceDef {
   description?: string;
+  shared?: boolean;
   env?: EnvMap;
   workdir?: string;
   command?: string;

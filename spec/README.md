@@ -241,6 +241,15 @@ map are started concurrently; tests only start after **all** of their services
 start order. Service names are also visible in the TUI so the user can switch
 to their output.
 
+A service with `shared: true` is started once per **resolved
+configuration** (name plus command/script/container, env, workdir after
+template resolution) and reference-counted: matrix instances or parallel
+tests whose resolved config is identical reuse the running instance, which
+stops after the last of them finished. Configs that differ — e.g. a matrix
+variable in the image or env — still get their own instance. A shared
+service sees the environment of the test that started it; if it dies
+unexpectedly, all tests depending on it are aborted.
+
 If a service exits by itself while dependent tests are still running, the
 runner marks the service as failed and aborts the dependent subtree.
 
