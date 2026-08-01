@@ -1,12 +1,12 @@
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { parse, stringify } from "yaml";
 import type { OutputLine } from "./output.js";
 import type { Status } from "./runtree.js";
 
-// Runs are persisted next to the Testfile in this folder. It contains
-// runs.yaml (the index of recent runs) and runs/<id>/ with the merged
-// stdout+stderr logs. The folder ignores itself via an own .gitignore.
+// Runs are persisted next to the Testfile in this folder: one self-contained
+// runs/<id>/ folder per run, holding run.yaml (the run's record) and the
+// merged stdout+stderr logs. The folder ignores itself via an own .gitignore.
 export const HISTORY_DIR = ".testfile";
 
 export interface RunRecordTest {
@@ -63,14 +63,55 @@ export class RunHistory {
 
   constructor(baseDir: string, private readonly keep = 50) {
     this.dir = join(baseDir, HISTORY_DIR);
+    this.migrateLegacyIndex();
+    this.index = this.load();
+  }
+
+  // Earlier versions kept one runs.yaml index for all runs; each entry now
+  // becomes a run.yaml inside its run folder (created if it was pruned).
+  private migrateLegacyIndex(): void {
+    const legacy = join(this.dir, "runs.yaml");
+    if (!existsSync(legacy)) return;
     try {
-      const parsed = parse(readFileSync(join(this.dir, "runs.yaml"), "utf8")) as {
-        runs?: RunRecord[];
-      } | null;
-      if (parsed && Array.isArray(parsed.runs)) this.index = parsed.runs;
+      const parsed = parse(readFileSync(legacy, "utf8")) as { runs?: RunRecord[] } | null;
+      for (const run of parsed?.runs ?? []) {
+        if (!run?.id) continue;
+        const file = join(this.dir, "runs", run.id, "run.yaml");
+        if (existsSync(file)) continue;
+        mkdirSync(dirname(file), { recursive: true });
+        writeFileSync(file, stringify(run));
+      }
+      rmSync(legacy);
     } catch {
-      // no history yet
+      // an unreadable legacy index is not worth failing for
     }
+  }
+
+  // Scans runs/<id>/run.yaml; unreadable entries are skipped. Newest first.
+  private load(): RunRecord[] {
+    const runs: RunRecord[] = [];
+    let entries: string[];
+    try {
+      entries = readdirSync(join(this.dir, "runs"), { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name);
+    } catch {
+      return runs; // no history yet
+    }
+    for (const id of entries) {
+      try {
+        const record = parse(readFileSync(join(this.dir, "runs", id, "run.yaml"), "utf8")) as
+          | RunRecord
+          | null;
+        if (record && typeof record === "object" && Array.isArray(record.tests)) {
+          runs.push({ ...record, id: record.id ?? id });
+        }
+      } catch {
+        // a run folder without a (readable) run.yaml is not a run
+      }
+    }
+    // Run ids start with their UTC timestamp, so they sort chronologically.
+    return runs.sort((a, b) => b.id.localeCompare(a.id));
   }
 
   // Newest first.
@@ -166,12 +207,12 @@ export class RunHistory {
       if (service.lines.length > 0) merged.push(renderLines(service.lines).trimEnd());
     }
     writeFileSync(join(runDir, "output.log"), `${merged.join("\n")}\n`);
+    writeFileSync(join(runDir, "run.yaml"), stringify(record));
 
     this.index.unshift(record);
     for (const pruned of this.index.splice(this.keep)) {
       rmSync(join(this.dir, "runs", pruned.id), { recursive: true, force: true });
     }
-    writeFileSync(join(this.dir, "runs.yaml"), stringify({ runs: this.index }));
     return record;
   }
 }

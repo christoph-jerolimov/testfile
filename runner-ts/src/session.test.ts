@@ -27,15 +27,15 @@ const doc: TestfileDoc = {
   },
 };
 
-test("a run is persisted with index, env, per-test logs and merged output", async () => {
+test("a run is persisted with its own run.yaml, env, per-test logs and merged output", async () => {
   const dir = tempDir();
   const session = new Session(doc, dir);
   const status = await session.runAll();
   assert.equal(status, "passed");
 
-  const index = parse(readFileSync(join(dir, ".testfile", "runs.yaml"), "utf8"));
-  assert.equal(index.runs.length, 1);
-  const run = index.runs[0];
+  const runId = session.lastRecord!.id;
+  const run = parse(readFileSync(join(dir, ".testfile", "runs", runId, "run.yaml"), "utf8"));
+  assert.equal(run.id, runId);
   assert.equal(run.status, "passed");
   assert.equal(run.exitCode, 0);
   assert.equal(run.cancelled, false);

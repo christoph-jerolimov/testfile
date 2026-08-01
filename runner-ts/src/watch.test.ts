@@ -4,7 +4,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { isIgnoredPath, WatchScheduler } from "./watch.js";
 
 test("isIgnoredPath ignores history, git and node_modules paths", () => {
-  assert.equal(isIgnoredPath(".testfile/runs.yaml"), true);
+  assert.equal(isIgnoredPath(".testfile/runs/20260801-1/run.yaml"), true);
   assert.equal(isIgnoredPath("node_modules/pkg/index.js"), true);
   assert.equal(isIgnoredPath(".git/HEAD"), true);
   assert.equal(isIgnoredPath("src/deep/node_modules/x"), true);

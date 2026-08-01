@@ -6,7 +6,7 @@
 //
 //   node annotate.mjs <tested-path>
 import { createRequire } from "node:module";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,11 +17,29 @@ const { parse } = require("yaml");
 
 const target = resolve(process.argv[2] ?? ".");
 const baseDir = existsSync(target) && statSync(target).isFile() ? dirname(target) : target;
-const indexFile = join(baseDir, ".testfile", "runs.yaml");
-if (!existsSync(indexFile)) process.exit(0);
 
-const index = parse(readFileSync(indexFile, "utf8"));
-const run = index?.runs?.[0];
+// Each run is self-contained in .testfile/runs/<id>/ with its own run.yaml;
+// ids start with their UTC timestamp, so the newest run has the largest id.
+const runsDir = join(baseDir, ".testfile", "runs");
+let runIds = [];
+try {
+  runIds = readdirSync(runsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort()
+    .reverse();
+} catch {
+  process.exit(0); // no recorded runs (e.g. the Testfile failed validation)
+}
+let run;
+for (const id of runIds) {
+  try {
+    run = parse(readFileSync(join(runsDir, id, "run.yaml"), "utf8"));
+    if (run) break;
+  } catch {
+    // a run folder without a readable run.yaml is not a run
+  }
+}
 if (!run) process.exit(0);
 
 // %, CR and LF must be escaped in workflow command data

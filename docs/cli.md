@@ -58,8 +58,8 @@ testfile run --reporter json           # ... or to stdout
 
 The JUnit XML contains one `<testcase>` per executed test (group path as
 classname) with `<failure>` elements carrying the merged log and
-`<skipped/>` markers; the JSON report is the same record that `runs.yaml`
-stores. In watch mode the report is rewritten after every re-run; with
+`<skipped/>` markers; the JSON report is the same record that the run's
+`run.yaml` stores. In watch mode the report is rewritten after every re-run; with
 `--tui` it is written when the TUI exits.
 
 ## Watch mode
@@ -215,21 +215,25 @@ including the readiness and stop behavior. `r` restarts a running service.
 ## Run history
 
 Every run — CLI and TUI alike — is recorded in a `.testfile/` folder next to
-the Testfile (the folder ignores itself via a generated `.gitignore`):
+the Testfile (the folder ignores itself via a generated `.gitignore`). Each
+run is a self-contained folder:
 
 ```
 .testfile/
-  runs.yaml            # index of the most recent runs (newest first)
   runs/<run-id>/
+    run.yaml           # the run's record
     output.log         # merged stdout+stderr of the whole run
     tests/<test>.log   # merged stdout+stderr per test
 ```
 
-`runs.yaml` stores for each run: start time, duration, status
+`run.yaml` stores the run's start time, duration, status
 (passed/failed/aborted), exit code, whether it was cancelled, the env
 variables and ports provided by the Testfile, which tests were selected, and
-the status/duration/log of every test that ran. The last 50 runs are kept;
-older run folders are pruned automatically.
+the status/duration/log of every test that ran. Run ids start with the run's
+UTC timestamp, so folders sort chronologically; the last 50 runs are kept
+and older run folders are pruned automatically. (Histories written by older
+runners as one `runs.yaml` index are migrated to per-run files on first
+use.)
 
 Browse the history from the command line:
 

@@ -177,7 +177,7 @@ test fails:
 
 Patterns are globs relative to the test's working directory. Collected
 files land in `.testfile/runs/<id>/artifacts/<test>/...` and are listed in
-`runs.yaml` and in `testfile history --run <id>`.
+the run's `run.yaml` and in `testfile history --run <id>`.
 
 ## Setup and teardown
 

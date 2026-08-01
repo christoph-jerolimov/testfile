@@ -54,7 +54,7 @@ Files use the usual dotenv format (`KEY=VALUE`, `#` comments, optional
 
 Values loaded from env files are treated as **secrets**: they are masked as
 `***` in the logs recorded under `.testfile/` and never written into
-`runs.yaml` — so tokens and passwords don't end up in your run history.
+the recorded `run.yaml` — so tokens and passwords don't end up in your run history.
 
 ## Named ports
 

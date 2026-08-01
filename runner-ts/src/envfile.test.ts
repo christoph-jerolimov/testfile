@@ -65,8 +65,11 @@ test("envFile values reach tests, explicit env wins, logs are masked", async () 
   assert.ok(!log.includes("supersecretvalue"));
   // the record's env only contains explicit doc env
   assert.deepEqual(latest.run.env, { OVERRIDDEN: "explicit" });
-  const runsYaml = readFileSync(join(dir, ".testfile", "runs.yaml"), "utf8");
-  assert.ok(!runsYaml.includes("supersecretvalue"));
+  const runYaml = readFileSync(
+    join(dir, ".testfile", "runs", latest.run.id, "run.yaml"),
+    "utf8"
+  );
+  assert.ok(!runYaml.includes("supersecretvalue"));
 });
 
 test("test-level envFile resolves relative to the test workdir", async () => {
