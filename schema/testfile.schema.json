@@ -426,12 +426,13 @@
     },
     "ready": {
       "type": "object",
-      "description": "How the runner detects that a service is ready. At least one of 'http', 'tcp' or 'log' must be set. Checks are polled until they succeed or 'timeout' is reached.",
+      "description": "How the runner detects that a service is ready. At least one of 'http', 'tcp', 'log' or 'exec' must be set. Checks are polled until they succeed or 'timeout' is reached.",
       "additionalProperties": false,
       "anyOf": [
         { "required": ["http"] },
         { "required": ["tcp"] },
-        { "required": ["log"] }
+        { "required": ["log"] },
+        { "required": ["exec"] }
       ],
       "properties": {
         "http": {
@@ -481,6 +482,26 @@
                 },
                 "port": {
                   "type": ["integer", "string"]
+                }
+              }
+            }
+          ]
+        },
+        "exec": {
+          "description": "Ready when this shell command exits with code 0, e.g. pg_isready or redis-cli ping. Runs in the service's environment and working directory.",
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["command"],
+              "properties": {
+                "command": {
+                  "type": "string",
+                  "minLength": 1
                 }
               }
             }

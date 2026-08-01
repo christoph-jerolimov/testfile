@@ -126,6 +126,40 @@ test("services start, become ready via log match, and are stopped", async () => 
   assert.equal(runner.services[0].status, "stopped");
 });
 
+test("an exec readiness check polls a command until it exits 0", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-exec-ready-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const runner = makeRunner({
+    version: 1,
+    env: { DIR: dir },
+    services: {
+      slowstart: {
+        // the flag appears only after 300ms; exec-ready must wait for it
+        script: 'sleep 0.3\ntouch "$DIR/up"\nsleep 30',
+        ready: { exec: 'test -f "$DIR/up"', interval: "100ms", timeout: "5s" },
+      },
+    },
+    test: { command: 'test -f "$DIR/up"' },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.equal(runner.services[0].status, "stopped");
+});
+
+test("an exec check that never succeeds fails the run at the timeout", async () => {
+  const runner = makeRunner({
+    version: 1,
+    services: {
+      never: {
+        script: "sleep 30",
+        ready: { exec: "false", interval: "100ms", timeout: "500ms" },
+      },
+    },
+    test: { command: "true" },
+  });
+  assert.equal(await runner.run(), "failed");
+  assert.match(runner.services[0].error ?? "", /not ready/);
+});
+
 test("a service that dies before readiness fails the run", async () => {
   const runner = makeRunner({
     version: 1,

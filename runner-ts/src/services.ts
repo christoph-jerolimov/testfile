@@ -101,6 +101,7 @@ export class ServiceInstance extends EventEmitter {
         scopes: myScopes,
         signal,
         where,
+        cwd: this.cwd,
         isRunning: () => !this.exited,
       });
       if (this.status === "starting") this.setStatus("ready");
