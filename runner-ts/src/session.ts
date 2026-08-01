@@ -22,7 +22,10 @@ export class Session extends EventEmitter {
 
   constructor(
     readonly doc: TestfileDoc,
-    readonly baseDir: string
+    readonly baseDir: string,
+    // Defaults applied to every run started from this session (CLI flags
+    // like --fail-fast / --max-parallel, honored by TUI-started runs too).
+    readonly runDefaults: { failFast?: boolean; maxParallel?: number } = {}
   ) {
     super();
     validateSemantics(doc);
@@ -62,7 +65,11 @@ export class Session extends EventEmitter {
     walk(this.tree, (node) => {
       if (active.has(node.id)) resetNode(node);
     });
-    const runner = new Runner(this.doc, this.tree, this.baseDir, { active });
+    const runner = new Runner(this.doc, this.tree, this.baseDir, {
+      active,
+      failFast: this.runDefaults.failFast,
+      maxParallel: this.runDefaults.maxParallel,
+    });
     this.runner = runner;
     runner.on("update", () => this.emit("update"));
     this.emit("runner", runner);

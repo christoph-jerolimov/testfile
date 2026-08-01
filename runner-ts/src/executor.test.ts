@@ -7,8 +7,8 @@ import { Runner } from "./executor.js";
 import type { TestfileDoc } from "./model.js";
 import { buildRunTree, type RunNode } from "./runtree.js";
 
-function makeRunner(doc: TestfileDoc): Runner {
-  return new Runner(doc, buildRunTree(doc), process.cwd());
+function makeRunner(doc: TestfileDoc, options: ConstructorParameters<typeof Runner>[3] = {}): Runner {
+  return new Runner(doc, buildRunTree(doc), process.cwd(), options);
 }
 
 test("a passing command", async () => {
@@ -293,6 +293,48 @@ test("retry does not re-run a passing command", async () => {
   });
   assert.equal(await runner.run(), "passed");
   assert.equal(runner.root.output.lines.filter((l) => l.text.includes("retrying")).length, 0);
+});
+
+test("failFast aborts the rest of the run at the first failure", async () => {
+  const runner = makeRunner(
+    {
+      version: 1,
+      test: {
+        parallel: [
+          { name: "fails-quickly", command: "false" },
+          { name: "slow", script: "sleep 5" },
+          { name: "queued", needs: ["slow"], command: "true" },
+        ],
+      },
+    },
+    { failFast: true }
+  );
+  const startedAt = Date.now();
+  assert.equal(await runner.run(), "failed");
+  assert.ok(Date.now() - startedAt < 4000, "slow sibling must be aborted, not awaited");
+  const byName = new Map(runner.root.children.map((c: RunNode) => [c.name, c]));
+  assert.equal(byName.get("fails-quickly")!.status, "failed");
+  assert.equal(byName.get("slow")!.status, "aborted");
+  assert.equal(runner.interrupted, false, "fail-fast is not an interrupt");
+});
+
+test("a global maxParallel caps concurrency across groups", async () => {
+  const runner = makeRunner(
+    {
+      version: 1,
+      test: {
+        parallel: [
+          { name: "a", script: "sleep 0.3" },
+          { name: "b", script: "sleep 0.3" },
+          { name: "c", script: "sleep 0.3" },
+        ],
+      },
+    },
+    { maxParallel: 1 }
+  );
+  const startedAt = Date.now();
+  assert.equal(await runner.run(), "passed");
+  assert.ok(Date.now() - startedAt >= 850, "three 300ms sleeps with maxParallel 1 must serialize");
 });
 
 test("setup runs before the body and teardown after it", async () => {
