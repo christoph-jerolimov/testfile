@@ -10,9 +10,11 @@ import { Session } from "./session.js";
 import {
   describeRun,
   failedLeafIds,
+  findMatches,
   logWindow,
   runListLabel,
   runningFocus,
+  scrollToLine,
   visibleNodes,
 } from "./tui-model.js";
 
@@ -110,6 +112,21 @@ test("describeRun and runListLabel render a recorded run", async () => {
   const label = runListLabel(run);
   assert.match(label, /passed/);
   assert.match(label, /\d+ failed/);
+});
+
+test("findMatches and scrollToLine locate lines in a log", () => {
+  const lines = [
+    { text: "starting", stream: "system" as const },
+    { text: "Error: boom", stream: "stderr" as const },
+    { text: "retrying", stream: "stdout" as const },
+    { text: "error again", stream: "stdout" as const },
+  ];
+  assert.deepEqual(findMatches(lines, "error"), [1, 3]);
+  assert.deepEqual(findMatches(lines, "nope"), []);
+  assert.deepEqual(findMatches(lines, ""), []);
+  // centering: 100 lines, window of 10, line 50 -> ~45 lines below it remain
+  assert.equal(scrollToLine(100, 10, 50), 45);
+  assert.equal(scrollToLine(100, 10, 99), 0, "matches near the tail clamp to 0");
 });
 
 test("logWindow follows the tail and scrolls back with clamping", () => {

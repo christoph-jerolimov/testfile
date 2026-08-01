@@ -8,9 +8,11 @@ import type { Session } from "./session.js";
 import {
   describeRun,
   failedLeafIds,
+  findMatches,
   logWindow,
   runListLabel,
   runningFocus,
+  scrollToLine,
   visibleNodes,
 } from "./tui-model.js";
 import { formatMs } from "./util.js";
@@ -74,6 +76,11 @@ export function App({
   const [historyCursor, setHistoryCursor] = useState(0);
   const [historyLog, setHistoryLog] = useState(false);
   const runLogs = useRef(new Map<string, OutputLine[]>());
+  // Log pane: wrap toggle and in-log search with match navigation.
+  const [wrap, setWrap] = useState(false);
+  const [logSearchInput, setLogSearchInput] = useState(false);
+  const [logQuery, setLogQuery] = useState("");
+  const [matchPos, setMatchPos] = useState(0);
   // Logs of previous runs, loaded lazily per test path (null = no log found).
   const previousLogs = useRef(new Map<string, PaneContent | null>());
   const lastRecordId = useRef<string | undefined>(undefined);
@@ -142,7 +149,84 @@ export function App({
     setLogScroll(0);
   };
 
+  const height = (stdout?.rows ?? 30) - 2;
+  const outputHeight = Math.max(5, height - 4);
+  const historyRuns = session.history.runs;
+  const historyIndex = Math.min(historyCursor, Math.max(0, historyRuns.length - 1));
+  const selectedRun = historyMode ? historyRuns[historyIndex] : undefined;
+  const pane = selectedRun
+    ? historyLog
+      ? { title: `run ${selectedRun.id}`, note: "merged log", lines: loadRunLog(session, selectedRun, runLogs.current) }
+      : { title: `run ${selectedRun.id}`, note: "details — enter for the log", lines: describeRun(selectedRun) }
+    : paneContent(current, session, previousLogs.current);
+  const logMatches = findMatches(pane.lines, logQuery);
+  const matchIndex = Math.min(matchPos, Math.max(0, logMatches.length - 1));
+  const currentMatchLine = logMatches.length > 0 ? logMatches[matchIndex] : undefined;
+
+  const jumpToMatch = (position: number): void => {
+    setMatchPos(position);
+    const line = logMatches[position];
+    if (line !== undefined) setLogScroll(scrollToLine(pane.lines.length, outputHeight, line));
+  };
+
   useInput((input, key) => {
+    if (logSearchInput) {
+      if (key.escape) {
+        setLogQuery("");
+        setLogSearchInput(false);
+      } else if (key.return) {
+        setLogSearchInput(false);
+        const matches = findMatches(pane.lines, logQuery);
+        if (matches.length === 0) {
+          setMessage(logQuery === "" ? undefined : "no match in the log");
+          setLogQuery("");
+        } else {
+          setMatchPos(matches.length - 1);
+          setLogScroll(scrollToLine(pane.lines.length, outputHeight, matches[matches.length - 1]));
+        }
+      } else if (key.backspace || key.delete) {
+        setLogQuery((q) => q.slice(0, -1));
+      } else if (input && !key.ctrl && !key.meta) {
+        setLogQuery((q) => q + input);
+      }
+      return;
+    }
+    if (searchInput) {
+      if (key.escape) {
+        setQuery("");
+        setSearchInput(false);
+      } else if (key.return) {
+        setSearchInput(false);
+      } else if (key.backspace || key.delete) {
+        setQuery((q) => q.slice(0, -1));
+      } else if (input && !key.ctrl && !key.meta) {
+        setQuery((q) => q + input);
+      }
+      setCursor(0);
+      return;
+    }
+    if (input === "?") {
+      setLogSearchInput(true);
+      setLogQuery("");
+      return;
+    }
+    if (input === "w") {
+      setWrap((v) => !v);
+      return;
+    }
+    if (logQuery !== "" && input === "n") {
+      jumpToMatch(Math.max(0, matchIndex - 1));
+      return;
+    }
+    if (logQuery !== "" && input === "N") {
+      jumpToMatch(Math.min(logMatches.length - 1, matchIndex + 1));
+      return;
+    }
+    if (logQuery !== "" && key.escape) {
+      setLogQuery("");
+      return;
+    }
+
     if (historyMode) {
       const runs = session.history.runs;
       if (key.upArrow || input === "k") {
@@ -161,21 +245,6 @@ export function App({
       }
       if (key.escape || input === "H") setHistoryMode(false);
       if (input === "q" || (key.ctrl && input === "c")) exit();
-      return;
-    }
-
-    if (searchInput) {
-      if (key.escape) {
-        setQuery("");
-        setSearchInput(false);
-      } else if (key.return) {
-        setSearchInput(false);
-      } else if (key.backspace || key.delete) {
-        setQuery((q) => q.slice(0, -1));
-      } else if (input && !key.ctrl && !key.meta) {
-        setQuery((q) => q + input);
-      }
-      setCursor(0);
       return;
     }
 
@@ -282,16 +351,6 @@ export function App({
     }
   });
 
-  const height = (stdout?.rows ?? 30) - 2;
-  const outputHeight = Math.max(5, height - 4);
-  const historyRuns = session.history.runs;
-  const historyIndex = Math.min(historyCursor, Math.max(0, historyRuns.length - 1));
-  const selectedRun = historyMode ? historyRuns[historyIndex] : undefined;
-  const pane = selectedRun
-    ? historyLog
-      ? { title: `run ${selectedRun.id}`, note: "merged log", lines: loadRunLog(session, selectedRun, runLogs.current) }
-      : { title: `run ${selectedRun.id}`, note: "details — enter for the log", lines: describeRun(selectedRun) }
-    : paneContent(current, session, previousLogs.current);
   const { window: tail, above } = logWindow(pane.lines, outputHeight, logScroll);
 
   return (
@@ -377,12 +436,20 @@ export function App({
           <Text bold wrap="truncate">
             {pane.title}
             {pane.note ? <Text dimColor> — {pane.note}</Text> : null}
+            {logQuery !== "" || logSearchInput ? (
+              <Text color="magenta">
+                {" "}
+                ?{logQuery}
+                {logMatches.length > 0 ? ` ${matchIndex + 1}/${logMatches.length}` : ""}
+              </Text>
+            ) : null}
             {above > 0 ? <Text color="magenta"> ↑{above} more</Text> : null}
           </Text>
           {tail.map((line, i) => (
             <Text
               key={i}
-              wrap="truncate"
+              wrap={wrap ? "wrap" : "truncate"}
+              inverse={above + i === currentMatchLine}
               color={line.stream === "stderr" ? "yellow" : line.stream === "system" ? "cyan" : undefined}
               dimColor={line.stream === "system"}
             >
@@ -404,12 +471,14 @@ export function App({
         {message ? <Text color="magenta"> · {message}</Text> : null}
       </Text>
       <Text dimColor>
-        {historyMode
-          ? "↑/↓ select run · enter log/details · u/d scroll · esc back · q quit"
-          : searchInput
-            ? "type to search · enter keep · esc clear"
-            : "space select · a all · c children · f failed · enter run · / search · ←/→ fold · u/d scroll · r restart svc · H history · " +
-              (session.running ? (stopRequested ? "q force stop" : "q stop") : "q quit")}
+        {logSearchInput
+          ? "type to search the log · enter jump · esc cancel"
+          : historyMode
+            ? "↑/↓ select run · enter log/details · ? log search · w wrap · u/d scroll · esc back · q quit"
+            : searchInput
+              ? "type to search · enter keep · esc clear"
+              : "space select · a all · c children · f failed · enter run · / tree · ? log · n/N match · w wrap · ←/→ fold · u/d scroll · r restart svc · H history · " +
+                (session.running ? (stopRequested ? "q force stop" : "q stop") : "q quit")}
         {stopRequested && session.running ? " · stopping gracefully..." : ""}
       </Text>
     </Box>

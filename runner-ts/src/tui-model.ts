@@ -104,6 +104,22 @@ export function runListLabel(run: RunRecord): string {
   return `${run.startedAt.replace("T", " ").slice(0, 19)}  ${run.status}  ${summary}`;
 }
 
+// Indices of log lines containing the query, case-insensitively.
+export function findMatches(lines: readonly OutputLine[], query: string): number[] {
+  if (query === "") return [];
+  const q = query.toLowerCase();
+  const out: number[] = [];
+  lines.forEach((line, index) => {
+    if (line.text.toLowerCase().includes(q)) out.push(index);
+  });
+  return out;
+}
+
+// The scroll value that centers the given line in a window of `height`.
+export function scrollToLine(totalLines: number, height: number, line: number): number {
+  return Math.max(0, totalLines - line - Math.ceil(height / 2));
+}
+
 // Slices the tail of a log for display: scroll = 0 follows the end, larger
 // values scroll back. Returns the window plus how many lines are above it.
 export function logWindow<T>(lines: T[], height: number, scroll: number): { window: T[]; above: number } {

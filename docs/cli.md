@@ -163,6 +163,8 @@ Keys:
 | PgUp/PgDn (`u`/`d`) | Scroll the log pane; it follows the tail when at the bottom. |
 | `r`       | On a service: stop it and start it again with the same configuration. |
 | `H`       | Browse recorded runs: pick a run, view its details or merged log; esc returns. |
+| `?`       | Search within the log pane; enter jumps to the latest match, `n`/`N` step older/newer, matches are highlighted. |
+| `w`       | Toggle line wrapping in the log pane. |
 | `q` / Ctrl+C | While running: stop gracefully, press again to force-kill. Otherwise: quit. |
 
 ## Run history
