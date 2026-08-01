@@ -20,6 +20,8 @@ export interface RunNode {
   isMatrixWrapper: boolean;
   children: RunNode[];
   status: Status;
+  // True when the result was reused from the cache (inputs unchanged).
+  cached?: boolean;
   // The working directory the node actually ran in; used to collect artifacts.
   resolvedCwd?: string;
   // Why a node was skipped: a false `if` condition does not block dependents,
@@ -117,6 +119,7 @@ export function buildRunTree(doc: TestfileDoc): RunNode {
 // Puts a node back into its initial state so it can run again.
 export function resetNode(node: RunNode): void {
   node.status = "pending";
+  node.cached = undefined;
   node.skipReason = undefined;
   node.resolvedCwd = undefined;
   node.timedOut = false;

@@ -84,6 +84,7 @@ Common fields available on every test:
 | `maxParallel`     | integer  | Only together with `parallel`: cap on concurrently running children. Default: unlimited. |
 | `needs`           | array    | Only on children of a `parallel` group: names of sibling tests that must finish first, turning the group into a DAG. The test starts once all named siblings passed or were skipped; if one failed, the test is skipped. References must name existing, unambiguous siblings and must not form cycles. |
 | `artifacts`       | array    | Glob patterns, relative to the test's working directory, of files the test produces (coverage, screenshots, reports). Runners copy matching files into the recorded run — also when the test failed. |
+| `inputs`          | array    | Only on `command`/`script` tests: glob patterns, relative to the test's working directory, of the files the test depends on. Enables [result caching](#result-caching). |
 | `setup`           | hook     | Runs after the test's services are ready and before its body. A failing setup skips the body and fails the test; teardown still runs. See [Hooks](#hooks). |
 | `teardown`        | hook     | Always runs after the test's body — on success, failure and abort — before the test's services stop. A failing teardown fails an otherwise passing test. See [Hooks](#hooks). |
 
@@ -337,6 +338,27 @@ Testfile; test-level paths resolve relative to the test's working directory.
 Values loaded from env files are treated as **secrets**: runners must mask
 them in recorded logs (and never write them into run records). Note that the
 live terminal output is not masked.
+
+## Result caching
+
+A test that declares `inputs` states that its outcome depends only on the
+matched files and its own configuration. Runners **may** then skip the test
+and reuse its previous result, under these rules:
+
+- Only **passing** results may be reused; a failure always re-runs.
+- A result may only be reused when the content of every matched input file
+  is unchanged **and** the test's configuration (resolved command/script,
+  its own `env`, its matrix combination) is unchanged. Renaming, adding or
+  removing matched files invalidates the cache.
+- A cached test reports status `passed`, marked as cached in run records
+  and logs; its services, hooks and retries do not run.
+- Runners must offer a way to bypass reuse (the reference runner:
+  `--no-cache`, which still refreshes stored results).
+
+Cache storage is runner-specific (the reference runner uses
+`.testfile/cache.json`). Caching is optional runner behavior: a runner that
+never caches — like one executing the conformance suite — is fully
+conforming.
 
 ## Exit code
 

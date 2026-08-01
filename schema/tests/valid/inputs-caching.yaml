@@ -1,0 +1,14 @@
+# Tests declaring their inputs, enabling result caching.
+version: 1
+test:
+  name: all
+  sequence:
+    - name: unit
+      inputs:
+        - src/**/*.ts
+        - package.json
+      command: npm run test:unit
+    - name: docs
+      inputs:
+        - docs/**/*.md
+      command: npm run lint:docs

@@ -215,6 +215,15 @@
           "description": "Services scoped to this subtree: started before this test runs, gracefully stopped when it finishes.",
           "$ref": "#/$defs/servicesMap"
         },
+        "inputs": {
+          "description": "Glob patterns (relative to the test's working directory) of the files this test depends on. When neither the matched files' content nor the test's configuration changed since the last passing run, runners may skip the test and reuse that result. Only on command/script tests.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "artifacts": {
           "description": "Glob patterns (relative to the test's working directory) of files the test produces, e.g. coverage reports or screenshots. The runner copies matching files into the recorded run's folder after the test finished - also when it failed.",
           "type": "array",
@@ -295,6 +304,13 @@
       "dependentSchemas": {
         "retry": {
           "description": "retry only applies to command/script tests, not to groups.",
+          "anyOf": [
+            { "required": ["command"] },
+            { "required": ["script"] }
+          ]
+        },
+        "inputs": {
+          "description": "inputs only applies to command/script tests, not to groups.",
           "anyOf": [
             { "required": ["command"] },
             { "required": ["script"] }

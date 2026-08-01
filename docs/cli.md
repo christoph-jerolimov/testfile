@@ -34,6 +34,8 @@ testfile completion zsh > "${fpath[1]}/_testfile"         # zsh
 testfile completion fish > ~/.config/fish/completions/testfile.fish
 ```
 
+`--no-cache` ignores [cached results](./writing-tests#result-caching) for
+tests with `inputs` (fresh results still refresh the cache).
 `--fail-fast` aborts running siblings and skips everything queued as soon as
 one test fails. `--max-parallel` limits how many tests run at the same time
 across the *whole* run (group-level `maxParallel` still applies on top).
