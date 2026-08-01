@@ -349,6 +349,11 @@
         "description": {
           "type": "string"
         },
+        "shared": {
+          "description": "Share one running instance between tests whose resolved service configuration is identical - e.g. matrix instances that do not vary this service. The service starts with the first test that needs it and stops after the last one finished. Configurations that differ (e.g. a matrix variable in the image) still get their own instance.",
+          "type": "boolean",
+          "default": false
+        },
         "env": {
           "$ref": "#/$defs/envMap"
         },

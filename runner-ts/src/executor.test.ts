@@ -172,6 +172,69 @@ test("a service that dies before readiness fails the run", async () => {
   assert.equal(runner.services[0].status, "failed");
 });
 
+test("a shared service starts once for identical matrix instances", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      name: "m",
+      matrix: { v: ["a", "b", "c"] },
+      services: {
+        db: {
+          shared: true,
+          script: "echo up\nsleep 30",
+          ready: { log: "up", interval: "100ms" },
+        },
+      },
+      command: "true",
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.equal(runner.services.length, 1, "one instance for all three matrix instances");
+  assert.equal(runner.services[0].status, "stopped");
+  assert.match(runner.services[0].owner, /shared/);
+});
+
+test("a shared service with a matrix-dependent config gets one instance per config", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      name: "m",
+      matrix: { v: ["a", "b"] },
+      services: {
+        db: {
+          shared: true,
+          env: { VARIANT: "${{ matrix.v }}" },
+          script: "echo up variant=$VARIANT\nsleep 30",
+          ready: { log: "up", interval: "100ms" },
+        },
+      },
+      command: "true",
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.equal(runner.services.length, 2, "different resolved configs must not share");
+  const variants = runner.services.map((s) => s.output.text()).sort();
+  assert.match(variants[0], /variant=a/);
+  assert.match(variants[1], /variant=b/);
+  assert.ok(runner.services.every((s) => s.status === "stopped"));
+});
+
+test("without shared, every matrix instance starts its own service", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      name: "m",
+      matrix: { v: ["a", "b"] },
+      services: {
+        db: { script: "echo up\nsleep 30", ready: { log: "up", interval: "100ms" } },
+      },
+      command: "true",
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.equal(runner.services.length, 2);
+});
+
 test("test-scoped services stop when the subtree finishes", async () => {
   const runner = makeRunner({
     version: 1,
