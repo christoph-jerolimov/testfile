@@ -257,7 +257,8 @@ runner marks the service as failed and aborts the dependent subtree.
 
 ### Readiness (`ready`)
 
-At least one of the checks must be set; all set checks must pass. Checks are
+At least one of the checks (`http`, `tcp`, `log`, `exec`) must be set; all
+set checks must pass. Checks are
 polled every `interval` (default `1s`), starting after `delay`, until they
 pass or `timeout` (default `30s`) expires — an expired timeout fails the
 service and aborts the dependent tests.
@@ -267,6 +268,7 @@ service and aborts the dependent tests.
 | `http` | string or object | Ready when the URL answers. String form: URL, any 2xx passes. Object form: `url` (required), `method` (default `GET`), `status` (default: any 2xx). |
 | `tcp`  | value or object  | Ready when a TCP connect succeeds. Plain form: a port on localhost (number or template string). Object form: `host` (default `localhost`), `port`. |
 | `log`  | string or object | Ready when the service output matches a regular expression. String form: pattern, matched on both streams. Object form: `pattern` (required), `stream` (`stdout`, `stderr`, `any`; default `any`). |
+| `exec` | string or object | Ready when the shell command exits with code 0 (e.g. `pg_isready`, `redis-cli ping`). Runs in the service's environment and working directory; a single attempt is capped at 10s. |
 | `delay`    | duration | Wait before the first check. |
 | `interval` | duration | Poll interval. Default `1s`. |
 | `timeout`  | duration | Overall deadline. Default `30s`. |

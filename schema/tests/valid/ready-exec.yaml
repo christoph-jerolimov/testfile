@@ -1,0 +1,23 @@
+# Readiness via a probe command that must exit 0.
+version: 1
+ports:
+  db: random
+services:
+  postgres:
+    container:
+      image: docker.io/library/postgres:16
+      ports:
+        - "${{ ports.db }}:5432"
+      env:
+        POSTGRES_PASSWORD: test
+    ready:
+      exec: pg_isready -h localhost -p ${{ ports.db }}
+      interval: 500ms
+      timeout: 60s
+  cache:
+    command: redis-server --port 6390
+    ready:
+      exec:
+        command: redis-cli -p 6390 ping
+test:
+  command: npm run test:integration

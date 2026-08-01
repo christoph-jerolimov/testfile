@@ -1,3 +1,4 @@
+import { spawn } from "node:child_process";
 import { connect } from "node:net";
 import type { ReadyDef } from "./model.js";
 import type { OutputBuffer } from "./output.js";
@@ -9,6 +10,8 @@ export interface WaitReadyOptions {
   scopes: Scopes;
   signal: AbortSignal;
   where: string;
+  // Working directory for exec checks.
+  cwd?: string;
   // Lets the wait fail fast when the service process already exited.
   isRunning?: () => boolean;
 }
@@ -31,6 +34,7 @@ export async function waitReady(def: ReadyDef | undefined, opts: WaitReadyOption
     if (def.http !== undefined) checks.push(checkHttp(def.http, opts));
     if (def.tcp !== undefined) checks.push(checkTcp(def.tcp, opts));
     if (def.log !== undefined) checks.push(Promise.resolve(checkLog(def.log, opts)));
+    if (def.exec !== undefined) checks.push(checkExec(def.exec, opts));
     const results = await Promise.all(checks);
     if (results.every(Boolean)) {
       opts.output.system("ready");
@@ -72,6 +76,31 @@ function checkTcp(def: NonNullable<ReadyDef["tcp"]>, opts: WaitReadyOptions): Pr
     socket.setTimeout(2000, () => done(false));
     socket.once("connect", () => done(true));
     socket.once("error", () => done(false));
+  });
+}
+
+function checkExec(def: NonNullable<ReadyDef["exec"]>, opts: WaitReadyOptions): Promise<boolean> {
+  const spec = typeof def === "string" ? { command: def } : def;
+  const command = resolveTemplate(spec.command, opts.scopes, opts.where);
+  return new Promise((resolve) => {
+    const child = spawn("sh", ["-c", command], {
+      cwd: opts.cwd,
+      env: opts.scopes.env,
+      stdio: "ignore",
+    });
+    // One attempt must not hang the poll loop forever.
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      resolve(false);
+    }, 10_000);
+    child.once("error", () => {
+      clearTimeout(timer);
+      resolve(false);
+    });
+    child.once("close", (code) => {
+      clearTimeout(timer);
+      resolve(code === 0);
+    });
   });
 }
 

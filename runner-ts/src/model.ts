@@ -76,6 +76,7 @@ export interface ReadyDef {
   http?: string | { url: string; method?: string; status?: number };
   tcp?: number | string | { host?: string; port: number | string };
   log?: string | { pattern: string; stream?: "stdout" | "stderr" | "any" };
+  exec?: string | { command: string };
   delay?: Duration;
   interval?: Duration;
   timeout?: Duration;
