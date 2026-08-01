@@ -1,0 +1,13 @@
+# Composing a monorepo Testfile from per-package Testfiles.
+version: 1
+name: monorepo
+test:
+  name: all
+  sequence:
+    - name: root checks
+      command: npm run lint
+    - name: packages
+      include: packages/*/Testfile
+    - name: app
+      if: ${{ env.CI }}
+      include: ./app

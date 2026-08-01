@@ -57,6 +57,7 @@ A test is an object with **exactly one** of the following variant fields:
 | `script`   | string        | A multi-line shell script, executed with `sh -e`. The test passes iff it exits with code 0. |
 | `sequence` | array of test | Children run one after another. The first failure stops the sequence and fails it, unless the failing child sets `continueOnError`. |
 | `parallel` | array of test | Children run concurrently. The group fails if any child fails. |
+| `include`  | string        | Path or glob (relative to this Testfile, not templated) of another Testfile — or a directory containing one — embedded here, see [Includes](#includes). |
 
 Common fields available on every test:
 
@@ -117,6 +118,37 @@ A false condition skips the test and its subtree (status `skipped`). This
 does not fail the surrounding sequence/parallel group; a group whose active
 children all skipped is itself `skipped`. A fully skipped run exits with
 code `0`.
+
+## Includes
+
+`include` embeds another Testfile as a subtree, composing e.g. per-package
+Testfiles of a monorepo into one:
+
+```yaml
+test:
+  sequence:
+    - name: packages
+      include: packages/*/Testfile
+    - include: ./app
+```
+
+Rules:
+
+- The path is resolved relative to the including file and may point to a
+  Testfile or to a directory containing one. A glob embeds every match; two
+  or more matches form a `parallel` group. Templates are not supported in
+  the path. Nothing matching is an error.
+- The included document must be a valid Testfile itself (including
+  `version`). Includes nest; cycles are an error.
+- The included file's directory becomes the working directory of the
+  embedded subtree (`workdir` cannot be set on an include node).
+- The included file's top-level `env` and `services` are scoped to the
+  embedded subtree; `env` set on the include node wins over the included
+  file's values.
+- The included file's `ports` merge into the including document's `ports`.
+  Two definitions of the same port name with different values are an error.
+- Other fields on the include node (`name`, `tags`, `if`, `timeout`,
+  `setup`/`teardown`, `matrix`, ...) apply to the embedded subtree as usual.
 
 ## Hooks
 
