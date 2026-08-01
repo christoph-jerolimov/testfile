@@ -37,6 +37,7 @@ export interface TestDef {
   matrix?: MatrixDef;
   command?: string;
   script?: string;
+  shell?: string;
   sequence?: TestDef[];
   parallel?: TestDef[];
   maxParallel?: number;

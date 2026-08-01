@@ -356,6 +356,29 @@ test("a group whose children all skip is reported as skipped", async () => {
   assert.equal(await runner.run(), "skipped");
 });
 
+test("a custom shell runs commands and scripts via -c", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: {
+      sequence: [
+        { name: "bashism", shell: "bash", command: "[[ 1 -eq 1 ]]" },
+        { name: "python", shell: "python3", command: "import sys; sys.exit(0)" },
+        { name: "bash strict", shell: "bash -e", script: "true\n[[ -n ok ]]" },
+      ],
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+});
+
+test("a failing custom-shell test reports its exit code", async () => {
+  const runner = makeRunner({
+    version: 1,
+    test: { shell: "python3", command: "import sys; sys.exit(7)" },
+  });
+  assert.equal(await runner.run(), "failed");
+  assert.match(runner.root.error ?? "", /exit code 7/);
+});
+
 test("retry re-runs a flaky command until it passes", async () => {
   const dir = mkdtempSync(join(tmpdir(), "testfile-retry-"));
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
