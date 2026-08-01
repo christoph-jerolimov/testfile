@@ -6,54 +6,23 @@ on:
   pull_request:
 
 jobs:
-  schema:
-    name: Validate schema & examples
+  testfile:
+    name: Run the repository Testfile
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Run all checks via the Testfile
+        uses: ./
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test --workspace schema
-
-  runner:
-    name: Build & test runner-ts
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+          path: .
+          reporter: junit
+          output: results.xml
+      - name: Upload the JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm test --workspace runner-ts
-
-  website:
-    name: Build website
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build --workspace website
-
-  conformance:
-    name: Conformance suite
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build --workspace runner-ts
-      - run: npm test --workspace conformance
+          name: testfile-results
+          path: results.xml
 
   action:
     name: Self-test GitHub Action

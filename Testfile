@@ -19,3 +19,6 @@ test:
             npm test --workspace runner-ts
         - name: website
           command: npm run build --workspace website
+        - name: conformance
+          needs: [runner-ts]
+          command: npm test --workspace conformance

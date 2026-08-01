@@ -84,9 +84,12 @@ See [docs/github-action.md](docs/github-action.md) for all inputs.
 
 ## Continuous integration
 
-- [`ci.yaml`](.github/workflows/ci.yaml) validates the schema against every
-  example (valid files must pass, invalid ones must be rejected), builds and
-  tests the runner, and builds the website.
+- [`ci.yaml`](.github/workflows/ci.yaml) runs the repository's own
+  [`Testfile`](Testfile) through the bundled GitHub Action — validating the
+  schema against every example (valid files must pass, invalid ones must be
+  rejected), building and testing the runner, building the website and running
+  the conformance suite — plus a self-test of the action against a smoke
+  Testfile.
 - [`deploy-website.yaml`](.github/workflows/deploy-website.yaml) publishes
   the website to GitHub Pages on every push to `main`.
 
