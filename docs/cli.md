@@ -15,8 +15,7 @@ and installs a `testfile` binary.
 ```sh
 testfile init [path]       # create a starter Testfile (from package.json)
 testfile run [path]        # run the tree (default command)
-testfile tui [path]        # interactive terminal UI (tests, history, services)
-testfile run --tui         # ... the same, sharing run's flags
+testfile tui [path]        # interactive terminal UI (tests, runs, results, services)
 testfile run --verbose     # also stream service output
 testfile run --fail-fast   # abort everything at the first failure
 testfile run --max-parallel 4   # global cap on concurrently running tests
@@ -43,8 +42,8 @@ across the *whole* run (group-level `maxParallel` still applies on top).
 `--dry-run` combines with all filter flags, so you can preview exactly what
 a filter expression will run; tests whose [inputs](./writing-tests#result-caching)
 are unchanged are marked `[cached]`, with a would-run/served-from-cache
-summary. All three also apply to runs started from the
-TUI.
+summary. `--no-cache`, `--fail-fast` and `--max-parallel` are also accepted
+by `testfile tui` and apply to runs started from it.
 
 ## Machine-readable reports
 
@@ -59,8 +58,7 @@ testfile run --reporter json           # ... or to stdout
 The JUnit XML contains one `<testcase>` per executed test (group path as
 classname) with `<failure>` elements carrying the merged log and
 `<skipped/>` markers; the JSON report is the same record that the run's
-`run.yaml` stores. In watch mode the report is rewritten after every re-run; with
-`--tui` it is written when the TUI exits.
+`run.yaml` stores. In watch mode the report is rewritten after every re-run.
 
 ## Watch mode
 
@@ -70,7 +68,7 @@ a tight edit-test loop:
 
 ```sh
 testfile run -w -f unit
-testfile run --tui --watch      # the TUI re-runs your last selection
+testfile tui --watch            # the TUI re-runs your last selection
 ```
 
 Changes are debounced, edits made while a run is in progress trigger one
@@ -127,32 +125,34 @@ filters — `testfile run --failed -t integration` re-runs only the failed
 integration tests.
 
 Different filter kinds are ANDed. Filters that match nothing are an error.
-With `--tui`, filters pre-select the matching tests instead of running them
-immediately. `testfile list` shows each test's tags, so it's an easy way to
-preview what a filter will run.
+The same filters on `testfile tui` pre-select the matching tests instead of
+running them immediately. `testfile list` shows each test's tags, so it's an
+easy way to preview what a filter will run.
 
 ## Plain output
 
-Without `--tui` the runner streams progress line by line — suitable for CI
+`testfile run` streams progress line by line — suitable for CI
 logs. Test output is prefixed with `[test name]`; service output is shown
 with `--verbose`, and the tail of a failing service's log is always printed.
 A summary tree with per-test durations is printed at the end.
 
 ## The TUI
 
-`testfile tui` opens a two-pane terminal UI with three top-level views,
-switched with `1`/`2`/`3` (shown in the header line):
+`testfile tui` opens a two-pane terminal UI with four top-level views,
+switched with `1`/`2`/`3`/`4` (shown in the header line):
 
 1. **tests** — the test tree, for selecting and running tests.
-2. **history** — every recorded run, with details and the merged log.
-3. **services** — all services the Testfile defines: the ones currently
+2. **runs** — a table of every recorded run, with details and the merged log.
+3. **results** — every test that appears in a recorded run, with a table of
+   its executions.
+4. **services** — all services the Testfile defines: the ones currently
    started and the startable ones that run on demand.
 
-`testfile run --tui` opens the same TUI on the tests view (honoring `run`'s
-filters, `--watch` and `--reporter`); `testfile history --tui` opens it on
-the history view. The TUI does **not** start any tests by itself: pick the
-tests you want with the selection keys, then press enter to run them — as
-often as you like within one session.
+`--view runs` (etc.) opens the TUI on another view; the `run` filter flags
+pre-select tests, and `--fail-fast`, `--max-parallel`, `--no-cache` and
+`--watch` apply to runs started from it. The TUI does **not** start any
+tests by itself: pick the tests you want with the selection keys, then press
+enter to run them — as often as you like within one session.
 
 ### Tests view
 
@@ -174,11 +174,26 @@ often as you like within one session.
 - The **summary line** counts selected, running, queued, passed and failed
   tests.
 
-### History view
+### Runs view
 
-The left pane lists all recorded runs (newest first); the right pane shows
-the selected run's details — status, duration, env, ports, per-test results
-— and toggles to the run's merged log with enter.
+The left pane is a table of all recorded runs (newest first) with start
+time, status, duration and per-status test counts; the right pane shows the
+selected run's details — status, duration, env, ports, per-test results —
+and toggles to the run's merged log with enter.
+
+The view is built from the `.testfile/runs/*/run.yaml` files and **watches
+them**: runs recorded by other processes (say, a plain `testfile run` in a
+second terminal) appear live.
+
+### Results view
+
+The left pane lists every test recorded in any run — built purely from the
+run records, so it also covers tests that no longer exist in the current
+Testfile — with its latest status and aggregated pass/fail counts. The
+right pane shows the selected test's executions across all runs as a table:
+one row per run with start time, status, duration and markers for cached
+results, artifacts and logs. Like the runs view it watches the run folders,
+so new executions appear live.
 
 ### Services view
 
@@ -194,7 +209,7 @@ including the readiness and stop behavior. `r` restarts a running service.
 
 | Key       | Action |
 | --------- | ------ |
-| `1`/`2`/`3` | Switch between the tests, history and services views. |
+| `1`/`2`/`3`/`4` | Switch between the tests, runs, results and services views. |
 | `↑`/`↓` (`k`/`j`) | Move the cursor in the active view's list. |
 | Mouse wheel | Scroll the log/detail pane; at the bottom it follows the tail again. |
 | Tab       | Tests view: cycle the detail tabs (info, log, history). |
@@ -202,14 +217,14 @@ including the readiness and stop behavior. `r` restarts a running service.
 | `a`       | Select all tests (or clear the selection). |
 | `c`       | Select all children of the current test. |
 | `f`       | Select the failed tests — from this session, or from the last recorded run. |
-| Enter     | Tests view: run the selected tests. History view: toggle details / merged log. |
+| Enter     | Tests view: run the selected tests. Runs view: toggle details / merged log. |
 | `/`       | Search: type to filter the tree (matches with their ancestors); enter keeps the filter, esc clears it. |
 | `←`/`→` (`h`/`l`) | Collapse / expand the current group. |
 | PgUp/PgDn (`u`/`d`) | Scroll the log pane; it follows the tail when at the bottom. |
 | `r`       | Services view: stop the service and start it again with the same configuration. |
 | `?`       | Search within the log pane; enter jumps to the latest match, `n`/`N` step older/newer, matches are highlighted. |
 | `w`       | Toggle line wrapping in the log pane. |
-| Esc       | History/services view: back to the tests view. |
+| Esc       | Runs/results/services view: back to the tests view. |
 | `q` / Ctrl+C | While running: stop gracefully, press again to force-kill. Otherwise: quit. |
 
 ## Run history
@@ -239,7 +254,7 @@ Browse the history from the command line:
 
 ```sh
 testfile history                          # table of recent runs, newest first
-testfile history --tui                    # browse runs in the TUI's history view
+testfile tui --view runs                  # browse runs in the TUI
 testfile history --run 20260801-1046      # one run in detail (id prefix is ok)
 testfile history --run <id> --log         # merged stdout+stderr of the run
 testfile history --run <id> --log all/e2e # ... of a single test

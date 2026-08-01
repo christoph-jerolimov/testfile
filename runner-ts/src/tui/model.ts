@@ -2,7 +2,7 @@ import { effectiveTags } from "../filter.js";
 import type { RunHistory, RunRecord } from "../history.js";
 import type { ReadyDef, ServiceDef, TestDef, TestfileDoc } from "../model.js";
 import type { OutputLine } from "../output.js";
-import { walk, type RunNode } from "../runtree.js";
+import { walk, type RunNode, type Status } from "../runtree.js";
 import type { ServiceInstance } from "../services.js";
 import { formatMs } from "../util.js";
 
@@ -106,12 +106,55 @@ export function describeRun(run: RunRecord): OutputLine[] {
   return lines;
 }
 
-// One row of the history list.
-export function runListLabel(run: RunRecord): string {
+function testSummary(run: RunRecord): string {
   const counts = new Map<string, number>();
   for (const test of run.tests) counts.set(test.status, (counts.get(test.status) ?? 0) + 1);
-  const summary = [...counts.entries()].map(([status, n]) => `${n} ${status}`).join(", ");
-  return `${run.startedAt.replace("T", " ").slice(0, 19)}  ${run.status}  ${summary}`;
+  return [...counts.entries()].map(([status, n]) => `${n} ${status}`).join(", ");
+}
+
+// The runs view as a table: a header line plus one aligned row per run.
+export function runsTable(runs: readonly RunRecord[]): { header: string; rows: string[] } {
+  const header = `${pad("STARTED", 19)}  ${pad("STATUS", 7)}  ${pad("DURATION", 8)}  TESTS`;
+  const rows = runs.map(
+    (run) =>
+      `${pad(run.startedAt.replace("T", " ").slice(0, 19), 19)}  ${pad(run.status, 7)}  ${pad(
+        formatMs(run.durationMs),
+        8
+      )}  ${testSummary(run)}`
+  );
+  return { header, rows };
+}
+
+// The tests recorded across all runs, aggregated per test path - the basis
+// of the results view. Built from the run records alone, so it also lists
+// tests that no longer exist in the current Testfile. Ordered by the run
+// they last appeared in (newest first), like the runs themselves.
+export interface RecordedTest {
+  path: string;
+  occurrences: number;
+  passes: number;
+  fails: number;
+  lastStatus: Status;
+}
+
+export function recordedTests(history: RunHistory): RecordedTest[] {
+  const byPath = new Map<string, RecordedTest>();
+  for (const run of history.runs) {
+    for (const test of run.tests) {
+      let entry = byPath.get(test.path);
+      if (!entry) {
+        // runs are newest first, so the first occurrence is the latest one
+        byPath.set(
+          test.path,
+          (entry = { path: test.path, occurrences: 0, passes: 0, fails: 0, lastStatus: test.status })
+        );
+      }
+      entry.occurrences++;
+      if (test.status === "passed") entry.passes++;
+      if (test.status === "failed" || test.status === "aborted") entry.fails++;
+    }
+  }
+  return [...byPath.values()];
 }
 
 // Indices of log lines containing the query, case-insensitively.

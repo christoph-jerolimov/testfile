@@ -110,13 +110,21 @@ export class RunHistory {
         // a run folder without a (readable) run.yaml is not a run
       }
     }
-    // Run ids start with their UTC timestamp, so they sort chronologically.
-    return runs.sort((a, b) => b.id.localeCompare(a.id));
+    // startedAt has millisecond resolution; the id (which starts with the
+    // run's UTC timestamp) only resolves seconds, so it is the tie-breaker.
+    return runs.sort(
+      (a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id)
+    );
   }
 
   // Newest first.
   get runs(): readonly RunRecord[] {
     return this.index;
+  }
+
+  // Re-reads the run folders, picking up runs recorded by other processes.
+  reload(): void {
+    this.index = this.load();
   }
 
   // Looks a run up by its id; a unique prefix is sufficient.
