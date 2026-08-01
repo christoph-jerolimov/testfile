@@ -49,6 +49,18 @@ inputs:
     description: "Emit GitHub annotations for failed tests (shown on the PR)"
     required: false
     default: "true"
+  summary:
+    description: "Write a job-summary table of the run's results"
+    required: false
+    default: "true"
+  upload-run:
+    description: "Upload the recorded run (.testfile/runs/<id>) as a build artifact, importable with `testfile runs sync`"
+    required: false
+    default: "true"
+  artifact-name:
+    description: "Name of the uploaded run artifact"
+    required: false
+    default: "testfile-run"
 
 runs:
   using: "composite"
@@ -94,3 +106,25 @@ runs:
       env:
         INPUT_PATH: ${{ inputs.path }}
       run: node "${{ github.action_path }}/action/annotate.mjs" "$INPUT_PATH"
+
+    - name: Write the job summary
+      if: ${{ always() && inputs.summary == 'true' }}
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+      run: node "${{ github.action_path }}/action/summary.mjs" "$INPUT_PATH"
+
+    - name: Pack the recorded run
+      if: ${{ always() && inputs['upload-run'] == 'true' }}
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+      run: node "${{ github.action_path }}/action/pack-run.mjs" "$INPUT_PATH" "$RUNNER_TEMP/testfile-run.tgz"
+
+    - name: Upload the recorded run
+      if: ${{ always() && inputs['upload-run'] == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs['artifact-name'] }}
+        path: ${{ runner.temp }}/testfile-run.tgz
+        if-no-files-found: ignore
