@@ -79,6 +79,7 @@ Common fields available on every test:
 | `timeout`         | duration | Abort and fail this test (and its children) after this time. |
 | `continueOnError` | boolean  | The failure of this test is reported but does not fail the parent group. Default `false`. |
 | `retry`           | int/object | Only on `command`/`script` tests: retry on failure. An integer is the number of additional attempts; the object form `{count, delay}` adds a wait between attempts. The test fails when the last attempt fails. |
+| `shell`           | string   | Only on `command`/`script` tests: interpreter instead of `sh`, e.g. `bash`, `bash -e`, `python3`. Split on whitespace and invoked as `<shell...> -c <source>`, so the interpreter must accept `-c`. The default `sh -e` for scripts does not apply — pass flags like `-e` yourself. |
 | `services`        | map      | Services scoped to this subtree, see [Services](#services). |
 | `matrix`          | map      | Matrix expansion, see [Matrix](#matrix). |
 | `maxParallel`     | integer  | Only together with `parallel`: cap on concurrently running children. Default: unlimited. |

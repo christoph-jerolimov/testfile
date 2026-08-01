@@ -30,6 +30,23 @@ test:
 
 Both pass when they exit with code `0`.
 
+By default everything runs under `sh` (`sh -e` for scripts). `shell` picks
+another interpreter — anything that accepts `-c`:
+
+```yaml
+- name: bash features
+  shell: bash -e
+  script: |
+    [[ -d dist ]]
+    shopt -s globstar
+- name: quick python check
+  shell: python3
+  command: "import json; json.load(open('package.json'))"
+```
+
+With a custom shell the implicit `-e` for scripts does not apply — add it
+yourself as above.
+
 ## Sequences
 
 ```yaml

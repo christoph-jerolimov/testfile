@@ -1,0 +1,14 @@
+# Tests running under interpreters other than sh.
+version: 1
+test:
+  name: all
+  sequence:
+    - name: bash features
+      shell: bash -e
+      script: |
+        [[ -d src ]]
+        shopt -s globstar
+        ls src/**/*.ts
+    - name: quick python check
+      shell: python3
+      command: "import json, sys; json.load(open('package.json')); sys.exit(0)"

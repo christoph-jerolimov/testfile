@@ -339,10 +339,22 @@ export class Runner extends EventEmitter {
   }
 
   private runShellAttempt(node: RunNode, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
+    const where = `test "${node.name}"`;
     const source = node.kind === "script" ? node.def.script! : node.def.command!;
-    const resolved = resolveTemplate(source, scopes, `test "${node.name}"`);
+    const resolved = resolveTemplate(source, scopes, where);
+    // A custom shell is invoked as <shell...> -c <source>; the default stays
+    // sh -c for commands and sh -e -c for scripts.
+    const shell = node.def.shell
+      ? resolveTemplate(node.def.shell, scopes, where).split(/\s+/)
+      : undefined;
+    const executable = shell ? shell[0] : "sh";
+    const args = shell
+      ? [...shell.slice(1), "-c", resolved]
+      : node.kind === "script"
+        ? ["-e", "-c", resolved]
+        : ["-c", resolved];
     return new Promise((resolve, reject) => {
-      const child = spawn("sh", node.kind === "script" ? ["-e", "-c", resolved] : ["-c", resolved], {
+      const child = spawn(executable, args, {
         cwd,
         env: scopes.env,
         detached: true,

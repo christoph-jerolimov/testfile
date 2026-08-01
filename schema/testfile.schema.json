@@ -254,6 +254,11 @@
           "type": "string",
           "minLength": 1
         },
+        "shell": {
+          "description": "Interpreter for this test's command/script instead of sh, e.g. \"bash\", \"bash -e\" or \"python3\". Split on whitespace and invoked as <shell...> -c <source>, so the interpreter must support -c. Note that the default 'sh -e' behavior for scripts does not apply - add flags like -e yourself.",
+          "type": "string",
+          "minLength": 1
+        },
         "sequence": {
           "description": "Child tests that run one after another. The sequence stops at the first failure unless that child sets continueOnError.",
           "type": "array",
@@ -311,6 +316,13 @@
         },
         "inputs": {
           "description": "inputs only applies to command/script tests, not to groups.",
+          "anyOf": [
+            { "required": ["command"] },
+            { "required": ["script"] }
+          ]
+        },
+        "shell": {
+          "description": "shell only applies to command/script tests, not to groups.",
           "anyOf": [
             { "required": ["command"] },
             { "required": ["script"] }

@@ -1,0 +1,6 @@
+# Invalid: shell only applies to command/script tests, not to groups.
+version: 1
+test:
+  shell: bash
+  sequence:
+    - command: npm test
