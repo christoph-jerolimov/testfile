@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { diffRuns, type RunRecord } from "./history.js";
+import { detectFlaky, diffRuns, type RunRecord } from "./history.js";
 import type { RunRecordTest } from "./history.js";
 
 function record(id: string, tests: RunRecordTest[]): RunRecord {
@@ -74,4 +74,54 @@ test("identical runs produce an empty diff", () => {
     removed: [],
     durations: [],
   });
+});
+
+test("detectFlaky finds tests that alternate and counts flips", () => {
+  // records are newest first, like RunHistory.runs
+  const runs = [
+    record("r5", [
+      { path: "a/flaky", status: "failed" },
+      { path: "a/stable", status: "passed" },
+      { path: "a/always-broken", status: "failed" },
+    ]),
+    record("r4", [
+      { path: "a/flaky", status: "passed" },
+      { path: "a/stable", status: "passed" },
+      { path: "a/always-broken", status: "failed" },
+    ]),
+    record("r3", [
+      { path: "a/flaky", status: "failed" },
+      { path: "a/stable", status: "passed" },
+      { path: "a/always-broken", status: "failed" },
+      { path: "a/skipped-once", status: "skipped" },
+    ]),
+    record("r2", [
+      { path: "a/flaky", status: "passed" },
+      { path: "a/once-fixed", status: "passed" },
+    ]),
+    record("r1", [{ path: "a/once-fixed", status: "failed" }]),
+  ];
+  const reports = detectFlaky(runs);
+  assert.deepEqual(
+    reports.map((r) => r.path),
+    ["a/flaky", "a/once-fixed"],
+    "stable, always-broken and skip-only tests are not flaky"
+  );
+  const flaky = reports[0];
+  assert.equal(flaky.occurrences, 4);
+  assert.equal(flaky.passes, 2);
+  assert.equal(flaky.fails, 2);
+  assert.equal(flaky.flips, 3, "passed->failed->passed->failed chronologically");
+  assert.equal(flaky.lastStatus, "failed");
+  assert.equal(reports[1].flips, 1);
+});
+
+test("detectFlaky honors the lastN window", () => {
+  const runs = [
+    record("new", [{ path: "t", status: "passed" }]),
+    record("mid", [{ path: "t", status: "passed" }]),
+    record("old", [{ path: "t", status: "failed" }]),
+  ];
+  assert.equal(detectFlaky(runs).length, 1, "flaky across all runs");
+  assert.equal(detectFlaky(runs, 2).length, 0, "stable within the recent window");
 });

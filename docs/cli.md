@@ -209,6 +209,19 @@ The diff lists newly failed, fixed and still-failing tests, tests added to
 or removed from the run, and significant duration changes (more than 100ms
 and more than 20%) of tests that passed in both runs.
 
+Hunt down flaky tests:
+
+```sh
+testfile history --flaky            # across all recorded runs
+testfile history --flaky --last 10  # only the 10 most recent runs
+```
+
+A test is flagged when it both passed and failed across the considered runs
+(skipped and aborted outcomes are ignored). The report shows the failure
+rate, how often the outcome *flipped* between consecutive occurrences — the
+strongest flakiness signal — and the latest status. Flagged tests are good
+candidates for a `flaky` tag and a [`retry`](./writing-tests#retries).
+
 ## Interrupting a run
 
 The first Ctrl+C aborts running tests and shuts down all services through

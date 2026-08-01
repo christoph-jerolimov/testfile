@@ -225,6 +225,53 @@ export function diffRuns(base: RunRecord, compare: RunRecord): RunDiff {
   return diff;
 }
 
+export interface FlakyReport {
+  path: string;
+  // occurrences considered (passed or failed outcomes only)
+  occurrences: number;
+  passes: number;
+  fails: number;
+  // status changes between consecutive occurrences - the flakiness signal
+  flips: number;
+  lastStatus: "passed" | "failed";
+}
+
+// Scans recorded runs (newest first) for tests that both passed and failed.
+// Skipped and aborted outcomes are ignored: they say nothing about
+// flakiness. Results are sorted by flips, then fails.
+export function detectFlaky(runs: readonly RunRecord[], lastN?: number): FlakyReport[] {
+  const considered = lastN !== undefined ? runs.slice(0, lastN) : runs;
+  // statuses per path, oldest run first, so flips read chronologically
+  const byPath = new Map<string, ("passed" | "failed")[]>();
+  for (const run of [...considered].reverse()) {
+    for (const test of run.tests) {
+      if (test.status !== "passed" && test.status !== "failed") continue;
+      let statuses = byPath.get(test.path);
+      if (!statuses) byPath.set(test.path, (statuses = []));
+      statuses.push(test.status);
+    }
+  }
+  const reports: FlakyReport[] = [];
+  for (const [path, statuses] of byPath) {
+    const passes = statuses.filter((s) => s === "passed").length;
+    const fails = statuses.length - passes;
+    if (passes === 0 || fails === 0) continue;
+    let flips = 0;
+    for (let i = 1; i < statuses.length; i++) {
+      if (statuses[i] !== statuses[i - 1]) flips++;
+    }
+    reports.push({
+      path,
+      occurrences: statuses.length,
+      passes,
+      fails,
+      flips,
+      lastStatus: statuses[statuses.length - 1],
+    });
+  }
+  return reports.sort((a, b) => b.flips - a.flips || b.fails - a.fails || a.path.localeCompare(b.path));
+}
+
 // Merged stdout+stderr; runner messages are marked as comments.
 function renderLines(lines: OutputLine[]): string {
   return `${lines.map((l) => (l.stream === "system" ? `# ${l.text}` : l.text)).join("\n")}\n`;
