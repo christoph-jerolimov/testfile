@@ -5,6 +5,11 @@ machine-readable counterpart is the JSON schema in
 [`../schema/testfile.schema.json`](../schema/testfile.schema.json); if the two
 disagree, this document wins and the schema has a bug.
 
+The execution semantics described here are additionally pinned by the
+runner-independent [conformance suite](../conformance/README.md): every
+change to this document must add or adjust a conformance case, and a runner
+implementation claims compatibility by passing the whole suite.
+
 ## File
 
 A Testfile is a YAML document. The runner looks for these file names in the

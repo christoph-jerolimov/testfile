@@ -1,0 +1,5 @@
+version: 1
+test:
+  name: flaky
+  retry: 2
+  command: test -f flag || { touch flag; exit 1; }

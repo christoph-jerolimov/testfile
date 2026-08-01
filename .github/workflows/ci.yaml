@@ -42,6 +42,19 @@ jobs:
       - run: npm ci
       - run: npm run build --workspace website
 
+  conformance:
+    name: Conformance suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build --workspace runner-ts
+      - run: npm test --workspace conformance
+
   action:
     name: Self-test GitHub Action
     runs-on: ubuntu-latest

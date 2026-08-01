@@ -1,0 +1,14 @@
+version: 1
+test:
+  name: root
+  parallel:
+    - name: broken
+      command: "false"
+    - name: dependent
+      needs: [broken]
+      command: "true"
+    - name: chained
+      needs: [dependent]
+      command: "true"
+    - name: unrelated
+      command: "true"

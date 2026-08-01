@@ -1,0 +1,8 @@
+exitCode: 0
+status: passed
+env:
+  CONFORMANCE_FLAG: "yes"
+tests:
+  - { path: root, status: passed }
+  - { path: root/on, status: passed }
+  - { path: root/off, status: skipped }

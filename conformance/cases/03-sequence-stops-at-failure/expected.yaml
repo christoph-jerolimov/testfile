@@ -1,0 +1,7 @@
+exitCode: 1
+status: failed
+tests:
+  - { path: root, status: failed }
+  - { path: root/a, status: passed }
+  - { path: root/b, status: failed }
+  - { path: root/c, status: skipped }

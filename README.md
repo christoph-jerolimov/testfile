@@ -46,6 +46,7 @@ test:
 | [`schema/`](schema/) | The JSON schema, plus `tests/valid` and `tests/invalid` example files that CI validates on every change. |
 | [`website/`](website/) | Astro site that renders `docs/`, published to GitHub Pages. |
 | [`runner-ts/`](runner-ts/) | The reference runner: a `testfile` CLI with an interactive TUI, written in TypeScript. |
+| [`conformance/`](conformance/) | Runner-independent conformance suite: cases with expected outcomes that any runner implementation must satisfy. |
 
 This repository is an npm-workspaces monorepo and eats its own dog food: its
 tests are described in [`Testfile`](Testfile).

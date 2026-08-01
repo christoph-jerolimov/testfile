@@ -1,0 +1,9 @@
+exitCode: 0
+status: passed
+tests:
+  - { path: m, status: passed }
+  - { path: "m/m (a=1, b=x)", status: passed }
+  - { path: "m/m (a=1, b=y)", status: passed }
+  - { path: "m/m (a=2, b=x)", status: passed }
+absentTests:
+  - "m/m (a=2, b=y)"

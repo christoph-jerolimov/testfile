@@ -1,0 +1,14 @@
+{
+  "name": "@testfile/conformance",
+  "version": "0.1.0",
+  "description": "Runner-independent conformance suite for the Testfile format",
+  "license": "Apache-2.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "devDependencies": {
+    "yaml": "^2.8.0"
+  }
+}
