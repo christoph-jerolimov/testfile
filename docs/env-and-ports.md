@@ -92,5 +92,13 @@ String values anywhere in the file can use `${{ scope.name }}`:
 | `ports`  | `${{ ports.web }}`   | A resolved named port. |
 | `matrix` | `${{ matrix.node }}` | A matrix variable of the current instance. |
 
-Referencing an undefined name is an error — typos fail fast instead of
-expanding to an empty string.
+Defaults use `||` and apply when the reference is undefined or empty:
+
+```yaml
+env:
+  PORT: ${{ env.PORT || 3000 }}
+  MODE: ${{ env.MODE || 'local dev' }}
+```
+
+Referencing an undefined name *without* a default is an error — typos fail
+fast instead of expanding to an empty string.

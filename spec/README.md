@@ -321,8 +321,12 @@ String values anywhere in the document may contain templates of the form
 | `ports`  | `${{ ports.web }}`   | A resolved named port. |
 | `matrix` | `${{ matrix.node }}` | A matrix variable of the closest expanded ancestor (or the node itself). |
 
-Referencing an undefined name is an error at run start. `duration` values are
-either plain integers (seconds) or strings like `500ms`, `30s`, `5m`, `1h`.
+A template may carry a default after `||`, used when the reference is
+undefined **or empty**: `${{ env.PORT || 3000 }}`. The default is plain text
+(optionally single- or double-quoted, quotes are stripped) and may not
+contain `}`. Referencing an undefined name **without** a default is an error
+at run start. `duration` values are either plain integers (seconds) or
+strings like `500ms`, `30s`, `5m`, `1h`.
 
 ## Env files
 
