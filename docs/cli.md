@@ -18,6 +18,7 @@ testfile run --tui         # interactive terminal UI
 testfile run --verbose     # also stream service output
 testfile validate [path]   # validate against the JSON schema
 testfile list [path]       # print the expanded tree, incl. matrix instances
+testfile history [path]    # list or show recorded runs
 ```
 
 `path` may be a Testfile or a directory containing one (`Testfile`,
@@ -116,6 +117,19 @@ the Testfile (the folder ignores itself via a generated `.gitignore`):
 variables and ports provided by the Testfile, which tests were selected, and
 the status/duration/log of every test that ran. The last 50 runs are kept;
 older run folders are pruned automatically.
+
+Browse the history from the command line:
+
+```sh
+testfile history                          # table of recent runs, newest first
+testfile history --run 20260801-1046      # one run in detail (id prefix is ok)
+testfile history --run <id> --log         # merged stdout+stderr of the run
+testfile history --run <id> --log all/e2e # ... of a single test
+```
+
+The detail view lists every recorded test with status, duration and whether
+a log is available. `history` only needs the `.testfile/` folder, so it also
+works when the Testfile itself has moved or changed.
 
 ## Interrupting a run
 
