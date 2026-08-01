@@ -64,7 +64,7 @@ npm test --workspace runner-ts
 
 # run this repository's own Testfile with the runner
 node runner-ts/dist/cli.js run          # plain output
-node runner-ts/dist/cli.js run --tui    # interactive TUI
+node runner-ts/dist/cli.js tui          # interactive TUI
 
 # build the documentation website
 npm run build --workspace website

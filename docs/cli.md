@@ -15,7 +15,8 @@ and installs a `testfile` binary.
 ```sh
 testfile init [path]       # create a starter Testfile (from package.json)
 testfile run [path]        # run the tree (default command)
-testfile run --tui         # interactive terminal UI
+testfile tui [path]        # interactive terminal UI (tests, history, services)
+testfile run --tui         # ... the same, sharing run's flags
 testfile run --verbose     # also stream service output
 testfile run --fail-fast   # abort everything at the first failure
 testfile run --max-parallel 4   # global cap on concurrently running tests
@@ -139,41 +140,76 @@ A summary tree with per-test durations is printed at the end.
 
 ## The TUI
 
-`testfile run --tui` opens a two-pane terminal UI. It does **not** start any
-tests by itself: pick the tests you want with the selection keys, then press
-enter to run them — as often as you like within one session.
+`testfile tui` opens a two-pane terminal UI with three top-level views,
+switched with `1`/`2`/`3` (shown in the header line):
+
+1. **tests** — the test tree, for selecting and running tests.
+2. **history** — every recorded run, with details and the merged log.
+3. **services** — all services the Testfile defines: the ones currently
+   started and the startable ones that run on demand.
+
+`testfile run --tui` opens the same TUI on the tests view (honoring `run`'s
+filters, `--watch` and `--reporter`); `testfile history --tui` opens it on
+the history view. The TUI does **not** start any tests by itself: pick the
+tests you want with the selection keys, then press enter to run them — as
+often as you like within one session.
+
+### Tests view
 
 - The **left pane** lists the whole test tree (including matrix instances)
   with a selection checkbox per test — `[x]` selected, `[~]` covered by a
-  selected ancestor — and, once a run started, every service with its state
-  (starting, ready, stopping, stopped, failed). Tests that have not run in
-  this session show the result and duration of their most recent recorded
-  run (`last ✔ 1.2s`).
-- The **right pane** shows the log of whatever the cursor is on: the live
-  (or queued) log while a run is in progress, otherwise the merged
-  stdout+stderr of the test's previous recorded run. For services it starts
-  with the resolved details — image, port mappings and the service's env
-  (secret values masked) — followed by the live log.
+  selected ancestor. Tests that have not run in this session show the
+  result and duration of their most recent recorded run (`last ✔ 1.2s`).
+- The **right pane** has three tabs per test, cycled with the tab key:
+  - **info** — everything known about the test before running it: command
+    or script, shell, working directory, timeout, retry policy, `if`
+    condition, tags, matrix combination, inputs, artifacts, the env
+    declared along its ancestor chain, the services it depends on (with
+    their readiness checks), hooks, and its last recorded result.
+  - **log** — the live (or queued) log while a run is in progress,
+    otherwise the merged stdout+stderr of the test's previous recorded run.
+  - **history** — a table of the test's recorded outcomes: one row per run
+    with start time, status, duration and markers for cached results,
+    artifacts and logs.
 - The **summary line** counts selected, running, queued, passed and failed
   tests.
 
-Keys:
+### History view
+
+The left pane lists all recorded runs (newest first); the right pane shows
+the selected run's details — status, duration, env, ports, per-test results
+— and toggles to the run's merged log with enter.
+
+### Services view
+
+The left pane lists every service with its state: `startable` for defined
+services that have not been started (services start with the tests that
+need them), otherwise the live state (starting, ready, stopping, stopped,
+failed) and where it was declared. The right pane shows a running service's
+resolved details — image, port mappings, env (secret values masked) — and
+its live log; for a startable service it shows the declared configuration
+including the readiness and stop behavior. `r` restarts a running service.
+
+### Keys
 
 | Key       | Action |
 | --------- | ------ |
-| `↑`/`↓` (`k`/`j`) | Move the cursor over tests and services. |
+| `1`/`2`/`3` | Switch between the tests, history and services views. |
+| `↑`/`↓` (`k`/`j`) | Move the cursor in the active view's list. |
+| Mouse wheel | Scroll the log/detail pane; at the bottom it follows the tail again. |
+| Tab       | Tests view: cycle the detail tabs (info, log, history). |
 | Space     | Toggle selection of the current test (its subtree runs with it). |
 | `a`       | Select all tests (or clear the selection). |
 | `c`       | Select all children of the current test. |
 | `f`       | Select the failed tests — from this session, or from the last recorded run. |
-| Enter     | Run the selected tests. |
+| Enter     | Tests view: run the selected tests. History view: toggle details / merged log. |
 | `/`       | Search: type to filter the tree (matches with their ancestors); enter keeps the filter, esc clears it. |
 | `←`/`→` (`h`/`l`) | Collapse / expand the current group. |
 | PgUp/PgDn (`u`/`d`) | Scroll the log pane; it follows the tail when at the bottom. |
-| `r`       | On a service: stop it and start it again with the same configuration. |
-| `H`       | Browse recorded runs: pick a run, view its details or merged log; esc returns. |
+| `r`       | Services view: stop the service and start it again with the same configuration. |
 | `?`       | Search within the log pane; enter jumps to the latest match, `n`/`N` step older/newer, matches are highlighted. |
 | `w`       | Toggle line wrapping in the log pane. |
+| Esc       | History/services view: back to the tests view. |
 | `q` / Ctrl+C | While running: stop gracefully, press again to force-kill. Otherwise: quit. |
 
 ## Run history
@@ -199,6 +235,7 @@ Browse the history from the command line:
 
 ```sh
 testfile history                          # table of recent runs, newest first
+testfile history --tui                    # browse runs in the TUI's history view
 testfile history --run 20260801-1046      # one run in detail (id prefix is ok)
 testfile history --run <id> --log         # merged stdout+stderr of the run
 testfile history --run <id> --log all/e2e # ... of a single test

@@ -109,6 +109,88 @@ function printTree(session: Session, active: Set<number>, annotate?: (node: RunN
   });
 }
 
+type TuiView = "tests" | "history" | "services";
+
+const NO_FILTERS: FilterFlags = {
+  filter: [],
+  filterName: [],
+  filterTags: [],
+  filterMatrix: [],
+  failed: false,
+  changed: false,
+};
+
+// The one place the TUI is started from: `testfile tui`, `run --tui` and
+// `history --tui` all end up here, only with a different initial view.
+async function launchTui(
+  session: Session,
+  filtered: { filtered: boolean; active: Set<number> },
+  flags: { watch?: boolean; reporter?: ReporterKind; output?: string },
+  view: TuiView
+): Promise<void> {
+  // The TUI starts idle: the user selects tests and runs them with enter.
+  // Filter flags pre-select the matching tests. Ctrl+C is handled inside
+  // the TUI (the terminal is in raw mode).
+  const initialSelection = filtered.filtered
+    ? [...filtered.active].filter((id) => session.byId.get(id)?.children.length === 0)
+    : [];
+  const { startTui } = await import("./tui/index.js");
+  const tui = startTui(session, { initialSelection, view });
+
+  let interrupts = 0;
+  const onSignal = (): void => {
+    interrupts += 1;
+    if (!session.running || !session.runner) {
+      process.exit(typeof process.exitCode === "number" ? process.exitCode : 130);
+    } else if (interrupts === 1) {
+      session.runner.requestStop();
+    } else {
+      session.runner.forceStop();
+      process.exit(130);
+    }
+  };
+  process.on("SIGTERM", onSignal);
+
+  // Watch mode: re-run the last selection when files change.
+  let scheduler: WatchScheduler | undefined;
+  let watcher: FSWatcher | undefined;
+  if (flags.watch) {
+    scheduler = new WatchScheduler({
+      debounceMs: 300,
+      isRunning: () => session.running,
+      trigger: () => {
+        void session.runSelected(
+          session.lastSelection ??
+            (initialSelection.length > 0 ? initialSelection : [session.tree.id])
+        );
+      },
+    });
+    watcher = watchDirectory(session.baseDir, () => scheduler?.notify());
+    session.on("update", () => {
+      if (!session.running) scheduler?.runFinished();
+    });
+  }
+
+  await tui.waitUntilExit();
+  scheduler?.close();
+  watcher?.close();
+  if (flags.reporter && session.lastRecord) {
+    writeReport(session, flags.reporter, flags.output ?? "-");
+    if (flags.output !== undefined && flags.output !== "-") {
+      console.log(color(90, `${flags.reporter} report written to ${flags.output}`));
+    }
+  }
+  const status = session.runner?.root.status;
+  process.exitCode =
+    session.runner === undefined
+      ? 0
+      : session.runner.interrupted
+        ? 130
+        : status === "passed" || status === "skipped"
+          ? 0
+          : 1;
+}
+
 function addFilterOptions(command: Command): Command {
   return command
     .option("-f, --filter <value>", "only tests matching by name/path, tag, or key:value matrix (repeatable)", collect, [])
@@ -133,7 +215,7 @@ program
       const { path: file, content } = initTestfile(path);
       console.log(content);
       console.log(`${color(32, "✔")} wrote ${file}`);
-      console.log(color(90, "run it with: testfile run   (or testfile run --tui)"));
+      console.log(color(90, "run it with: testfile run   (or testfile tui)"));
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;
@@ -218,12 +300,34 @@ program
   .option("--last <n>", "with --flaky: only consider the most recent n runs", (v: string) =>
     Number.parseInt(v, 10)
   )
+  .option("--tui", "open the interactive terminal UI on the history view", false)
   .description("List, show or compare recorded test runs")
   .action(
-    (
+    async (
       path: string,
-      options: { run?: string; log?: string | boolean; diff?: string[]; flaky: boolean; last?: number }
+      options: {
+        run?: string;
+        log?: string | boolean;
+        diff?: string[];
+        flaky: boolean;
+        last?: number;
+        tui: boolean;
+      }
     ) => {
+    if (options.tui) {
+      try {
+        if (!process.stdout.isTTY) {
+          throw new Error("the TUI needs an interactive terminal (use: testfile history)");
+        }
+        const { path: file, doc } = loadTestfile(path);
+        const session = new Session(doc, dirname(file));
+        await launchTui(session, resolveFilters(session, NO_FILTERS), {}, "history");
+      } catch (err) {
+        console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
+        process.exitCode = 1;
+      }
+      return;
+    }
     const history = new RunHistory(resolveHistoryBase(path));
     if (history.runs.length === 0) {
       console.error(`no recorded runs in ${HISTORY_DIR}/`);
@@ -427,6 +531,16 @@ addFilterOptions(
       return;
     }
 
+    if (options.tui && process.stdout.isTTY) {
+      await launchTui(
+        session,
+        filtered,
+        { watch: options.watch, reporter: options.reporter, output: options.output },
+        "tests"
+      );
+      return;
+    }
+
     // Watch mode: re-run the last selection when files change (debounced;
     // changes during a run re-trigger once it finished).
     let scheduler: WatchScheduler | undefined;
@@ -465,43 +579,7 @@ addFilterOptions(
     };
     process.on("SIGTERM", onSignal);
 
-    if (options.tui && process.stdout.isTTY) {
-      // The TUI starts idle: the user selects tests and runs them with enter.
-      // Filter flags pre-select the matching tests. Ctrl+C is handled inside
-      // the TUI (the terminal is in raw mode).
-      const initialSelection = filtered.filtered
-        ? [...filtered.active].filter((id) => session.byId.get(id)?.children.length === 0)
-        : [];
-      const [{ render }, React, { App }] = await Promise.all([
-        import("ink"),
-        import("react"),
-        import("./tui.js"),
-      ]);
-      const app = render(React.createElement(App, { session, initialSelection }), {
-        exitOnCtrlC: false,
-      });
-      startWatching(() => {
-        void session.runSelected(
-          session.lastSelection ??
-            (initialSelection.length > 0 ? initialSelection : [session.tree.id])
-        );
-      });
-      await app.waitUntilExit();
-      stopWatching();
-      if (options.reporter && session.lastRecord) {
-        writeReport(session, options.reporter, options.output);
-        if (options.output !== "-") console.log(color(90, `${options.reporter} report written to ${options.output}`));
-      }
-      const status = session.runner?.root.status;
-      process.exitCode =
-        session.runner === undefined
-          ? 0
-          : session.runner.interrupted
-            ? 130
-            : status === "passed" || status === "skipped"
-              ? 0
-              : 1;
-    } else {
+    {
       if (options.tui) console.error("not a TTY, falling back to plain output");
       process.on("SIGINT", onSignal);
       let reporter: ConsoleReporter | undefined;
@@ -530,6 +608,57 @@ addFilterOptions(
         });
         console.log(color(36, "watching for changes... (Ctrl+C to exit)"));
       }
+    }
+  });
+
+interface TuiCommandFlags extends FilterFlags {
+  view: string;
+  failFast: boolean;
+  maxParallel?: number;
+  watch: boolean;
+  cache: boolean;
+}
+
+addFilterOptions(
+  program
+    .command("tui")
+    .argument("[path]", "Testfile or directory containing one", ".")
+    .option("--view <view>", "initial view: tests, history or services", "tests")
+    .option("--fail-fast", "abort the whole run at the first test failure", false)
+    .option(
+      "--max-parallel <n>",
+      "global cap on concurrently running tests",
+      (value: string) => Number.parseInt(value, 10),
+      undefined
+    )
+    .option("-w, --watch", "re-run the selection when files change", false)
+    .option("--no-cache", "ignore cached results (fresh results still refresh the cache)")
+    .description("Interactive terminal UI: tests, run history and services")
+)
+  .action(async (path: string, options: TuiCommandFlags) => {
+    try {
+      if (!process.stdout.isTTY) {
+        throw new Error("the TUI needs an interactive terminal (use: testfile run)");
+      }
+      if (!["tests", "history", "services"].includes(options.view)) {
+        throw new Error(`unknown --view "${options.view}", expected tests, history or services`);
+      }
+      if (options.maxParallel !== undefined && !(options.maxParallel >= 1)) {
+        throw new Error("--max-parallel must be a positive integer");
+      }
+      const { path: file, doc } = loadTestfile(path);
+      const session = new Session(doc, dirname(file), {
+        failFast: options.failFast,
+        maxParallel: options.maxParallel,
+        noCache: !options.cache,
+      });
+      let filtered = resolveFilters(session, options);
+      if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
+      filtered = await applyChanged(session, filtered, options.changed);
+      await launchTui(session, filtered, { watch: options.watch }, options.view as TuiView);
+    } catch (err) {
+      console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
+      process.exitCode = 1;
     }
   });
 
