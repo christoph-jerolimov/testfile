@@ -37,6 +37,11 @@ test("equality and inequality comparison", () => {
   assert.equal(evaluate("${{ env.NOT_SET }} == ''"), true);
 });
 
+test("template defaults work inside conditions", () => {
+  assert.equal(evaluate("${{ env.NOT_SET || yes }} == yes"), true);
+  assert.equal(evaluate("${{ env.OS || fallback }} == linux"), true);
+});
+
 test("negation applies to the whole expression", () => {
   assert.equal(evaluate("!${{ env.CI }}"), false);
   assert.equal(evaluate("!${{ env.NOT_SET }}"), true);
