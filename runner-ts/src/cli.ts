@@ -13,6 +13,7 @@ import {
 } from "./filter.js";
 import { HISTORY_DIR, RunHistory, type RunRecord } from "./history.js";
 import { loadTestfile } from "./loader.js";
+import { writeReport, type ReporterKind } from "./report.js";
 import { ConsoleReporter } from "./reporter.js";
 import { walk, type RunNode } from "./runtree.js";
 import { Session } from "./session.js";
@@ -252,6 +253,8 @@ interface RunFlags extends FilterFlags {
   maxParallel?: number;
   dryRun: boolean;
   watch: boolean;
+  reporter?: ReporterKind;
+  output: string;
 }
 
 addFilterOptions(
@@ -269,6 +272,8 @@ addFilterOptions(
     )
     .option("--dry-run", "print what would run (with filters applied) without running", false)
     .option("-w, --watch", "re-run the selection when files change", false)
+    .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
+    .option("--output <file>", 'report target file, or "-" for stdout', "-")
     .description("Run the test tree")
 )
   .action(async (path: string, options: RunFlags) => {
@@ -277,6 +282,9 @@ addFilterOptions(
     try {
       if (options.maxParallel !== undefined && !(options.maxParallel >= 1)) {
         throw new Error("--max-parallel must be a positive integer");
+      }
+      if (options.reporter !== undefined && options.reporter !== "junit" && options.reporter !== "json") {
+        throw new Error(`unknown --reporter "${options.reporter}", expected junit or json`);
       }
       const { path: file, doc } = loadTestfile(path);
       session = new Session(doc, dirname(file), {
@@ -360,6 +368,10 @@ addFilterOptions(
       });
       await app.waitUntilExit();
       stopWatching();
+      if (options.reporter && session.lastRecord) {
+        writeReport(session, options.reporter, options.output);
+        if (options.output !== "-") console.log(color(90, `${options.reporter} report written to ${options.output}`));
+      }
       const status = session.runner?.root.status;
       process.exitCode =
         session.runner === undefined
@@ -382,6 +394,10 @@ addFilterOptions(
         reporter?.summary();
         if (session.lastRecord) {
           console.log(color(90, `run recorded in ${HISTORY_DIR}/runs/${session.lastRecord.id}`));
+        }
+        if (options.reporter) {
+          writeReport(session, options.reporter, options.output);
+          if (options.output !== "-") console.log(color(90, `${options.reporter} report written to ${options.output}`));
         }
         process.exitCode =
           session.runner!.interrupted ? 130 : status === "passed" || status === "skipped" ? 0 : 1;
