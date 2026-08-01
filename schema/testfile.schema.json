@@ -19,6 +19,10 @@
       "description": "Environment variables available to every test and service in this file.",
       "$ref": "#/$defs/envMap"
     },
+    "envFile": {
+      "description": "Dotenv file(s), relative to this Testfile, loaded for the whole run. Values are treated as secrets: they are masked in recorded logs and never written into run records. Explicit 'env' entries win over env file values.",
+      "$ref": "#/$defs/envFileSpec"
+    },
     "ports": {
       "description": "Named ports. A value of \"random\" allocates a free port on startup; an integer pins a fixed port. Referenced anywhere via ${{ ports.NAME }} templates.",
       "$ref": "#/$defs/portsMap"
@@ -35,6 +39,22 @@
   "$defs": {
     "scalar": {
       "type": ["string", "number", "boolean"]
+    },
+    "envFileSpec": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ]
     },
     "envMap": {
       "type": "object",
@@ -148,6 +168,10 @@
         "env": {
           "description": "Environment variables for this test and its children. Merged over the parent environment.",
           "$ref": "#/$defs/envMap"
+        },
+        "envFile": {
+          "description": "Dotenv file(s), relative to this test's working directory, loaded for this subtree. Values are treated as secrets: masked in recorded logs and never written into run records. Precedence: parent env < env file(s) < this test's 'env'.",
+          "$ref": "#/$defs/envFileSpec"
         },
         "workdir": {
           "description": "Working directory for this test and its children, relative to the Testfile location (or absolute).",

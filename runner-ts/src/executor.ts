@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { resolve as resolvePath } from "node:path";
 import { evaluateCondition } from "./condition.js";
+import { loadEnvFiles } from "./envfile.js";
 import type { HookDef, ServiceDef, TestfileDoc } from "./model.js";
 import { resolvePorts } from "./ports.js";
 import { walk, type RunNode, type Status } from "./runtree.js";
@@ -21,6 +22,8 @@ export class Runner extends EventEmitter {
   ports: Record<string, number> = {};
   // The Testfile's own top-level env (resolved), for run records.
   docEnv: Record<string, string> = {};
+  // Values loaded from env files; masked when logs are persisted.
+  readonly secrets = new Set<string>();
   interrupted = false;
   readonly active?: Set<number>;
 
@@ -71,8 +74,10 @@ export class Runner extends EventEmitter {
     try {
       this.ports = await resolvePorts(this.doc.ports);
       const bootstrap: Scopes = { env: baseEnv, ports: this.ports, matrix: {} };
-      this.docEnv = resolveEnvMap(this.doc.env, bootstrap, "Testfile");
-      const scopes: Scopes = { ...bootstrap, env: { ...baseEnv, ...this.docEnv } };
+      const fileEnv = loadEnvFiles(this.doc.envFile, this.baseDir, bootstrap, "Testfile", this.secrets);
+      const withFiles = { ...baseEnv, ...fileEnv };
+      this.docEnv = resolveEnvMap(this.doc.env, { ...bootstrap, env: withFiles }, "Testfile");
+      const scopes: Scopes = { ...bootstrap, env: { ...withFiles, ...this.docEnv } };
       await this.startServices(this.doc.services, scopes, this.baseDir, started, this.abort);
       await this.runNode(this.root, scopes, this.baseDir, this.abort.signal);
     } catch (err) {
@@ -132,7 +137,7 @@ export class Runner extends EventEmitter {
         for (const [key, value] of Object.entries(node.matrix)) {
           env[`TESTFILE_MATRIX_${key.toUpperCase()}`] = value;
         }
-        const nodeScopes: Scopes = { ...withMatrix, env };
+        let nodeScopes: Scopes = { ...withMatrix, env };
 
         if (node.def.if !== undefined && !evaluateCondition(node.def.if, nodeScopes, where)) {
           node.output.system(`skipped: condition not met (${node.def.if})`);
@@ -148,6 +153,20 @@ export class Runner extends EventEmitter {
           ? resolvePath(cwd, resolveTemplate(node.def.workdir, nodeScopes, where))
           : cwd;
         node.resolvedCwd = nodeCwd;
+
+        if (node.def.envFile !== undefined) {
+          const nodeFileEnv = loadEnvFiles(node.def.envFile, nodeCwd, nodeScopes, where, this.secrets);
+          // precedence: parent env < env file(s) < this test's own env
+          const merged = {
+            ...withMatrix.env,
+            ...nodeFileEnv,
+            ...resolveEnvMap(node.def.env, withMatrix, where),
+          };
+          for (const [key, value] of Object.entries(node.matrix)) {
+            merged[`TESTFILE_MATRIX_${key.toUpperCase()}`] = value;
+          }
+          nodeScopes = { ...withMatrix, env: merged };
+        }
 
         if (node.def.teardown) {
           const hook = node.def.teardown;

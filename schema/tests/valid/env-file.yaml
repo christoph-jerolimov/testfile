@@ -1,0 +1,12 @@
+# Dotenv files at the document and test level.
+version: 1
+envFile: .env.test
+test:
+  sequence:
+    - name: unit
+      command: npm run test:unit
+    - name: integration
+      envFile:
+        - .env.integration
+        - .env.integration.local
+      command: npm run test:integration
