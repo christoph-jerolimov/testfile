@@ -1,5 +1,7 @@
 # yaml-language-server: $schema=schema/testfile.schema.json
-# This repository's own tests, described as a Testfile.
+# This repository's own CI, described as a Testfile. The GitHub workflow
+# (.github/workflows/ci.yaml) runs it through the bundled action, so the
+# format, the runner and the action are all exercised by every build.
 version: 1
 name: testfile-monorepo
 env:
@@ -13,9 +15,26 @@ test:
       parallel:
         - name: schema
           command: npm test --workspace schema
-        - name: runner-ts
-          script: |
-            npm run build --workspace runner-ts
-            npm test --workspace runner-ts
         - name: website
           command: npm run build --workspace website
+        - name: build-runner
+          command: npm run build --workspace runner-ts
+        # npm test --workspace runner-ts would rebuild via pretest; the tests
+        # run against the one build above so nothing rewrites dist mid-run.
+        - name: runner-tests
+          needs: [build-runner]
+          workdir: runner-ts
+          command: node --test "dist/**/*.test.js"
+        - name: conformance
+          needs: [build-runner]
+          command: npm test --workspace conformance
+        # What the dedicated action self-test job used to check: running the
+        # smoke Testfile produces a passing JUnit report.
+        - name: action-smoke
+          needs: [build-runner]
+          script: |
+            out=$(mktemp)
+            node runner-ts/dist/cli.js run .github/action-smoke --reporter junit --output "$out"
+            grep -q '<testcase name="hello"' "$out"
+            grep -q 'failures="0"' "$out"
+            rm -f "$out"
