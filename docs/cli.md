@@ -26,6 +26,29 @@ testfile list [path]       # print the expanded tree, incl. matrix instances
 Exit codes: `0` all tests passed · `1` failures or a service that would not
 start · `130` interrupted.
 
+## Filtering
+
+`run` and `list` accept filters to work on a subset of the tree:
+
+```sh
+testfile run --filter e2e                  # tests whose path contains "e2e"
+testfile run --filter all/checks/unit      # ... or a full path
+testfile run --matrix-filter db:postgres   # only these matrix instances
+testfile run --filter integration --matrix-filter db:postgres --matrix-filter node:22
+```
+
+- `--filter <name-or-path>` matches case-insensitively against the test's
+  *path* — its names joined with `/`, e.g. `all/checks/unit tests` — so a
+  bare test name works too. A matched test runs with its whole subtree;
+  ancestors run as scaffolding (their sequence order, services and env still
+  apply). Repeat the flag to match more tests.
+- `--matrix-filter <key:value>` keeps only matrix instances whose combination
+  has that value. Repeating the same key ORs the values, different keys are
+  ANDed; tests outside a matrix with that key are unaffected.
+
+Filters that match nothing are an error. With `--tui`, filters pre-select the
+matching tests instead of running them immediately.
+
 ## Plain output
 
 Without `--tui` the runner streams progress line by line — suitable for CI

@@ -48,12 +48,18 @@ interface PaneContent {
   lines: OutputLine[];
 }
 
-export function App({ session }: { session: Session }): React.ReactElement {
+export function App({
+  session,
+  initialSelection = [],
+}: {
+  session: Session;
+  initialSelection?: number[];
+}): React.ReactElement {
   const { exit } = useApp();
   const { stdout } = useStdout();
   const [, setTick] = useState(0);
   const [cursor, setCursor] = useState(0);
-  const [selection, setSelection] = useState<Set<number>>(new Set());
+  const [selection, setSelection] = useState<Set<number>>(new Set(initialSelection));
   const [message, setMessage] = useState<string | undefined>();
   const [stopRequested, setStopRequested] = useState(false);
   // Logs of previous runs, loaded lazily per test path (null = no log found).
