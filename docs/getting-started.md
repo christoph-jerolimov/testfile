@@ -8,8 +8,9 @@ description: Write your first Testfile and run it.
 
 ## 1. Create a Testfile
 
-Create a file called `Testfile` (or `testfile.yaml`) in the root of your
-project:
+The quickest start is `testfile init`: it inspects your `package.json`
+scripts and writes a matching starter Testfile. Or create a file called
+`Testfile` (or `testfile.yaml`) in the root of your project yourself:
 
 ```yaml
 version: 1

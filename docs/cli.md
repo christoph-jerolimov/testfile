@@ -13,6 +13,7 @@ and installs a `testfile` binary.
 ## Commands
 
 ```sh
+testfile init [path]       # create a starter Testfile (from package.json)
 testfile run [path]        # run the tree (default command)
 testfile run --tui         # interactive terminal UI
 testfile run --verbose     # also stream service output
