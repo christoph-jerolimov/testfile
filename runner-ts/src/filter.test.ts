@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   effectiveTags,
+  filterByLastFailed,
   matchesMatrixFilters,
   parseMatrixFilters,
   parseTagFilters,
@@ -12,6 +13,7 @@ import {
   splitGenericFilters,
   type TestFilters,
 } from "./filter.js";
+import { RunHistory } from "./history.js";
 import type { TestfileDoc } from "./model.js";
 import { buildRunTree, walk, type RunNode } from "./runtree.js";
 import { Session } from "./session.js";
@@ -184,6 +186,45 @@ test("matchesMatrixFilters constrains only nodes that carry the key", () => {
     "integration (db=postgres, node=20)",
     "integration (db=postgres, node=22)",
   ]);
+});
+
+test("filterByLastFailed selects only tests that failed in the recorded run", async () => {
+  const dir = tempDir();
+  const mixed: TestfileDoc = {
+    version: 1,
+    test: {
+      name: "root",
+      sequence: [
+        { name: "good", command: "true" },
+        { name: "bad", command: "false", continueOnError: true },
+        { name: "also-good", command: "true" },
+      ],
+    },
+  };
+  const session = new Session(mixed, dir);
+  assert.equal(await session.runAll(), "passed");
+
+  const leaves = selectLeaves(session.tree, filters({}));
+  const lastRun = new RunHistory(dir).runs[0];
+  const failedLeaves = filterByLastFailed(leaves, lastRun);
+  assert.deepEqual(
+    failedLeaves.map((n) => n.path),
+    ["root/bad"]
+  );
+
+  // re-running just the failed selection leaves the others untouched:
+  // "good" keeps its result from the first run instead of being reset
+  const goodBefore = new Map<string, RunNode>();
+  walk(session.tree, (node) => goodBefore.set(node.name, node));
+  const goodEndedAt = goodBefore.get("good")!.endedAt;
+  await session.runSelected(failedLeaves.map((n) => n.id));
+  const byName = new Map<string, RunNode>();
+  walk(session.tree, (node) => byName.set(node.name, node));
+  assert.equal(byName.get("bad")!.status, "failed");
+  assert.equal(byName.get("good")!.status, "passed");
+  assert.equal(byName.get("good")!.endedAt, goodEndedAt, "good must not have re-run");
+
+  assert.throws(() => filterByLastFailed(leaves, undefined), /no recorded runs/);
 });
 
 test("a tag-filtered run only executes matching leaves", async () => {
