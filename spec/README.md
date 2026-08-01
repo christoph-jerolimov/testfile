@@ -75,6 +75,8 @@ Common fields available on every test:
 | `matrix`          | map      | Matrix expansion, see [Matrix](#matrix). |
 | `maxParallel`     | integer  | Only together with `parallel`: cap on concurrently running children. Default: unlimited. |
 | `needs`           | array    | Only on children of a `parallel` group: names of sibling tests that must finish first, turning the group into a DAG. The test starts once all named siblings passed or were skipped; if one failed, the test is skipped. References must name existing, unambiguous siblings and must not form cycles. |
+| `setup`           | hook     | Runs after the test's services are ready and before its body. A failing setup skips the body and fails the test; teardown still runs. See [Hooks](#hooks). |
+| `teardown`        | hook     | Always runs after the test's body — on success, failure and abort — before the test's services stop. A failing teardown fails an otherwise passing test. See [Hooks](#hooks). |
 
 ### Execution semantics
 
@@ -114,6 +116,24 @@ A false condition skips the test and its subtree (status `skipped`). This
 does not fail the surrounding sequence/parallel group; a group whose active
 children all skipped is itself `skipped`. A fully skipped run exits with
 code `0`.
+
+## Hooks
+
+`setup` and `teardown` are objects with **exactly one** of `command` or
+`script` (run with `sh -c` / `sh -e`), plus optional `env`, `workdir` and
+`timeout`. They run in the test's environment (their own `env` merged on
+top) and write into the test's log.
+
+Order of one test: services start and become ready → `setup` → body
+(command/script/children) → `teardown` → services stop.
+
+- A failing `setup` (non-zero exit or timeout) fails the test; the body is
+  skipped, `teardown` still runs.
+- `teardown` always runs once the test got as far as starting — including
+  when the body failed or the run was interrupted with Ctrl+C — and cannot
+  be aborted (a second Ctrl+C force-kills). A failing `teardown` fails an
+  otherwise passing test; it never masks an earlier failure.
+- On a test with a `matrix`, hooks run per instance.
 
 ## Matrix
 

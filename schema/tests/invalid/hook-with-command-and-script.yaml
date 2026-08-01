@@ -1,0 +1,8 @@
+# Invalid: a hook must set exactly one of command or script.
+version: 1
+test:
+  setup:
+    command: ./prepare.sh
+    script: |
+      ./prepare.sh
+  command: npm test

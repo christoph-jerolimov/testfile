@@ -102,6 +102,27 @@ sequence:
     command: rm -rf tmp
 ```
 
+## Setup and teardown
+
+`setup` runs before a test's body, `teardown` after it — cleanup included on
+failures and Ctrl+C:
+
+```yaml
+- name: db tests
+  setup:
+    command: npm run db:migrate
+  teardown:
+    command: npm run db:drop
+    timeout: 30s
+  command: npm run test:db
+```
+
+Hooks take one `command` or `script` plus optional `env`, `workdir` and
+`timeout`, and they run after the test's services are ready. A failing
+setup fails the test and skips its body (teardown still runs); a failing
+teardown fails an otherwise passing test. On groups, hooks wrap all
+children; with a matrix they run per instance.
+
 ## Conditional tests
 
 `if` decides whether a test (and its subtree) runs. A false condition marks
