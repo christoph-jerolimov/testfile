@@ -31,26 +31,31 @@ start · `130` interrupted.
 `run` and `list` accept filters to work on a subset of the tree:
 
 ```sh
-testfile run --filter-name e2e               # tests whose path contains "e2e"
-testfile run --filter-name all/checks/unit   # ... or a full path
-testfile run --filter-tags fast              # tests tagged fast
-testfile run --filter-tags "slow, nightly"   # ... or slow OR nightly
-testfile run --matrix-filter db:postgres     # only these matrix instances
-testfile run --filter-tags slow --matrix-filter db:postgres --matrix-filter node:22
+testfile run -f e2e                          # best guess: name, tag, ...
+testfile run -f fast                         # ... tag ...
+testfile run -f db:postgres                  # ... or matrix (it has a ":")
+testfile run --filter-name all/checks/unit   # -n: match name/path only
+testfile run --filter-tags "slow, nightly"   # -t: tagged slow OR nightly
+testfile run --filter-matrix db:postgres     # -m: only these matrix instances
+testfile run -t slow -m db:postgres -m node:22
 ```
 
-- `--filter-name <name-or-path>` matches case-insensitively against the
+- `-f, --filter <value>` is the quick, best-guess filter: a value containing
+  `:` is treated as a `key:value` matrix filter; anything else matches tests
+  whose path contains the value **or** that carry it as a tag. Repeatable.
+- `-n, --filter-name <name-or-path>` matches case-insensitively against the
   test's *path* — its names joined with `/`, e.g. `all/checks/unit tests` —
   so a bare test name works too. A matched test runs with its whole subtree;
   ancestors run as scaffolding (their sequence order, services and env still
   apply). Repeat the flag to match more tests.
-- `--filter-tags <tags>` takes a comma-separated list of
+- `-t, --filter-tags <tags>` takes a comma-separated list of
   [tags](./writing-tests#tags) (whitespace is trimmed) and keeps tests that
   carry — or inherit from an ancestor — any of them. The flag can be
   repeated.
-- `--matrix-filter <key:value>` keeps only matrix instances whose combination
-  has that value. Repeating the same key ORs the values, different keys are
-  ANDed; tests outside a matrix with that key are unaffected.
+- `-m, --filter-matrix <key:value>` keeps only matrix instances whose
+  combination has that value. Repeating the same key ORs the values,
+  different keys are ANDed; tests outside a matrix with that key are
+  unaffected.
 
 Different filter kinds are ANDed. Filters that match nothing are an error.
 With `--tui`, filters pre-select the matching tests instead of running them

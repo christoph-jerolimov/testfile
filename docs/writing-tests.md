@@ -94,7 +94,7 @@ test:
 ```
 
 A tag on a group applies to all tests below it. Run a subset with
-[`testfile run --filter-tags fast`](./cli#filtering).
+[`testfile run -t fast`](./cli#filtering) (or just `-f fast`).
 
 ## Timeouts, env, workdir
 

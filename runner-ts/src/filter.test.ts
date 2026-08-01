@@ -9,6 +9,7 @@ import {
   parseMatrixFilters,
   parseTagFilters,
   selectLeaves,
+  splitGenericFilters,
   type TestFilters,
 } from "./filter.js";
 import type { TestfileDoc } from "./model.js";
@@ -22,7 +23,7 @@ function tempDir(): string {
 }
 
 function filters(partial: Partial<TestFilters>): TestFilters {
-  return { names: [], tags: [], matrix: new Map(), ...partial };
+  return { any: [], names: [], tags: [], matrix: new Map(), ...partial };
 }
 
 const doc: TestfileDoc = {
@@ -113,6 +114,53 @@ test("name, tag and matrix filters are ANDed", () => {
   assert.deepEqual(
     combined.map((n) => n.name),
     ["integration (db=postgres, node=22)"]
+  );
+});
+
+test("splitGenericFilters routes values with a colon to matrix specs", () => {
+  const split = splitGenericFilters(["e2e", " fast ", "db:postgres", "", "node:22"]);
+  assert.deepEqual(split.nameOrTag, ["e2e", "fast"]);
+  assert.deepEqual(split.matrixSpecs, ["db:postgres", "node:22"]);
+});
+
+test("the generic filter matches names or tags", () => {
+  const tree = buildRunTree(doc);
+  // "e2e" is a test name
+  assert.deepEqual(
+    selectLeaves(tree, filters({ any: ["e2e"] })).map((n) => n.name),
+    ["e2e"]
+  );
+  // "fast" is a tag (on lint and the checks group)
+  assert.deepEqual(
+    selectLeaves(tree, filters({ any: ["fast"] })).map((n) => n.name),
+    ["lint", "unit tests", "e2e"]
+  );
+  // several generic values are ORed: name match or tag match
+  assert.deepEqual(
+    selectLeaves(tree, filters({ any: ["nightly", "lint"] })).map((n) => n.name),
+    [
+      "lint",
+      "integration (db=postgres, node=20)",
+      "integration (db=postgres, node=22)",
+      "integration (db=mysql, node=20)",
+      "integration (db=mysql, node=22)",
+    ]
+  );
+});
+
+test("generic matrix values combine with the dedicated matrix filter", () => {
+  const tree = buildRunTree(doc);
+  const generic = splitGenericFilters(["integration", "db:mysql"]);
+  const combined = selectLeaves(
+    tree,
+    filters({
+      any: generic.nameOrTag,
+      matrix: parseMatrixFilters([...generic.matrixSpecs, "node:20"]),
+    })
+  );
+  assert.deepEqual(
+    combined.map((n) => n.name),
+    ["integration (db=mysql, node=20)"]
   );
 });
 

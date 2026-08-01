@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 import { dirname } from "node:path";
 import { Command } from "commander";
-import { hasFilters, parseMatrixFilters, parseTagFilters, selectLeaves, type TestFilters } from "./filter.js";
+import {
+  hasFilters,
+  parseMatrixFilters,
+  parseTagFilters,
+  selectLeaves,
+  splitGenericFilters,
+  type TestFilters,
+} from "./filter.js";
 import { HISTORY_DIR } from "./history.js";
 import { loadTestfile } from "./loader.js";
 import { ConsoleReporter } from "./reporter.js";
@@ -14,9 +21,10 @@ const program = new Command();
 const collect = (value: string, previous: string[]) => [...previous, value];
 
 interface FilterFlags {
+  filter: string[];
   filterName: string[];
   filterTags: string[];
-  matrixFilter: string[];
+  filterMatrix: string[];
 }
 
 // Turns the filter flags into the selection Session.runSelected expects,
@@ -24,11 +32,13 @@ interface FilterFlags {
 function resolveFilters(
   session: Session,
   flags: FilterFlags
-): { selection: number[]; active: Set<number>; leafCount: number } {
+): { selection: number[]; active: Set<number>; leafCount: number; filtered: boolean } {
+  const generic = splitGenericFilters(flags.filter);
   const filters: TestFilters = {
+    any: generic.nameOrTag,
     names: flags.filterName,
     tags: parseTagFilters(flags.filterTags),
-    matrix: parseMatrixFilters(flags.matrixFilter),
+    matrix: parseMatrixFilters([...flags.filterMatrix, ...generic.matrixSpecs]),
   };
   if (!hasFilters(filters)) {
     const active = session.activeSetFor([session.tree.id]);
@@ -36,18 +46,19 @@ function resolveFilters(
     for (const id of active) {
       if (session.byId.get(id)?.children.length === 0) leafCount++;
     }
-    return { selection: [session.tree.id], active, leafCount };
+    return { selection: [session.tree.id], active, leafCount, filtered: false };
   }
   const leaves = selectLeaves(session.tree, filters);
   const selection = leaves.map((leaf) => leaf.id);
-  return { selection, active: session.activeSetFor(selection), leafCount: leaves.length };
+  return { selection, active: session.activeSetFor(selection), leafCount: leaves.length, filtered: true };
 }
 
 function addFilterOptions(command: Command): Command {
   return command
-    .option("--filter-name <name-or-path>", "only tests whose path contains this (repeatable)", collect, [])
-    .option("--filter-tags <tags>", "only tests tagged with any of these comma-separated tags (repeatable)", collect, [])
-    .option("--matrix-filter <key:value>", "only matrix instances with this value (repeatable)", collect, []);
+    .option("-f, --filter <value>", "only tests matching by name/path, tag, or key:value matrix (repeatable)", collect, [])
+    .option("-n, --filter-name <name-or-path>", "only tests whose path contains this (repeatable)", collect, [])
+    .option("-t, --filter-tags <tags>", "only tests tagged with any of these comma-separated tags (repeatable)", collect, [])
+    .option("-m, --filter-matrix <key:value>", "only matrix instances with this value (repeatable)", collect, []);
 }
 
 program
@@ -146,10 +157,9 @@ addFilterOptions(
       // The TUI starts idle: the user selects tests and runs them with enter.
       // Filter flags pre-select the matching tests. Ctrl+C is handled inside
       // the TUI (the terminal is in raw mode).
-      const initialSelection =
-        options.filterName.length > 0 || options.filterTags.length > 0 || options.matrixFilter.length > 0
-          ? [...filtered.active].filter((id) => session.byId.get(id)?.children.length === 0)
-          : [];
+      const initialSelection = filtered.filtered
+        ? [...filtered.active].filter((id) => session.byId.get(id)?.children.length === 0)
+        : [];
       const [{ render }, React, { App }] = await Promise.all([
         import("ink"),
         import("react"),
