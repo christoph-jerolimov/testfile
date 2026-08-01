@@ -102,6 +102,24 @@ sequence:
     command: rm -rf tmp
 ```
 
+## Artifacts
+
+Declare files a test produces — coverage, screenshots, reports — and the
+runner keeps them with the [run record](./cli#run-history), also when the
+test fails:
+
+```yaml
+- name: e2e
+  artifacts:
+    - playwright-report/**
+    - test-results/**/*.png
+  command: npm run test:e2e
+```
+
+Patterns are globs relative to the test's working directory. Collected
+files land in `.testfile/runs/<id>/artifacts/<test>/...` and are listed in
+`runs.yaml` and in `testfile history --run <id>`.
+
 ## Setup and teardown
 
 `setup` runs before a test's body, `teardown` after it — cleanup included on

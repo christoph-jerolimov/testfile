@@ -1,5 +1,5 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { parse, stringify } from "yaml";
 import type { OutputLine } from "./output.js";
 import type { Status } from "./runtree.js";
@@ -15,6 +15,8 @@ export interface RunRecordTest {
   durationMs?: number;
   // Log file relative to the run's folder, when the test produced output.
   log?: string;
+  // Collected artifact files, relative to the run's folder.
+  artifacts?: string[];
 }
 
 export interface RunRecord {
@@ -48,6 +50,8 @@ export interface RunLogInput {
   status: Status;
   durationMs?: number;
   lines: OutputLine[];
+  // Files to copy into the run's artifacts folder.
+  artifacts?: { absolute: string; relative: string }[];
 }
 
 export class RunHistory {
@@ -133,6 +137,20 @@ export class RunHistory {
       if (test.lines.length > 0) {
         entry.log = join("tests", `${slugify(test.path)}.log`);
         writeFileSync(join(runDir, entry.log), renderLines(test.lines));
+      }
+      if (test.artifacts && test.artifacts.length > 0) {
+        entry.artifacts = [];
+        const slug = slugify(test.path);
+        for (const artifact of test.artifacts) {
+          const target = join("artifacts", slug, artifact.relative);
+          try {
+            mkdirSync(join(runDir, dirname(target)), { recursive: true });
+            cpSync(artifact.absolute, join(runDir, target));
+            entry.artifacts.push(target);
+          } catch {
+            // a vanished file is not worth failing the record for
+          }
+        }
       }
       record.tests.push(entry);
       const duration = test.durationMs !== undefined ? `, ${test.durationMs}ms` : "";

@@ -1,4 +1,6 @@
 import { EventEmitter } from "node:events";
+import { globSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { Runner } from "./executor.js";
 import { RunHistory, type RunLogInput, type RunRecord } from "./history.js";
 import { validateSemantics } from "./loader.js";
@@ -100,6 +102,7 @@ export class Session extends EventEmitter {
             ? node.endedAt - node.startedAt
             : undefined,
         lines: node.output.lines,
+        artifacts: collectArtifacts(node),
       });
     });
     // A fully condition-skipped run counts as success: nothing failed.
@@ -121,4 +124,22 @@ export class Session extends EventEmitter {
       runner.services.map((service) => ({ name: service.name, lines: service.output.lines }))
     );
   }
+}
+
+// Matches a test's artifact globs against its working directory. Runs after
+// the test finished (also on failure), right before the run is recorded.
+function collectArtifacts(node: RunNode): { absolute: string; relative: string }[] | undefined {
+  if (!node.def.artifacts || node.resolvedCwd === undefined || node.status === "skipped") {
+    return undefined;
+  }
+  const files: { absolute: string; relative: string }[] = [];
+  for (const relative of globSync(node.def.artifacts, { cwd: node.resolvedCwd })) {
+    const absolute = join(node.resolvedCwd, relative);
+    try {
+      if (statSync(absolute).isFile()) files.push({ absolute, relative });
+    } catch {
+      // ignore files that vanish between glob and stat
+    }
+  }
+  return files;
 }
