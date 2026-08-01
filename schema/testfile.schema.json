@@ -420,6 +420,24 @@
             "type": "string"
           }
         },
+        "pull": {
+          "description": "When to pull the image: always, only when missing locally (default), or never.",
+          "enum": ["always", "missing", "never"],
+          "default": "missing"
+        },
+        "network": {
+          "description": "Attach the container to this named network, creating it if needed. The service name becomes a network alias, so services on the same network reach each other by name.",
+          "type": "string",
+          "minLength": 1
+        },
+        "entrypoint": {
+          "description": "Override the image entrypoint.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
         "command": {
           "description": "Override the image command.",
           "type": "array",

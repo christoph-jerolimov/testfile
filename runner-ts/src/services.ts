@@ -1,7 +1,7 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { resolve as resolvePath } from "node:path";
-import type { ServiceDef } from "./model.js";
+import type { ContainerDef, ServiceDef } from "./model.js";
 import { OutputBuffer } from "./output.js";
 import { waitReady } from "./ready.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
@@ -54,6 +54,58 @@ function waitExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
     };
     child.once("exit", onExit);
   });
+}
+
+// The full `run` argument list for a service container. The service name
+// becomes a network alias when a network is set, so services on the same
+// network reach each other by name.
+export function buildContainerRunArgs(
+  name: string,
+  container: ContainerDef,
+  scopes: Scopes,
+  where: string
+): string[] {
+  const args = ["run", "--rm", "-d"];
+  if (container.pull) args.push(`--pull=${container.pull}`);
+  if (container.network) {
+    args.push("--network", resolveTemplate(container.network, scopes, where));
+    args.push("--network-alias", name);
+  }
+  for (const mapping of container.ports ?? []) {
+    args.push("-p", resolveTemplate(mapping, scopes, where));
+  }
+  for (const [key, value] of Object.entries(resolveEnvMap(container.env, scopes, where))) {
+    args.push("-e", `${key}=${value}`);
+  }
+  for (const volume of container.volumes ?? []) {
+    args.push("-v", resolveTemplate(volume, scopes, where));
+  }
+  if (container.entrypoint) {
+    const entrypoint = container.entrypoint.map((part) => resolveTemplate(part, scopes, where));
+    // both engines accept a JSON array for multi-part entrypoints
+    args.push("--entrypoint", entrypoint.length === 1 ? entrypoint[0] : JSON.stringify(entrypoint));
+  }
+  args.push(resolveTemplate(container.image, scopes, where));
+  for (const arg of container.command ?? []) {
+    args.push(resolveTemplate(arg, scopes, where));
+  }
+  return args;
+}
+
+// Networks created (or verified) in this process, per engine.
+const ensuredNetworks = new Set<string>();
+
+async function ensureNetwork(engine: string, network: string, cwd: string): Promise<void> {
+  const key = `${engine}:${network}`;
+  if (ensuredNetworks.has(key)) return;
+  const inspect = await execCapture(engine, ["network", "inspect", network], cwd);
+  if (inspect.code !== 0) {
+    const create = await execCapture(engine, ["network", "create", network], cwd);
+    if (create.code !== 0 && !/already exists/i.test(create.stderr)) {
+      throw new Error(`failed to create network "${network}": ${(create.stderr || create.stdout).trim()}`);
+    }
+  }
+  ensuredNetworks.add(key);
 }
 
 // Identity of a service's fully resolved configuration. Shared services with
@@ -178,20 +230,10 @@ export class ServiceInstance extends EventEmitter {
     }
     this.engine = engine;
 
-    const args = ["run", "--rm", "-d"];
-    for (const mapping of container.ports ?? []) {
-      args.push("-p", resolveTemplate(mapping, scopes, where));
+    if (container.network) {
+      await ensureNetwork(engine, resolveTemplate(container.network, scopes, where), this.cwd);
     }
-    for (const [key, value] of Object.entries(resolveEnvMap(container.env, scopes, where))) {
-      args.push("-e", `${key}=${value}`);
-    }
-    for (const volume of container.volumes ?? []) {
-      args.push("-v", resolveTemplate(volume, scopes, where));
-    }
-    args.push(resolveTemplate(container.image, scopes, where));
-    for (const arg of container.command ?? []) {
-      args.push(resolveTemplate(arg, scopes, where));
-    }
+    const args = buildContainerRunArgs(this.name, container, scopes, where);
 
     this.output.system(`${engine} ${args.join(" ")}`);
     const run = await execCapture(engine, args, this.cwd);

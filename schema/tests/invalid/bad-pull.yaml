@@ -1,0 +1,11 @@
+# Invalid: pull must be always, missing or never.
+version: 1
+services:
+  db:
+    container:
+      image: docker.io/library/postgres:16
+      pull: sometimes
+    ready:
+      tcp: 5432
+test:
+  command: npm test

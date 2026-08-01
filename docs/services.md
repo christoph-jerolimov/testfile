@@ -78,17 +78,26 @@ gets its own instance — sharing only kicks in where it is safe.
 container:
   image: docker.io/library/postgres:16
   engine: auto            # podman if available, else docker
+  pull: missing           # always | missing | never
+  network: testnet        # created if needed; service name = network alias
   ports:
     - "${{ ports.db }}:5432"
   env:
     POSTGRES_PASSWORD: test
   volumes:
     - ./fixtures:/docker-entrypoint-initdb.d:ro
+  entrypoint: [/bin/sh, -c]   # optional overrides
+  command: ["./start.sh"]
 ```
 
 `engine: auto` prefers podman and falls back to docker. `kubernetes` is a
 reserved engine name: running service containers inside the cluster the
 runner runs in, or on a remote cluster, is planned for a future version.
+
+With `network`, service containers can talk to each other directly: each
+container joins the named network with its service name as alias, so an app
+container reaches its database at `db:5432` instead of going through host
+ports. The network is created on first use and left in place after the run.
 
 ## Readiness checks
 
