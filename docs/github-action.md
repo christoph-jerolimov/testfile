@@ -31,6 +31,7 @@ against your repository's Testfile. The job fails when tests fail.
 | `max-parallel` | – | Global cap on concurrently running tests. |
 | `reporter` / `output` | – | Write [machine-readable results](./cli#machine-readable-reports) (`junit` or `json`). |
 | `node-version` | `22` | Node.js version for the runner. |
+| `annotations` | `true` | Emit GitHub annotations for failed tests — each failure appears on the PR with the tail of its log. |
 
 ## Examples
 
@@ -62,6 +63,10 @@ JUnit results for your test-report tooling:
     name: test-results
     path: results.xml
 ```
+
+When tests fail, the action annotates the workflow run (and the PR's
+files/checks views) with one error per failed test carrying the last lines
+of its log, plus a summary notice — no extra configuration needed.
 
 Container services (postgres etc.) work out of the box on the standard
 `ubuntu-latest` runners, which ship with docker.
