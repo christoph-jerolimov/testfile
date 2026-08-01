@@ -143,3 +143,36 @@ test("predictCacheHits marks unchanged tests without running them", async () => 
   const forced = new Session(doc, dir, { noCache: true });
   assert.equal((await predictCacheHits(forced, forced.activeSetFor([forced.tree.id]))).size, 0);
 });
+
+test("changedLeafIds selects predicted cache misses plus tests without inputs", async () => {
+  const { changedLeafIds } = await import("./cache-predict.js");
+  const dir = tempDir();
+  writeFileSync(join(dir, "input.txt"), "good");
+  const doc: TestfileDoc = {
+    version: 1,
+    test: {
+      name: "root",
+      sequence: [
+        { name: "cachable", inputs: ["input.txt"], command: "grep -q good input.txt" },
+        { name: "plain", command: "true" },
+      ],
+    },
+  };
+  await new Session(doc, dir).runAll();
+
+  const session = new Session(doc, dir);
+  const active = session.activeSetFor([session.tree.id]);
+  const changed = await changedLeafIds(session, active);
+  assert.deepEqual(
+    changed.map((id) => session.byId.get(id)!.name),
+    ["plain"],
+    "unchanged cachable is dropped, inputs-less tests always run"
+  );
+
+  writeFileSync(join(dir, "input.txt"), "good v2");
+  const afterEdit = await changedLeafIds(session, active);
+  assert.deepEqual(
+    afterEdit.map((id) => session.byId.get(id)!.name).sort(),
+    ["cachable", "plain"]
+  );
+});

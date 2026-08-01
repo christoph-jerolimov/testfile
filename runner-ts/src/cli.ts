@@ -2,7 +2,7 @@
 import { existsSync, statSync, type FSWatcher } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
-import { predictCacheHits } from "./cache-predict.js";
+import { changedLeafIds, predictCacheHits } from "./cache-predict.js";
 import { generateCompletion, type CompletionModel } from "./completion.js";
 import {
   filterByLastFailed,
@@ -33,6 +33,27 @@ interface FilterFlags {
   filterTags: string[];
   filterMatrix: string[];
   failed: boolean;
+  changed: boolean;
+}
+
+// --changed narrows a resolved selection to the leaves that would actually
+// execute (predicted cache misses).
+async function applyChanged(
+  session: Session,
+  filtered: ReturnType<typeof resolveFilters>,
+  changed: boolean
+): Promise<ReturnType<typeof resolveFilters>> {
+  if (!changed) return filtered;
+  const leaves = await changedLeafIds(session, filtered.active);
+  if (leaves.length === 0) {
+    throw new Error("nothing changed — every selected test would be served from the cache");
+  }
+  return {
+    selection: leaves,
+    active: session.activeSetFor(leaves),
+    leafCount: leaves.length,
+    filtered: true,
+  };
 }
 
 // Turns the filter flags into the selection Session.runSelected expects,
@@ -94,7 +115,8 @@ function addFilterOptions(command: Command): Command {
     .option("-n, --filter-name <name-or-path>", "only tests whose path contains this (repeatable)", collect, [])
     .option("-t, --filter-tags <tags>", "only tests tagged with any of these comma-separated tags (repeatable)", collect, [])
     .option("-m, --filter-matrix <key:value>", "only matrix instances with this value (repeatable)", collect, [])
-    .option("--failed", "only tests that failed in the last recorded run", false);
+    .option("--failed", "only tests that failed in the last recorded run", false)
+    .option("--changed", "only tests whose inputs changed (predicted cache misses)", false);
 }
 
 program
@@ -138,13 +160,14 @@ addFilterOptions(
     .argument("[path]", "Testfile or directory containing one", ".")
     .description("Print the expanded test tree (including matrix instances)")
 )
-  .action((path: string, flags: FilterFlags) => {
+  .action(async (path: string, flags: FilterFlags) => {
     try {
       const { path: file, doc } = loadTestfile(path);
       const session = new Session(doc, dirname(file));
-      const { active, leafCount } = resolveFilters(session, flags);
-      if (leafCount === 0) throw new Error("no tests match the given filters");
-      printTree(session, active);
+      let filtered = resolveFilters(session, flags);
+      if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
+      filtered = await applyChanged(session, filtered, flags.changed);
+      printTree(session, filtered.active);
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;
@@ -381,6 +404,7 @@ addFilterOptions(
       });
       filtered = resolveFilters(session, options);
       if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
+      filtered = await applyChanged(session, filtered, options.changed);
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;

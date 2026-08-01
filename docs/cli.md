@@ -115,6 +115,11 @@ testfile run -t slow -m db:postgres -m node:22
   different keys are ANDed; tests outside a matrix with that key are
   unaffected.
 
+`--changed` runs only tests whose [inputs](./writing-tests#result-caching)
+changed — predicted cache misses. Tests without `inputs` always count as
+changed; it composes with the other filters, works on `list` for preview,
+and errors when every selected test would come from the cache.
+
 `--failed` re-runs what broke last time: it keeps only tests that failed (or
 were aborted) in the most recent recorded run, and combines with the other
 filters — `testfile run --failed -t integration` re-runs only the failed
