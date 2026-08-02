@@ -788,7 +788,7 @@ program
       console.log(`${color(32, "●")} serving on http://127.0.0.1:${port} (Ctrl+C to stop)`);
       if (!viewerDir) {
         console.log(
-          color(90, "web viewer not built — REST API only (npm run build --workspace viewer)")
+          color(90, "web viewer not built — REST API only (npm run build --workspace viewer-web)")
         );
       }
       const shutdown = (): void => {

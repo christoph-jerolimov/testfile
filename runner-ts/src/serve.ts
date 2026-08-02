@@ -1,5 +1,5 @@
 // `testfile serve`: a read-only REST API over the recorded runs plus the
-// web viewer (the React app in the viewer/ workspace), served on
+// web viewer (the React app in the viewer-web/ workspace), served on
 // localhost ONLY - the listener binds to 127.0.0.1 and never exposes the
 // history to the network.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
@@ -33,7 +33,7 @@ const CONTENT_TYPES: Record<string, string> = {
 export function findViewerDir(): string | undefined {
   const candidates = [
     process.env.TESTFILE_VIEWER,
-    join(dirname(fileURLToPath(import.meta.url)), "..", "..", "viewer", "dist"),
+    join(dirname(fileURLToPath(import.meta.url)), "..", "..", "viewer-web", "dist"),
   ];
   for (const candidate of candidates) {
     if (candidate && existsSync(join(candidate, "index.html"))) return resolve(candidate);

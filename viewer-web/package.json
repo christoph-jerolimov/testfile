@@ -1,5 +1,5 @@
 {
-  "name": "@testfile/viewer",
+  "name": "@testfile/viewer-web",
   "private": true,
   "version": "0.1.0",
   "description": "Web viewer for recorded Testfile runs, served by `testfile serve`",

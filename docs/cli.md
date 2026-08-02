@@ -352,7 +352,7 @@ The server binds to `127.0.0.1` **only** — it is never reachable from the
 network. It exposes a read-only REST API for other tooling:
 `/api/summary`, `/api/runs`, `/api/runs/<id>`, `/api/runs/<id>/log`
 (`?test=<path>` for one test), `/api/results` and `/api/events` (SSE).
-The UI itself lives in the `viewer/` workspace (React, bundled with
+The UI itself lives in the `viewer-web/` workspace (React, bundled with
 esbuild); `serve` picks up its build automatically.
 
 ## Interrupting a run
