@@ -127,3 +127,27 @@ test("folders without a readable run.yaml are skipped", () => {
   const history = new RunHistory(dir);
   assert.equal(history.runs.length, 1);
 });
+
+test("service logs are persisted per service and appear in the merged log", () => {
+  const dir = tempDir();
+  const history = new RunHistory(dir);
+  const run = history.saveRun(
+    meta(Date.UTC(2026, 0, 6)),
+    [{ path: "all", status: "passed", durationMs: 1, lines }],
+    [
+      { name: "db", status: "stopped", lines: [{ text: "ready to accept connections", stream: "stdout" }] },
+      { name: "quiet", status: "stopped", lines: [] },
+    ]
+  );
+  assert.equal(run.services?.length, 2);
+  assert.equal(run.services?.[0].log, "services/db-" + run.services[0].log!.split("-").pop());
+  assert.equal(run.services?.[1].log, undefined, "no log entry without output");
+
+  const fresh = new RunHistory(dir);
+  const loaded = fresh.find(run.id)!;
+  assert.equal(fresh.readServiceLog(loaded, loaded.services![0]), "ready to accept connections\n");
+  const merged = fresh.readRunLog(loaded) ?? "";
+  assert.match(merged, /=== service db \(stopped\) ===/);
+  assert.match(merged, /ready to accept connections/);
+  assert.match(merged, /=== service quiet \(stopped\) ===/);
+});

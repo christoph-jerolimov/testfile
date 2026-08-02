@@ -418,6 +418,13 @@ program
       const cached = test.cached ? color(90, "  [cached]") : "";
       console.log(`  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${log}${artifacts}${cached}`);
     }
+    if (run.services?.length) {
+      console.log("services:");
+      for (const service of run.services) {
+        const log = service.log ? color(90, "  [log]") : "";
+        console.log(`  ${pad(service.status ?? "-", 7)} ${service.name}${log}`);
+      }
+    }
     console.log(color(90, `\nlogs: testfile history --run ${run.id} --log [test-path]`));
   });
 

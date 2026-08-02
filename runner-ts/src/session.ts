@@ -155,7 +155,11 @@ export class Session extends EventEmitter {
           .filter((path): path is string => path !== undefined),
       },
       tests,
-      runner.services.map((service) => ({ name: service.name, lines: mask(service.output.lines) }))
+      runner.services.map((service) => ({
+        name: service.name,
+        status: service.status,
+        lines: mask(service.output.lines),
+      }))
     );
   }
 }

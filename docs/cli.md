@@ -243,6 +243,7 @@ run is a self-contained folder:
   runs/<run-id>/
     run.yaml           # the run's record
     tests/<test>.log   # merged stdout+stderr per test
+    services/<svc>.log # log of each started service
 ```
 
 `run.yaml` stores the run's start time, duration, status
