@@ -1,5 +1,5 @@
 # Invalid: a test must set exactly one of command/script/sequence/parallel.
-version: 1
+version: 0
 test:
   command: npm test
   script: |

@@ -21,7 +21,7 @@ export function generateTestfile(dir: string): string {
   }
   const scripts = pkg?.scripts ?? {};
 
-  const lines: string[] = [`# yaml-language-server: $schema=${SCHEMA_URL}`, "version: 1"];
+  const lines: string[] = [`# yaml-language-server: $schema=${SCHEMA_URL}`, "version: 0"];
   if (pkg?.name) lines.push(`name: ${pkg.name}`);
 
   const checks: { name: string; command: string; tags?: string[] }[] = [];

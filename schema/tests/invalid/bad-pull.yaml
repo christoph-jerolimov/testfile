@@ -1,5 +1,5 @@
 # Invalid: pull must be always, missing or never.
-version: 1
+version: 0
 services:
   db:
     container:

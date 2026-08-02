@@ -125,7 +125,7 @@ In a monorepo, each package can keep its own Testfile and the root file
 stitches them together with `include`:
 
 ```yaml
-version: 1
+version: 0
 test:
   name: all
   sequence:

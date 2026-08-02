@@ -16,7 +16,7 @@ function tempDir(): string {
 }
 
 const doc: TestfileDoc = {
-  version: 1,
+  version: 0,
   env: { GREETING: "hi" },
   test: {
     name: "root",
@@ -66,7 +66,7 @@ test("artifacts are collected into the run folder and recorded", async () => {
   const dir = tempDir();
   const session = new Session(
     {
-      version: 1,
+      version: 0,
       test: {
         name: "produce",
         artifacts: ["out/**/*.txt"],
@@ -92,7 +92,7 @@ test("artifacts are collected from failing tests too", async () => {
   const dir = tempDir();
   const session = new Session(
     {
-      version: 1,
+      version: 0,
       test: { name: "fails", artifacts: ["report.txt"], script: "echo partial > report.txt\nfalse" },
     },
     dir
@@ -159,7 +159,7 @@ test("running with an empty selection does nothing", async () => {
 test("a cancelled run is recorded as cancelled with exit code 130", async () => {
   const dir = tempDir();
   const session = new Session(
-    { version: 1, test: { name: "slow", command: "sleep 10" } },
+    { version: 0, test: { name: "slow", command: "sleep 10" } },
     dir
   );
   const done = session.runAll();

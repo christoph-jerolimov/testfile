@@ -1,5 +1,5 @@
 # The smallest possible Testfile: one command.
-version: 1
+version: 0
 test:
   name: unit tests
   command: npm test

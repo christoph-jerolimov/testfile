@@ -66,6 +66,6 @@ test("init with only a test script produces a single command", () => {
 
 test("init refuses to overwrite an existing Testfile", () => {
   const dir = tempDir();
-  writeFileSync(join(dir, "testfile.yaml"), "version: 1\ntest:\n  command: 'true'\n");
+  writeFileSync(join(dir, "testfile.yaml"), "version: 0\ntest:\n  command: 'true'\n");
   assert.throws(() => initTestfile(dir), /already exists/);
 });

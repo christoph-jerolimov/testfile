@@ -1,5 +1,5 @@
 # Minimal Testfile used by CI to self-test the GitHub Action.
-version: 1
+version: 0
 name: action-smoke
 test:
   name: smoke

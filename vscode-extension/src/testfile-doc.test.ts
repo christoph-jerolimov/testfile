@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { listRuns, listTests, testAtLine } from "./testfile-doc.js";
 
-const doc = `version: 1
+const doc = `version: 0
 name: demo
 test:
   name: all

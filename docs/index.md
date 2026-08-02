@@ -10,6 +10,12 @@ A **Testfile** is a YAML file — named `Testfile`, `testfile.yaml` or
 `testfile.yml` — that describes how your project runs its tests, checked into
 the repository next to your code.
 
+> **Status: under review.** The format is currently at `version: 0` and may
+> still change based on feedback. Version 1 is targeted for Q4 2026. Please
+> try it on your project and tell us what works and what doesn't in a
+> [GitHub issue](https://github.com/christoph-jerolimov/testfile/issues) —
+> feedback and contributions are very welcome.
+
 It is built around three ideas:
 
 1. **Tests form a tree.** The root of the file contains one test. Every test
@@ -32,7 +38,7 @@ It is built around three ideas:
 A small but complete example:
 
 ```yaml
-version: 1
+version: 0
 name: my-app
 ports:
   web: random
@@ -64,6 +70,6 @@ testfile tui          # interactive terminal UI (tests, runs, results, services)
 Continue with [Getting started](./getting-started), or read the
 [full specification](https://github.com/christoph-jerolimov/testfile/blob/main/spec/README.md)
 and its [versioning policy](https://github.com/christoph-jerolimov/testfile/blob/main/spec/VERSIONING.md)
-— the format evolves additively within `version: 1`, and a
+— once version 1 ships, the format will evolve additively within it, and a
 [conformance suite](https://github.com/christoph-jerolimov/testfile/blob/main/conformance/README.md)
 pins its semantics for alternative runner implementations.

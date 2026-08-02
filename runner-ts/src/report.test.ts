@@ -15,7 +15,7 @@ function tempDir(): string {
 async function ranSession(): Promise<Session> {
   const session = new Session(
     {
-      version: 1,
+      version: 0,
       name: "demo & more",
       test: {
         name: "all",
@@ -52,6 +52,6 @@ test("buildJsonReport is the parsed run record", async () => {
 });
 
 test("reports refuse to build without a run", () => {
-  const session = new Session({ version: 1, test: { command: "true" } }, tempDir());
+  const session = new Session({ version: 0, test: { command: "true" } }, tempDir());
   assert.throws(() => buildJUnitXml(session), /no run to report/);
 });

@@ -1,6 +1,6 @@
 # Invalid: include is a variant like command/script/sequence/parallel -
 # exactly one of them must be set.
-version: 1
+version: 0
 test:
   include: ./other
   command: npm test

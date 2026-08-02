@@ -46,7 +46,7 @@ test("envFile values reach tests, explicit env wins, logs are masked", async () 
   writeFileSync(join(dir, ".env.test"), "SECRET=supersecretvalue\nOVERRIDDEN=from-file\n");
   const session = new Session(
     {
-      version: 1,
+      version: 0,
       envFile: ".env.test",
       env: { OVERRIDDEN: "explicit" },
       test: {
@@ -79,7 +79,7 @@ test("test-level envFile resolves relative to the test workdir", async () => {
   writeFileSync(join(dir, "outer.env"), "WHERE=outer\n");
   const session = new Session(
     {
-      version: 1,
+      version: 0,
       test: {
         sequence: [
           {
@@ -98,7 +98,7 @@ test("test-level envFile resolves relative to the test workdir", async () => {
 test("a missing env file fails the run", async () => {
   const dir = tempDir();
   const session = new Session(
-    { version: 1, envFile: ".env.missing", test: { command: "true" } },
+    { version: 0, envFile: ".env.missing", test: { command: "true" } },
     dir
   );
   assert.equal(await session.runAll(), "failed");

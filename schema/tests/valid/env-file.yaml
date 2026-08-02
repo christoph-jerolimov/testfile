@@ -1,5 +1,5 @@
 # Dotenv files at the document and test level.
-version: 1
+version: 0
 envFile: .env.test
 test:
   sequence:

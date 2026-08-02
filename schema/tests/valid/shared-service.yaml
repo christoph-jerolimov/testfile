@@ -1,6 +1,6 @@
 # One postgres shared by all matrix instances; per-version containers when
 # the matrix variable appears in the config.
-version: 1
+version: 0
 ports:
   db: random
 test:

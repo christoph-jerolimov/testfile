@@ -22,7 +22,7 @@ test("all valid schema examples load", () => {
       continue;
     }
     const { doc } = loadTestfile(join(schemaTests, "valid", file));
-    assert.equal(doc.version, 1, file);
+    assert.equal(doc.version, 0, file);
   }
 });
 
@@ -39,11 +39,11 @@ test("finds the repository Testfile by directory", () => {
 });
 
 test("validateDoc reports the offending path", () => {
-  assert.throws(() => validateDoc({ version: 1, test: { command: "x", script: "y" } }), /\/test/);
+  assert.throws(() => validateDoc({ version: 0, test: { command: "x", script: "y" } }), /\/test/);
 });
 
 function docWith(parallel: TestfileDoc["test"]["parallel"]): TestfileDoc {
-  return { version: 1, test: { name: "all", parallel } };
+  return { version: 0, test: { name: "all", parallel } };
 }
 
 test("validateSemantics accepts a valid needs DAG", () => {
@@ -89,7 +89,7 @@ test("validateSemantics rejects unknown, ambiguous, self and cyclic needs", () =
   assert.throws(
     () =>
       validateSemantics({
-        version: 1,
+        version: 0,
         test: { sequence: [{ name: "a", needs: ["b"], command: "true" }] },
       }),
     /only allowed on children of a parallel group/
@@ -105,7 +105,7 @@ function includeFixture(): string {
   writeFileSync(
     join(dir, "packages", "a", "Testfile"),
     [
-      "version: 1",
+      "version: 0",
       "name: pkg-a",
       "env:",
       "  PKG: a",
@@ -117,12 +117,12 @@ function includeFixture(): string {
   );
   writeFileSync(
     join(dir, "packages", "b", "testfile.yaml"),
-    ["version: 1", "name: pkg-b", "ports:", "  web: random", "test:", "  command: 'true'"].join("\n")
+    ["version: 0", "name: pkg-b", "ports:", "  web: random", "test:", "  command: 'true'"].join("\n")
   );
   writeFileSync(
     join(dir, "Testfile"),
     [
-      "version: 1",
+      "version: 0",
       "name: root",
       "test:",
       "  name: all",
@@ -160,11 +160,11 @@ test("include cycles and missing targets are rejected", () => {
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   writeFileSync(
     join(dir, "Testfile"),
-    ["version: 1", "test:", "  include: ./other.yaml"].join("\n")
+    ["version: 0", "test:", "  include: ./other.yaml"].join("\n")
   );
   writeFileSync(
     join(dir, "other.yaml"),
-    ["version: 1", "test:", "  include: ./Testfile"].join("\n")
+    ["version: 0", "test:", "  include: ./Testfile"].join("\n")
   );
   assert.throws(() => loadTestfile(dir), /include cycle/);
 
@@ -172,7 +172,7 @@ test("include cycles and missing targets are rejected", () => {
   process.on("exit", () => rmSync(dir2, { recursive: true, force: true }));
   writeFileSync(
     join(dir2, "Testfile"),
-    ["version: 1", "test:", "  include: ./nope"].join("\n")
+    ["version: 0", "test:", "  include: ./nope"].join("\n")
   );
   assert.throws(() => loadTestfile(dir2), /include "\.\/nope"/);
 });
@@ -182,12 +182,12 @@ test("conflicting included ports are rejected", () => {
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   writeFileSync(
     join(dir, "child.yaml"),
-    ["version: 1", "ports:", "  web: 8080", "test:", "  command: 'true'"].join("\n")
+    ["version: 0", "ports:", "  web: 8080", "test:", "  command: 'true'"].join("\n")
   );
   writeFileSync(
     join(dir, "Testfile"),
     [
-      "version: 1",
+      "version: 0",
       "ports:",
       "  web: 9090",
       "test:",

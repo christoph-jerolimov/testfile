@@ -1,5 +1,5 @@
 # Readiness via a probe command that must exit 0.
-version: 1
+version: 0
 ports:
   db: random
 services:

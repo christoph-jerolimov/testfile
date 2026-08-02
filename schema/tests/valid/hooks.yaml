@@ -1,5 +1,5 @@
 # setup/teardown hooks around a test and around a group.
-version: 1
+version: 0
 test:
   name: all
   setup:

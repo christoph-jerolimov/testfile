@@ -1,5 +1,5 @@
 # Tests declaring their inputs, enabling result caching.
-version: 1
+version: 0
 test:
   name: all
   sequence:

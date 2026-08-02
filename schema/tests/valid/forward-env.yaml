@@ -1,6 +1,6 @@
 # Host-env isolation: forward specific variables (or everything) into the
 # otherwise clean test environment.
-version: 1
+version: 0
 forwardEnv:
   - GITHUB_*
   - MY_TOKEN
