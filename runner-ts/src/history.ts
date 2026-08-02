@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { parse, stringify } from "yaml";
 import { junitFromRecord } from "./junit.js";
 import type { OutputLine } from "./output.js";
-import type { Status } from "./runtree.js";
+import type { Status } from "./runsuite.js";
 
 // Runs are persisted next to the Testfile in this folder: one self-contained
 // runs/<id>/ folder per run, holding run.yaml (the run's record) and the

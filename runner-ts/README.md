@@ -2,12 +2,12 @@
 
 The reference runner for the
 [Testfile](https://github.com/christoph-jerolimov/testfile) format: a
-`testfile` CLI that runs the test tree described in your `Testfile` /
+`testfile` CLI that runs the test suite described in your `Testfile` /
 `testfile.yaml` — starting the services tests depend on, waiting for their
 readiness checks and stopping them gracefully — plus an interactive TUI.
 
 ```sh
-testfile run            # run the tree, stream progress, record the run
+testfile run            # run the suite, stream progress, record the run
 testfile tui            # interactive terminal UI (tests, runs, results, services)
 testfile run -w -f unit # watch mode + filter: a tight edit-test loop
 testfile validate       # check the file against the JSON schema
@@ -17,7 +17,7 @@ testfile init           # write a starter Testfile from package.json
 Beyond that core, the same binary covers the special cases:
 
 - **Filters** (`-f`, `-n`, `-t`, `-m`, `--failed`, `--changed`) to run a
-  subset of the tree,
+  subset of the suite,
 - **machine-readable reports** for CI (`--reporter junit|json`),
 - **run history** under `.testfile/` (`testfile history`, `--diff`,
   `--flaky`),

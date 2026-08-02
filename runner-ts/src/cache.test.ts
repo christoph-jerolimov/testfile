@@ -126,7 +126,7 @@ test("predictCacheHits marks unchanged tests without running them", async () => 
   await new Session(doc, dir).runAll();
 
   const session = new Session(doc, dir);
-  const active = session.activeSetFor([session.tree.id]);
+  const active = session.activeSetFor([session.suite.id]);
   const before = readFileSync(join(dir, "ran.log"), "utf8");
   const hits = await predictCacheHits(session, active);
   assert.equal(readFileSync(join(dir, "ran.log"), "utf8"), before, "prediction must not execute anything");
@@ -141,11 +141,11 @@ test("predictCacheHits marks unchanged tests without running them", async () => 
 
   // --no-cache sessions predict nothing
   const forced = new Session(doc, dir, { noCache: true });
-  assert.equal((await predictCacheHits(forced, forced.activeSetFor([forced.tree.id]))).size, 0);
+  assert.equal((await predictCacheHits(forced, forced.activeSetFor([forced.suite.id]))).size, 0);
 });
 
-test("changedLeafIds selects predicted cache misses plus tests without inputs", async () => {
-  const { changedLeafIds } = await import("./cache-predict.js");
+test("changedTestIds selects predicted cache misses plus tests without inputs", async () => {
+  const { changedTestIds } = await import("./cache-predict.js");
   const dir = tempDir();
   writeFileSync(join(dir, "input.txt"), "good");
   const doc: TestfileDoc = {
@@ -161,8 +161,8 @@ test("changedLeafIds selects predicted cache misses plus tests without inputs", 
   await new Session(doc, dir).runAll();
 
   const session = new Session(doc, dir);
-  const active = session.activeSetFor([session.tree.id]);
-  const changed = await changedLeafIds(session, active);
+  const active = session.activeSetFor([session.suite.id]);
+  const changed = await changedTestIds(session, active);
   assert.deepEqual(
     changed.map((id) => session.byId.get(id)!.name),
     ["plain"],
@@ -170,7 +170,7 @@ test("changedLeafIds selects predicted cache misses plus tests without inputs", 
   );
 
   writeFileSync(join(dir, "input.txt"), "good v2");
-  const afterEdit = await changedLeafIds(session, active);
+  const afterEdit = await changedTestIds(session, active);
   assert.deepEqual(
     afterEdit.map((id) => session.byId.get(id)!.name).sort(),
     ["cachable", "plain"]

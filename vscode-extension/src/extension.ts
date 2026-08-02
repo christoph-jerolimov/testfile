@@ -48,7 +48,7 @@ class TestfileCodeLensProvider implements vscode.CodeLensProvider {
     return listTests(document.getText()).map(
       (test) =>
         new vscode.CodeLens(new vscode.Range(test.line, 0, test.line, 0), {
-          title: `▶ run ${test.isLeaf ? test.name : `${test.name} (subtree)`}`,
+          title: `▶ run ${test.isGroup ? `${test.name} (with nested tests)` : test.name}`,
           tooltip: `testfile run -n "${test.path}"`,
           command: "testfile.runTest",
           arguments: [document.uri, test.path],
@@ -173,7 +173,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("testfile.refreshRuns", () => runs.refresh())
   );
 
-  // New recorded runs appear in the tree automatically.
+  // New recorded runs appear in the view automatically.
   const watcher = vscode.workspace.createFileSystemWatcher("**/.testfile/runs/**");
   watcher.onDidCreate(() => runs.refresh());
   watcher.onDidChange(() => runs.refresh());

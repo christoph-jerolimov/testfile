@@ -2,7 +2,7 @@
   "name": "testfile-monorepo",
   "private": true,
   "version": "0.1.0",
-  "description": "Testfile \u2014 a declarative YAML format for running test trees with services, matrices and dynamic ports",
+  "description": "Testfile \u2014 a declarative YAML format for running test suites with services, matrices and dynamic ports",
   "license": "Apache-2.0",
   "workspaces": [
     "schema",

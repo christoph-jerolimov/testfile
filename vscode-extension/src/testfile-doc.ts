@@ -12,7 +12,7 @@ export interface TestEntry {
   path: string;
   name: string;
   line: number;
-  isLeaf: boolean;
+  isGroup: boolean;
 }
 
 function scalarString(map: YAMLMap, key: string): string | undefined {
@@ -32,7 +32,7 @@ function nameOf(map: YAMLMap): string {
   return "test";
 }
 
-// Walks the test tree of a Testfile document and lists every test with its
+// Walks the tests of a Testfile document and lists every test with its
 // path (names joined with "/", like the runner reports them).
 export function listTests(text: string): TestEntry[] {
   const lineCounter = new LineCounter();
@@ -54,7 +54,7 @@ export function listTests(text: string): TestEntry[] {
       path,
       name,
       line: lineCounter.linePos(offset).line - 1,
-      isLeaf: !children,
+      isGroup: !!children,
     });
     if (children) {
       for (const child of children.items) {
@@ -66,7 +66,7 @@ export function listTests(text: string): TestEntry[] {
   return entries;
 }
 
-// The test whose node starts closest above the given line - what "run the
+// The test whose YAML node starts closest above the given line - what "run the
 // test at the cursor" should run.
 export function testAtLine(entries: TestEntry[], line: number): TestEntry | undefined {
   let best: TestEntry | undefined;
@@ -76,7 +76,7 @@ export function testAtLine(entries: TestEntry[], line: number): TestEntry | unde
   return best;
 }
 
-// A recorded run, as far as the tree view needs it.
+// A recorded run, as far as the Testfile Runs view needs it.
 export interface RunInfo {
   id: string;
   startedAt: string;

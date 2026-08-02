@@ -35,10 +35,10 @@ export function generateTestfile(dir: string): string {
   }
   const build = scripts.build ? { name: "build", command: "npm run build" } : undefined;
 
-  const emitLeaf = (leaf: { name: string; command: string; tags?: string[] }, indent: string): void => {
-    lines.push(`${indent}- name: ${leaf.name}`);
-    if (leaf.tags) lines.push(`${indent}  tags: [${leaf.tags.join(", ")}]`);
-    lines.push(`${indent}  command: ${leaf.command}`);
+  const emitTest = (test: { name: string; command: string; tags?: string[] }, indent: string): void => {
+    lines.push(`${indent}- name: ${test.name}`);
+    if (test.tags) lines.push(`${indent}  tags: [${test.tags.join(", ")}]`);
+    lines.push(`${indent}  command: ${test.command}`);
   };
 
   lines.push("test:");
@@ -52,13 +52,13 @@ export function generateTestfile(dir: string): string {
   } else {
     lines.push("  name: all");
     lines.push("  sequence:");
-    if (build) emitLeaf(build, "    ");
+    if (build) emitTest(build, "    ");
     if (checks.length === 1) {
-      emitLeaf(checks[0], "    ");
+      emitTest(checks[0], "    ");
     } else if (checks.length > 1) {
       lines.push("    - name: checks");
       lines.push("      parallel:");
-      for (const check of checks) emitLeaf(check, "        ");
+      for (const check of checks) emitTest(check, "        ");
     }
   }
   return `${lines.join("\n")}\n`;

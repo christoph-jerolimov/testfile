@@ -60,7 +60,7 @@ A YAML document with these fields:
 | `cancelled`  | boolean | yes      | True when the run was interrupted. |
 | `env`        | map     | yes      | The resolved top-level `env` of the Testfile (may be empty). Secret values are masked. |
 | `ports`      | map     | yes      | The resolved named ports (may be empty). |
-| `selected`   | array   | yes      | Test paths the user selected for this run (empty = whole tree). |
+| `selected`   | array   | yes      | Test paths the user selected for this run (empty = the whole suite). |
 | `tests`      | array   | yes      | One entry per executed test, in execution order — see below. |
 | `services`   | array   | no       | One entry per started service — see below. |
 | `junit`      | string  | no       | Relative path of the JUnit XML (`junit.xml`). |

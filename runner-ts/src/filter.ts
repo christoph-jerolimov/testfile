@@ -1,15 +1,15 @@
 import type { RunRecord } from "./history.js";
-import { walk, type RunNode } from "./runtree.js";
+import { walk, type RunTest } from "./runsuite.js";
 
 export interface TestFilters {
   // --filter: best-guess values matching either the path (substring) or a
   // tag (exact), case-insensitive. Values with ":" are routed to `matrix`
   // by splitGenericFilters before they get here.
   any: string[];
-  // --filter-name: case-insensitive substrings matched against the leaf's
+  // --filter-name: case-insensitive substrings matched against the test's
   // path (names joined with "/"), so ancestor names match too.
   names: string[];
-  // --filter-tags: a leaf matches when it or an ancestor carries any of
+  // --filter-tags: a test matches when it or an ancestor carries any of
   // these tags (case-insensitive).
   tags: string[];
   // --filter-matrix, see parseMatrixFilters.
@@ -64,28 +64,28 @@ export function parseMatrixFilters(specs: string[]): Map<string, Set<string>> {
   return filters;
 }
 
-// A node passes unless it carries a filtered matrix key with a value that is
+// A test passes unless it carries a filtered matrix key with a value that is
 // not allowed. Nodes without the key (e.g. outside the matrix) are unaffected.
-export function matchesMatrixFilters(node: RunNode, filters: Map<string, Set<string>>): boolean {
+export function matchesMatrixFilters(test: RunTest, filters: Map<string, Set<string>>): boolean {
   for (const [key, allowed] of filters) {
-    const value = node.matrix[key];
+    const value = test.matrix[key];
     if (value !== undefined && !allowed.has(value)) return false;
   }
   return true;
 }
 
-// Tags of the node and all its ancestors, lower-cased.
-export function effectiveTags(node: RunNode): Set<string> {
+// Tags of the test and all its ancestors, lower-cased.
+export function effectiveTags(test: RunTest): Set<string> {
   const tags = new Set<string>();
-  for (let n: RunNode | undefined = node; n; n = n.parent) {
+  for (let n: RunTest | undefined = test; n; n = n.parent) {
     for (const tag of n.def.tags ?? []) tags.add(tag.toLowerCase());
   }
   return tags;
 }
 
-// --failed: keeps only leaves that failed (or were aborted) in the given
+// --failed: keeps only tests that failed (or were aborted) in the given
 // recorded run, usually the most recent one.
-export function filterByLastFailed(leaves: RunNode[], lastRun: RunRecord | undefined): RunNode[] {
+export function filterByLastFailed(tests: RunTest[], lastRun: RunRecord | undefined): RunTest[] {
   if (!lastRun) {
     throw new Error("no recorded runs to take failures from (--failed)");
   }
@@ -94,32 +94,32 @@ export function filterByLastFailed(leaves: RunNode[], lastRun: RunRecord | undef
       .filter((test) => test.status === "failed" || test.status === "aborted")
       .map((test) => test.path)
   );
-  return leaves.filter((leaf) => failedPaths.has(leaf.path));
+  return tests.filter((test) => failedPaths.has(test.path));
 }
 
-// The leaf tests that satisfy all given filters (filters of different kinds
-// are ANDed). Selecting these leaves runs exactly the filtered subset; their
+// The test tests that satisfy all given filters (filters of different kinds
+// are ANDed). Selecting these tests runs exactly the filtered subset; their
 // ancestors act as scaffolding.
-export function selectLeaves(tree: RunNode, filters: TestFilters): RunNode[] {
+export function selectTests(suite: RunTest, filters: TestFilters): RunTest[] {
   const anyNeedles = filters.any.map((value) => value.toLowerCase());
   const needles = filters.names.map((name) => name.toLowerCase());
   const wantedTags = filters.tags.map((tag) => tag.toLowerCase());
-  const leaves: RunNode[] = [];
-  walk(tree, (node) => {
-    if (node.children.length === 0) leaves.push(node);
+  const tests: RunTest[] = [];
+  walk(suite, (test) => {
+    if (test.children.length === 0) tests.push(test);
   });
-  return leaves.filter((leaf) => {
-    const path = leaf.path.toLowerCase();
+  return tests.filter((test) => {
+    const path = test.path.toLowerCase();
     if (anyNeedles.length > 0) {
-      const tags = effectiveTags(leaf);
+      const tags = effectiveTags(test);
       if (!anyNeedles.some((needle) => path.includes(needle) || tags.has(needle))) return false;
     }
     if (needles.length > 0 && !needles.some((needle) => path.includes(needle))) return false;
     if (wantedTags.length > 0) {
-      const tags = effectiveTags(leaf);
+      const tags = effectiveTags(test);
       if (!wantedTags.some((tag) => tags.has(tag))) return false;
     }
-    if (filters.matrix.size > 0 && !matchesMatrixFilters(leaf, filters.matrix)) return false;
+    if (filters.matrix.size > 0 && !matchesMatrixFilters(test, filters.matrix)) return false;
     return true;
   });
 }

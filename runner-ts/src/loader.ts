@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import { parse } from "yaml";
 import type { TestDef, TestfileDoc } from "./model.js";
-import { defaultName } from "./runtree.js";
+import { defaultName } from "./runsuite.js";
 
 const require = createRequire(import.meta.url);
 
@@ -101,10 +101,10 @@ export function validateSemantics(doc: TestfileDoc): void {
   }
 }
 
-// Replaces every `include` node with the content of the referenced
-// Testfile(s): their root test is embedded as a subtree, their env and
-// services become node-scoped, their ports merge into the root document's
-// ports, and their directory becomes the subtree's working directory.
+// Replaces every `include` test with the content of the referenced
+// Testfile(s): their root test is embedded as a nested suite, their env and
+// services become test-scoped, their ports merge into the root document's
+// ports, and their directory becomes the embedded tests' working directory.
 export function expandIncludes(doc: TestfileDoc, filePath: string): void {
   const real = realpathSync(resolve(filePath));
   expandTest(doc, doc.test, dirname(real), [real]);

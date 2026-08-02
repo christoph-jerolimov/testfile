@@ -22,8 +22,8 @@ base environment is:
   describe the platform.
 
 Everything else must be forwarded explicitly with `forwardEnv` — a list of
-names or `*` patterns, at the top level or per test (applying to its
-subtree):
+names or `*` patterns, at the top level or per test (applying to it and
+its nested tests):
 
 ```yaml
 version: 0

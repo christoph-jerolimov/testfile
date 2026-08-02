@@ -1,4 +1,4 @@
-# Container services with log/tcp readiness checks, scoped to a subtree.
+# Container services with log/tcp readiness checks, scoped to a test and its nested tests.
 version: 0
 ports:
   db: random

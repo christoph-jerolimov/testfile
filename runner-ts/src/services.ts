@@ -140,7 +140,7 @@ export class ServiceInstance extends EventEmitter {
   status: ServiceStatus = "pending";
   readonly output = new OutputBuffer();
   error?: string;
-  // Where in the tree the service was declared, for display purposes.
+  // Where in the suite the service was declared, for display purposes.
   owner = "";
   // Resolved facts for display: image, port mappings, service-level env.
   details: { image?: string; ports?: string[]; env?: Record<string, string> } = {};
@@ -219,7 +219,7 @@ export class ServiceInstance extends EventEmitter {
     const child = spawn("sh", this.def.script ? ["-e", "-c", resolved] : ["-c", resolved], {
       cwd: this.cwd,
       env: this.env,
-      detached: true, // own process group, so stop() can signal the whole tree
+      detached: true, // own process group, so stop() can signal the whole suite
       stdio: ["ignore", "pipe", "pipe"],
     });
     child.stdout.on("data", (d) => this.output.append(d, "stdout"));

@@ -6,7 +6,7 @@ import { test } from "node:test";
 import { parse } from "yaml";
 import { RunHistory } from "./history.js";
 import type { TestfileDoc } from "./model.js";
-import { walk, type RunNode } from "./runtree.js";
+import { walk, type RunTest } from "./runsuite.js";
 import { Session } from "./session.js";
 
 function tempDir(): string {
@@ -129,17 +129,17 @@ test("newer runs are prepended and become the latest result", async () => {
   assert.equal(history.latestFor("root/one")!.run.id, history.runs[0].id);
 });
 
-test("runSelected only runs the selected subtree, the rest stays untouched", async () => {
+test("runSelected only runs the selected tests, the rest stays untouched", async () => {
   const dir = tempDir();
   const session = new Session(doc, dir);
-  let two: RunNode | undefined;
-  walk(session.tree, (node) => {
-    if (node.name === "two") two = node;
+  let two: RunTest | undefined;
+  walk(session.suite, (n) => {
+    if (n.name === "two") two = n;
   });
   const status = await session.runSelected([two!.id]);
   assert.equal(status, "passed");
-  const byName = new Map<string, RunNode>();
-  walk(session.tree, (node) => byName.set(node.name, node));
+  const byName = new Map<string, RunTest>();
+  walk(session.suite, (n) => byName.set(n.name, n));
   assert.equal(byName.get("one")!.status, "pending");
   assert.equal(byName.get("two")!.status, "failed");
   assert.equal(byName.get("root")!.status, "passed");
@@ -176,9 +176,9 @@ test("nodes can run again after a selective re-run resets them", async () => {
   const dir = tempDir();
   const session = new Session(doc, dir);
   await session.runAll();
-  let one: RunNode | undefined;
-  walk(session.tree, (node) => {
-    if (node.name === "one") one = node;
+  let one: RunTest | undefined;
+  walk(session.suite, (n) => {
+    if (n.name === "one") one = n;
   });
   assert.equal(one!.status, "passed");
   await session.runSelected([one!.id]);

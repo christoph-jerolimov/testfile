@@ -8,15 +8,15 @@ import type { OutputLine } from "./output.js";
 import { RunHistory, type RunLogInput, type RunRecord } from "./history.js";
 import { validateSemantics } from "./loader.js";
 import type { TestfileDoc } from "./model.js";
-import { buildRunTree, resetNode, walk, type RunNode, type Status } from "./runtree.js";
+import { buildRunSuite, resetTest, walk, type RunTest, type Status } from "./runsuite.js";
 
-// Owns the test tree, run history and the (re)creation of Runners, so the
-// TUI and the CLI can run the tree - or a selected part of it - repeatedly.
+// Owns the test suite, run history and the (re)creation of Runners, so the
+// TUI and the CLI can run the suite - or a selected part of it - repeatedly.
 // Events: "update" (state changed), "runner" (a new Runner was created).
 export class Session extends EventEmitter {
-  readonly tree: RunNode;
+  readonly suite: RunTest;
   readonly history: RunHistory;
-  readonly byId = new Map<number, RunNode>();
+  readonly byId = new Map<number, RunTest>();
   runner?: Runner;
   running = false;
   lastRecord?: RunRecord;
@@ -37,47 +37,47 @@ export class Session extends EventEmitter {
   ) {
     super();
     validateSemantics(doc);
-    this.tree = buildRunTree(doc);
-    walk(this.tree, (node) => this.byId.set(node.id, node));
+    this.suite = buildRunSuite(doc);
+    walk(this.suite, (test) => this.byId.set(test.id, test));
     this.history = new RunHistory(baseDir);
     this.cache = new ResultCache(baseDir, !(runDefaults.noCache ?? false));
   }
 
   readonly cache: ResultCache;
 
-  // A selected node runs with its whole subtree; ancestors run as scaffolding
+  // A selected test runs with all its nested tests; ancestors run as scaffolding
   // (their sequence/parallel semantics and services still apply).
   activeSetFor(selection: Iterable<number>): Set<number> {
     const active = new Set<number>();
     for (const id of selection) {
-      const node = this.byId.get(id);
-      if (!node) continue;
-      walk(node, (n) => active.add(n.id));
-      for (let parent = node.parent; parent; parent = parent.parent) active.add(parent.id);
+      const test = this.byId.get(id);
+      if (!test) continue;
+      walk(test, (n) => active.add(n.id));
+      for (let parent = test.parent; parent; parent = parent.parent) active.add(parent.id);
     }
     return active;
   }
 
   async runSelected(
     selection: Iterable<number>,
-    options: { exclude?: (node: RunNode) => boolean } = {}
+    options: { exclude?: (test: RunTest) => boolean } = {}
   ): Promise<Status | undefined> {
     if (this.running) return undefined;
     const selectedIds = [...selection];
     const active = this.activeSetFor(selectedIds);
     if (options.exclude) {
       for (const id of [...active]) {
-        const node = this.byId.get(id);
-        if (node && options.exclude(node)) active.delete(id);
+        const test = this.byId.get(id);
+        if (test && options.exclude(test)) active.delete(id);
       }
     }
     if (active.size === 0) return undefined;
     this.lastSelection = selectedIds;
 
-    walk(this.tree, (node) => {
-      if (active.has(node.id)) resetNode(node);
+    walk(this.suite, (test) => {
+      if (active.has(test.id)) resetTest(test);
     });
-    const runner = new Runner(this.doc, this.tree, this.baseDir, {
+    const runner = new Runner(this.doc, this.suite, this.baseDir, {
       active,
       failFast: this.runDefaults.failFast,
       maxParallel: this.runDefaults.maxParallel,
@@ -104,7 +104,7 @@ export class Session extends EventEmitter {
   }
 
   runAll(): Promise<Status | undefined> {
-    return this.runSelected([this.tree.id]);
+    return this.runSelected([this.suite.id]);
   }
 
   private persist(
@@ -123,18 +123,18 @@ export class Session extends EventEmitter {
         : lines.map((line) => ({ ...line, text: maskSecrets(line.text, secrets) }));
 
     const tests: RunLogInput[] = [];
-    walk(this.tree, (node) => {
-      if (!active.has(node.id) || node.status === "pending") return;
+    walk(this.suite, (test) => {
+      if (!active.has(test.id) || test.status === "pending") return;
       tests.push({
-        path: node.path,
-        status: node.status,
+        path: test.path,
+        status: test.status,
         durationMs:
-          node.startedAt !== undefined && node.endedAt !== undefined
-            ? node.endedAt - node.startedAt
+          test.startedAt !== undefined && test.endedAt !== undefined
+            ? test.endedAt - test.startedAt
             : undefined,
-        lines: mask(node.output.lines),
-        artifacts: collectArtifacts(node),
-        cached: node.cached === true ? true : undefined,
+        lines: mask(test.output.lines),
+        artifacts: collectArtifacts(test),
+        cached: test.cached === true ? true : undefined,
       });
     });
     // A fully condition-skipped run counts as success: nothing failed.
@@ -167,13 +167,13 @@ export class Session extends EventEmitter {
 
 // Matches a test's artifact globs against its working directory. Runs after
 // the test finished (also on failure), right before the run is recorded.
-function collectArtifacts(node: RunNode): { absolute: string; relative: string }[] | undefined {
-  if (!node.def.artifacts || node.resolvedCwd === undefined || node.status === "skipped") {
+function collectArtifacts(test: RunTest): { absolute: string; relative: string }[] | undefined {
+  if (!test.def.artifacts || test.resolvedCwd === undefined || test.status === "skipped") {
     return undefined;
   }
   const files: { absolute: string; relative: string }[] = [];
-  for (const relative of globSync(node.def.artifacts, { cwd: node.resolvedCwd })) {
-    const absolute = join(node.resolvedCwd, relative);
+  for (const relative of globSync(test.def.artifacts, { cwd: test.resolvedCwd })) {
+    const absolute = join(test.resolvedCwd, relative);
     try {
       if (statSync(absolute).isFile()) files.push({ absolute, relative });
     } catch {

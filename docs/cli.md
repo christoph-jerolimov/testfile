@@ -20,7 +20,7 @@ works with it.
 ```sh
 # the runner
 testfile init [path]       # create a starter Testfile (from package.json)
-testfile run [path]        # run the tree (default command)
+testfile run [path]        # run the test suite (default command)
 testfile run --verbose     # also stream service output
 testfile run --fail-fast   # abort everything at the first failure
 testfile run --max-parallel 4   # global cap on concurrently running tests
@@ -28,7 +28,7 @@ testfile run --dry-run     # print what would run, without running
 testfile run --watch       # re-run on file changes
 testfile run --reporter junit --output results.xml   # report for CI
 testfile validate [path]   # validate against the JSON schema
-testfile list [path]       # print the expanded tree, incl. matrix instances
+testfile list [path]       # print the expanded suite, incl. matrix instances
 testfile completion bash   # shell completions (bash, zsh, fish)
 
 # the viewer (read-only over .testfile/)
@@ -95,7 +95,7 @@ start · `130` interrupted.
 
 ## Filtering
 
-`run` and `list` accept filters to work on a subset of the tree:
+`run` and `list` accept filters to work on a subset of the suite:
 
 ```sh
 testfile run -f e2e                          # best guess: name, tag, ...
@@ -112,7 +112,7 @@ testfile run -t slow -m db:postgres -m node:22
   whose path contains the value **or** that carry it as a tag. Repeatable.
 - `-n, --filter-name <name-or-path>` matches case-insensitively against the
   test's *path* — its names joined with `/`, e.g. `all/checks/unit tests` —
-  so a bare test name works too. A matched test runs with its whole subtree;
+  so a bare test name works too. A matched test runs with all its nested tests;
   ancestors run as scaffolding (their sequence order, services and env still
   apply). Repeat the flag to match more tests.
 - `-t, --filter-tags <tags>` takes a comma-separated list of
@@ -143,7 +143,7 @@ a filter will run.
 `testfile run` streams progress line by line — suitable for CI
 logs. Test output is prefixed with `[test name]`; service output is shown
 with `--verbose`, and the tail of a failing service's log is always printed.
-A summary tree with per-test durations is printed at the end.
+A nested summary with per-test durations is printed at the end.
 
 ## The TUI
 
