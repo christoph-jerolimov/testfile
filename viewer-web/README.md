@@ -1,4 +1,4 @@
-# viewer
+# viewer-web
 
 The React web viewer over recorded Testfile runs — the browser sibling of
 the TUI's runs/results views. It is not used standalone: `testfile serve`
@@ -7,8 +7,8 @@ the TUI's runs/results views. It is not used standalone: `testfile serve`
 build up automatically.
 
 ```sh
-npm run build --workspace viewer   # bundle with esbuild into dist/
-npm test --workspace viewer        # typecheck + build
+npm run build --workspace viewer-web   # bundle with esbuild into dist/
+npm test --workspace viewer-web        # typecheck + build
 ```
 
 See the [web viewer documentation](../docs/cli.md#the-web-viewer) for what
