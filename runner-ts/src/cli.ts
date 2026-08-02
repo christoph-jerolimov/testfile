@@ -686,7 +686,7 @@ runsCommand
 
 runsCommand
   .command("import")
-  .argument("<archive>", '.tgz created by "testfile runs pack"')
+  .argument("<archive>", '.tgz ("testfile runs pack") or .zip (a GitHub run artifact)')
   .argument("[path]", "Testfile or directory containing one", ".")
   .description("Import a packed run into the local history")
   .action((archive: string, path: string) => {

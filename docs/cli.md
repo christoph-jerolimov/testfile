@@ -303,6 +303,7 @@ TUI treat them like local runs:
 testfile runs pack                       # latest run -> testfile-run-<id>.tgz
 testfile runs pack --run 20260801 -o ci.tgz
 testfile runs import ci.tgz              # import into ./.testfile/runs/
+testfile runs import testfile-run.zip    # a downloaded GitHub run artifact
 ```
 
 Importing skips runs that already exist locally (same id), so repeated

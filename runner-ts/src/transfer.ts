@@ -61,8 +61,51 @@ export interface ImportResult {
   skipped: string[];
 }
 
-// Imports every run found in a .tgz archive into the local history. Runs
-// that already exist locally (same id) are left untouched.
+// Copies one extracted run folder into the local history (skipping runs
+// that already exist locally, same id).
+function importRunDir(baseDir: string, dir: string, id: string, out: ImportResult): void {
+  const target = join(runsDir(baseDir), id);
+  if (existsSync(target)) {
+    out.skipped.push(id);
+    return;
+  }
+  mkdirSync(runsDir(baseDir), { recursive: true });
+  cpSync(dir, target, { recursive: true });
+  writeFileSync(join(baseDir, HISTORY_DIR, ".gitignore"), "*\n");
+  out.imported.push(id);
+}
+
+// Imports everything run-shaped found under an extraction directory:
+// either run folders (<id>/run.yaml, the tgz layout) or a run's contents
+// directly at the root (run.yaml next to the logs - the layout of a
+// GitHub artifact zip, which wraps the uploaded folder's contents).
+function importExtracted(baseDir: string, tmp: string, out: ImportResult): void {
+  const rootRecord = readRecordId(join(tmp, "run.yaml"));
+  if (rootRecord !== undefined) {
+    importRunDir(baseDir, tmp, rootRecord, out);
+    return;
+  }
+  for (const entry of readdirSync(tmp, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const id = readRecordId(join(tmp, entry.name, "run.yaml"));
+    if (id !== undefined) importRunDir(baseDir, join(tmp, entry.name), id, out);
+  }
+}
+
+// The run id from a run.yaml, or undefined when the file is not a readable
+// run record. Falls back to the folder name only when the record has no id.
+function readRecordId(file: string): string | undefined {
+  try {
+    const record = parse(readFileSync(file, "utf8")) as { id?: string; tests?: unknown } | null;
+    if (!record || !Array.isArray(record.tests)) return undefined;
+    return record.id ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// Imports every run found in a .tgz or .zip archive into the local
+// history. Runs that already exist locally (same id) are left untouched.
 export function importRunArchive(
   baseDir: string,
   archive: string,
@@ -70,28 +113,14 @@ export function importRunArchive(
 ): ImportResult {
   const tmp = mkdtempSync(join(tmpdir(), "testfile-import-"));
   try {
-    const result = exec("tar", ["-xzf", archive, "-C", tmp]);
+    const result = archive.endsWith(".zip")
+      ? exec("unzip", ["-o", "-q", archive, "-d", tmp])
+      : exec("tar", ["-xzf", archive, "-C", tmp]);
     if (result.status !== 0) {
-      throw new Error(`tar failed: ${(result.stderr || result.stdout).trim()}`);
+      throw new Error(`extracting ${archive} failed: ${(result.stderr || result.stdout).trim()}`);
     }
     const out: ImportResult = { imported: [], skipped: [] };
-    for (const entry of readdirSync(tmp, { withFileTypes: true })) {
-      if (!entry.isDirectory() || !existsSync(join(tmp, entry.name, "run.yaml"))) continue;
-      try {
-        parse(readFileSync(join(tmp, entry.name, "run.yaml"), "utf8"));
-      } catch {
-        continue; // not a readable run record
-      }
-      const target = join(runsDir(baseDir), entry.name);
-      if (existsSync(target)) {
-        out.skipped.push(entry.name);
-        continue;
-      }
-      mkdirSync(runsDir(baseDir), { recursive: true });
-      cpSync(join(tmp, entry.name), target, { recursive: true });
-      writeFileSync(join(baseDir, HISTORY_DIR, ".gitignore"), "*\n");
-      out.imported.push(entry.name);
-    }
+    importExtracted(baseDir, tmp, out);
     if (out.imported.length === 0 && out.skipped.length === 0) {
       throw new Error(`${archive} does not contain a recorded run`);
     }
@@ -253,15 +282,22 @@ export async function syncFromGithub(
     try {
       const zipFile = join(tmp, "artifact.zip");
       writeFileSync(zipFile, Buffer.from(await response.arrayBuffer()));
-      const unzip = exec("unzip", ["-o", "-q", zipFile, "-d", join(tmp, "unzipped")]);
+      const unzipped = join(tmp, "unzipped");
+      const unzip = exec("unzip", ["-o", "-q", zipFile, "-d", unzipped]);
       if (unzip.status !== 0) {
         throw new Error(`unzip failed: ${(unzip.stderr || unzip.stdout).trim()}`);
       }
-      for (const entry of readdirSync(join(tmp, "unzipped"))) {
-        if (!entry.endsWith(".tgz")) continue;
-        const result = importRunArchive(baseDir, join(tmp, "unzipped", entry), exec);
-        out.imported.push(...result.imported);
-        out.skipped.push(...result.skipped);
+      // Current artifacts hold the run folder's contents directly; older
+      // action versions packed a .tgz first - both import fine.
+      const tgzArchives = readdirSync(unzipped).filter((entry) => entry.endsWith(".tgz"));
+      if (tgzArchives.length > 0) {
+        for (const entry of tgzArchives) {
+          const result = importRunArchive(baseDir, join(unzipped, entry), exec);
+          out.imported.push(...result.imported);
+          out.skipped.push(...result.skipped);
+        }
+      } else {
+        importExtracted(baseDir, unzipped, out);
       }
     } finally {
       rmSync(tmp, { recursive: true, force: true });
