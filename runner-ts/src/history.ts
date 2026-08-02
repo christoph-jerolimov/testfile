@@ -152,13 +152,23 @@ export class RunHistory {
     }
   }
 
-  // The merged stdout+stderr of the whole run.
+  // The merged stdout+stderr of the whole run, assembled on demand from the
+  // per-test logs. (Older runs recorded a pre-merged output.log; when one
+  // exists it is served as-is.)
   readRunLog(run: RunRecord): string | undefined {
     try {
       return readFileSync(join(this.dir, "runs", run.id, "output.log"), "utf8");
     } catch {
-      return undefined;
+      // no legacy file: assemble from the per-test logs below
     }
+    const parts: string[] = [];
+    for (const test of run.tests) {
+      const duration = test.durationMs !== undefined ? `, ${test.durationMs}ms` : "";
+      parts.push(`=== ${test.path} (${test.status}${duration}) ===`);
+      const log = this.readLog(run, test);
+      if (log !== undefined && log !== "") parts.push(log.trimEnd());
+    }
+    return parts.length === 0 ? undefined : `${parts.join("\n")}\n`;
   }
 
   saveRun(meta: RunMeta, tests: RunLogInput[], services: { name: string; lines: OutputLine[] }[]): RunRecord {
@@ -182,7 +192,6 @@ export class RunHistory {
       tests: [],
     };
 
-    const merged: string[] = [];
     for (const test of tests) {
       const entry: RunRecordTest = { path: test.path, status: test.status };
       if (test.durationMs !== undefined) entry.durationMs = test.durationMs;
@@ -206,15 +215,10 @@ export class RunHistory {
         }
       }
       record.tests.push(entry);
-      const duration = test.durationMs !== undefined ? `, ${test.durationMs}ms` : "";
-      merged.push(`=== ${test.path} (${test.status}${duration}) ===`);
-      if (test.lines.length > 0) merged.push(renderLines(test.lines).trimEnd());
     }
-    for (const service of services) {
-      merged.push(`=== service ${service.name} ===`);
-      if (service.lines.length > 0) merged.push(renderLines(service.lines).trimEnd());
-    }
-    writeFileSync(join(runDir, "output.log"), `${merged.join("\n")}\n`);
+    // The merged run log is assembled on demand (readRunLog); service logs
+    // land in the run folder with the next step of this series.
+    void services;
     writeFileSync(join(runDir, "run.yaml"), stringify(record));
 
     this.index.unshift(record);

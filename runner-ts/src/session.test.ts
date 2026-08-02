@@ -53,8 +53,9 @@ test("a run is persisted with its own run.yaml, env, per-test logs and merged ou
   const latestTwo = history.latestFor("root/two");
   assert.match(history.readLog(latestTwo!.run, latestTwo!.test) ?? "", /two-err/);
 
-  // merged run log
-  const merged = readFileSync(join(dir, ".testfile", "runs", run.id, "output.log"), "utf8");
+  // merged run log, assembled on demand - no output.log file is written
+  assert.ok(!existsSync(join(dir, ".testfile", "runs", run.id, "output.log")));
+  const merged = history.readRunLog(history.find(run.id)!) ?? "";
   assert.match(merged, /=== root\/one \(passed/);
   assert.match(merged, /one-out/);
 
