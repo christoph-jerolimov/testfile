@@ -23,6 +23,8 @@ test:
           command: npm test --workspace vscode-extension
         - name: build-runner
           command: npm run build --workspace runner-ts
+        - name: viewer-ts
+          command: npm test --workspace viewer-ts
         # npm test --workspace runner-ts would rebuild via pretest; the tests
         # run against the one build above so nothing rewrites dist mid-run.
         - name: runner-tests

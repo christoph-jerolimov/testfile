@@ -3,35 +3,26 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { RunHistory, type RunMeta } from "./history.js";
+import { writeRun } from "./fixture.js";
 import { ViewerServer } from "./serve.js";
 
 function tempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), "testfile-serve-"));
+  const dir = mkdtempSync(join(tmpdir(), "testfile-viewer-serve-"));
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   return dir;
 }
 
-const meta: RunMeta = {
-  startedAtMs: Date.UTC(2026, 0, 1, 10, 0, 0),
-  durationMs: 5,
-  status: "failed",
-  exitCode: 1,
-  cancelled: false,
-  env: {},
-  ports: {},
-  selected: ["all"],
-};
-
 test("the REST API serves runs, logs and results on localhost", async () => {
   const dir = tempDir();
-  const saved = new RunHistory(dir).saveRun(
-    meta,
+  const saved = writeRun(
+    dir,
+    "20260101-100000-aaaa",
+    "2026-01-01T10:00:00.000Z",
     [
-      { path: "all/good", status: "passed", durationMs: 1, lines: [{ text: "fine", stream: "stdout" }] },
-      { path: "all/bad", status: "failed", durationMs: 2, lines: [{ text: "boom", stream: "stderr" }] },
+      { path: "all/good", status: "passed", durationMs: 1, log: "fine\n" },
+      { path: "all/bad", status: "failed", durationMs: 2, log: "boom\n" },
     ],
-    []
+    { status: "failed" }
   );
 
   const server = new ViewerServer({ baseDir: dir, port: 0, name: "demo" });

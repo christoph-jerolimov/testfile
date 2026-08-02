@@ -13,8 +13,16 @@
   "engines": {
     "vscode": "^1.90.0"
   },
-  "categories": ["Testing"],
-  "keywords": ["testfile", "test runner", "yaml", "testing", "ci"],
+  "categories": [
+    "Testing"
+  ],
+  "keywords": [
+    "testfile",
+    "test runner",
+    "yaml",
+    "testing",
+    "ci"
+  ],
   "main": "./dist/extension.js",
   "activationEvents": [
     "workspaceContains:**/Testfile",
@@ -23,10 +31,22 @@
   ],
   "contributes": {
     "commands": [
-      { "command": "testfile.runAll", "title": "Testfile: Run All Tests" },
-      { "command": "testfile.runTest", "title": "Testfile: Run Test at Cursor" },
-      { "command": "testfile.openTui", "title": "Testfile: Open the TUI" },
-      { "command": "testfile.serve", "title": "Testfile: Serve the Web Viewer" },
+      {
+        "command": "testfile.runAll",
+        "title": "Testfile: Run All Tests"
+      },
+      {
+        "command": "testfile.runTest",
+        "title": "Testfile: Run Test at Cursor"
+      },
+      {
+        "command": "testfile.openTui",
+        "title": "Testfile: Open the Viewer TUI"
+      },
+      {
+        "command": "testfile.serve",
+        "title": "Testfile: Serve the Web Viewer"
+      },
       {
         "command": "testfile.refreshRuns",
         "title": "Testfile: Refresh Runs",
@@ -40,6 +60,11 @@
           "type": "string",
           "default": "testfile",
           "description": "The testfile CLI to invoke (e.g. \"testfile\" or \"node /path/to/runner-ts/dist/cli.js\")."
+        },
+        "testfile.viewerCommand": {
+          "type": "string",
+          "default": "testfile-viewer",
+          "description": "The read-only viewer CLI for the TUI and web viewer (e.g. \"testfile-viewer\" or \"node /path/to/viewer-ts/dist/cli.js\")."
         }
       }
     },
@@ -64,7 +89,11 @@
     },
     "yamlValidation": [
       {
-        "fileMatch": ["Testfile", "testfile.yaml", "testfile.yml"],
+        "fileMatch": [
+          "Testfile",
+          "testfile.yaml",
+          "testfile.yml"
+        ],
         "url": "./schemas/testfile.schema.json"
       }
     ],

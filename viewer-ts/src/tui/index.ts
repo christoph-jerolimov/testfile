@@ -1,28 +1,27 @@
-// Entry point of the interactive terminal UI. The CLI imports this module
-// lazily so plain runs never pay for React/Ink.
+// Entry point of the viewer TUI. Imported lazily by the CLI so plain
+// history commands never pay for React/Ink.
 import { render } from "ink";
 import React from "react";
-import type { Session } from "../session.js";
-import { App, type TuiView } from "./app.js";
+import type { RunHistory } from "../runrecord.js";
+import { App, type ViewerView } from "./app.js";
 import { MOUSE_DISABLE, MOUSE_ENABLE } from "./mouse.js";
 
-export type { TuiView } from "./app.js";
+export type { ViewerView } from "./app.js";
 
 export interface TuiHandle {
   waitUntilExit(): Promise<void>;
 }
 
-// Renders the TUI and switches the terminal into mouse-reporting mode, which
-// is reliably switched off again when the TUI (or the process) exits.
 export function startTui(
-  session: Session,
-  options: { initialSelection?: number[]; view?: TuiView } = {}
+  history: RunHistory,
+  options: { baseDir: string; name?: string; view?: ViewerView }
 ): TuiHandle {
   const app = render(
     React.createElement(App, {
-      session,
-      initialSelection: options.initialSelection ?? [],
-      initialView: options.view ?? "tests",
+      history,
+      baseDir: options.baseDir,
+      name: options.name,
+      initialView: options.view ?? "runs",
     }),
     { exitOnCtrlC: false }
   );
