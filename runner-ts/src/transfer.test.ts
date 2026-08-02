@@ -200,12 +200,32 @@ test("githubRunArchives lists matching, unexpired artifacts of recent runs", asy
   assert.ok(requests.every((request) => request.auth === "Bearer tok"), "every call authenticates");
 });
 
-test("syncFromGithub downloads artifact zips and imports the contained runs", async () => {
+test("importRunArchive accepts a zip of the run folder's contents", () => {
   const source = tempDir();
   const id = recordRun(source);
   const staging = tempDir();
-  packRun(source, id, join(staging, "testfile-run.tgz"));
-  spawnSync("zip", ["-q", "-j", join(staging, "artifact.zip"), join(staging, "testfile-run.tgz")]);
+  // the layout of a GitHub artifact: run.yaml and the logs at the zip root
+  spawnSync("zip", ["-q", "-r", join(staging, "artifact.zip"), "."], {
+    cwd: join(source, ".testfile", "runs", id),
+  });
+
+  const target = tempDir();
+  assert.deepEqual(importRunArchive(target, join(staging, "artifact.zip")), {
+    imported: [id],
+    skipped: [],
+  });
+  const history = new RunHistory(target);
+  assert.equal(history.runs[0]?.id, id);
+  assert.equal(history.readLog(history.runs[0], history.runs[0].tests[0]), "out\n");
+});
+
+test("syncFromGithub imports artifact zips holding the run contents directly", async () => {
+  const source = tempDir();
+  const id = recordRun(source);
+  const staging = tempDir();
+  spawnSync("zip", ["-q", "-r", join(staging, "artifact.zip"), "."], {
+    cwd: join(source, ".testfile", "runs", id),
+  });
   const zipBytes = readFileSync(join(staging, "artifact.zip"));
 
   const { fetchImpl } = fakeFetch({
@@ -241,4 +261,35 @@ test("syncFromGithub downloads artifact zips and imports the contained runs", as
     fetchImpl,
   });
   assert.deepEqual(again.skipped, [id]);
+});
+
+test("syncFromGithub still imports legacy artifacts wrapping a .tgz", async () => {
+  const source = tempDir();
+  const id = recordRun(source);
+  const staging = tempDir();
+  packRun(source, id, join(staging, "testfile-run.tgz"));
+  spawnSync("zip", ["-q", "-j", join(staging, "artifact.zip"), join(staging, "testfile-run.tgz")]);
+  const zipBytes = readFileSync(join(staging, "artifact.zip"));
+
+  const { fetchImpl } = fakeFetch({
+    "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1": {
+      json: {
+        workflow_runs: [{ id: 8, name: "CI", artifacts_url: "https://api.github.com/runs/8/artifacts" }],
+      },
+    },
+    "https://api.github.com/runs/8/artifacts": {
+      json: { artifacts: [{ id: 10, name: "testfile-run", archive_download_url: "https://dl/10" }] },
+    },
+    "https://dl/10": { bytes: zipBytes },
+  });
+
+  const target = tempDir();
+  const result = await syncFromGithub(target, {
+    repo: "o/r",
+    latest: 1,
+    artifact: "testfile-run",
+    token: "tok",
+    fetchImpl,
+  });
+  assert.deepEqual(result.imported, [id]);
 });

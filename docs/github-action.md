@@ -74,9 +74,10 @@ summary shows a results table for every run, passing or failing.
 
 ## Bringing CI runs home
 
-Every action run uploads the recorded run as a `testfile-run` artifact —
-the same self-contained `.testfile/runs/<id>/` folder the runner writes
-locally. `testfile runs sync` downloads the artifacts of the latest
+Every action run uploads the recorded run folder as a `testfile-run`
+artifact — GitHub wraps it in a zip, so the artifact is a single zip with
+`run.yaml` and the logs at its root. A manually downloaded artifact
+imports with `testfile runs import testfile-run.zip`. `testfile runs sync` downloads the artifacts of the latest
 workflow runs and imports them into your local
 [run history](./cli#run-history), where `testfile history`, `--diff`,
 `--flaky` and the TUI's runs/results views treat them like local runs:

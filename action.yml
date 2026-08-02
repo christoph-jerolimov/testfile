@@ -114,17 +114,20 @@ runs:
         INPUT_PATH: ${{ inputs.path }}
       run: node "${{ github.action_path }}/action/summary.mjs" "$INPUT_PATH"
 
-    - name: Pack the recorded run
+    - name: Locate the recorded run
+      id: locate-run
       if: ${{ always() && inputs['upload-run'] == 'true' }}
       shell: bash
       env:
         INPUT_PATH: ${{ inputs.path }}
-      run: node "${{ github.action_path }}/action/pack-run.mjs" "$INPUT_PATH" "$RUNNER_TEMP/testfile-run.tgz"
+      run: node "${{ github.action_path }}/action/locate-run.mjs" "$INPUT_PATH" >> "$GITHUB_OUTPUT"
 
+    # The folder is uploaded as-is; GitHub wraps artifacts in a zip anyway,
+    # so the artifact is a single zip with run.yaml and the logs at its root.
     - name: Upload the recorded run
-      if: ${{ always() && inputs['upload-run'] == 'true' }}
+      if: ${{ always() && inputs['upload-run'] == 'true' && steps.locate-run.outputs.run-dir != '' }}
       uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs['artifact-name'] }}
-        path: ${{ runner.temp }}/testfile-run.tgz
+        path: ${{ steps.locate-run.outputs.run-dir }}
         if-no-files-found: ignore
