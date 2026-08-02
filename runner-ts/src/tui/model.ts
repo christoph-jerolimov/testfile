@@ -103,6 +103,14 @@ export function describeRun(run: RunRecord): OutputLine[] {
       stream: test.status === "failed" || test.status === "aborted" ? "stderr" : "stdout",
     });
   }
+  for (const service of run.services ?? []) {
+    lines.push({
+      text: `service  ${service.name}${service.status ? ` (${service.status})` : ""}${
+        service.log ? "  [log]" : ""
+      }`,
+      stream: service.status === "failed" ? "stderr" : "system",
+    });
+  }
   return lines;
 }
 

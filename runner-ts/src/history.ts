@@ -21,6 +21,14 @@ export interface RunRecordTest {
   cached?: boolean;
 }
 
+export interface RunRecordService {
+  name: string;
+  // Last observed status (ready, stopped, failed, ...), when known.
+  status?: string;
+  // Log file relative to the run's folder, when the service produced output.
+  log?: string;
+}
+
 export interface RunRecord {
   id: string;
   startedAt: string;
@@ -34,6 +42,8 @@ export interface RunRecord {
   // Paths of the tests the user selected for this run.
   selected: string[];
   tests: RunRecordTest[];
+  // Services that were started during the run.
+  services?: RunRecordService[];
 }
 
 export interface RunMeta {
@@ -168,10 +178,28 @@ export class RunHistory {
       const log = this.readLog(run, test);
       if (log !== undefined && log !== "") parts.push(log.trimEnd());
     }
+    for (const service of run.services ?? []) {
+      parts.push(`=== service ${service.name}${service.status ? ` (${service.status})` : ""} ===`);
+      const log = this.readServiceLog(run, service);
+      if (log !== undefined && log !== "") parts.push(log.trimEnd());
+    }
     return parts.length === 0 ? undefined : `${parts.join("\n")}\n`;
   }
 
-  saveRun(meta: RunMeta, tests: RunLogInput[], services: { name: string; lines: OutputLine[] }[]): RunRecord {
+  readServiceLog(run: RunRecord, service: RunRecordService): string | undefined {
+    if (!service.log) return undefined;
+    try {
+      return readFileSync(join(this.dir, "runs", run.id, service.log), "utf8");
+    } catch {
+      return undefined;
+    }
+  }
+
+  saveRun(
+    meta: RunMeta,
+    tests: RunLogInput[],
+    services: { name: string; status?: string; lines: OutputLine[] }[]
+  ): RunRecord {
     const startedAt = new Date(meta.startedAtMs);
     const stamp = startedAt.toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "-");
     const id = `${stamp}-${Math.random().toString(16).slice(2, 6)}`;
@@ -216,9 +244,16 @@ export class RunHistory {
       }
       record.tests.push(entry);
     }
-    // The merged run log is assembled on demand (readRunLog); service logs
-    // land in the run folder with the next step of this series.
-    void services;
+    for (const service of services) {
+      const entry: RunRecordService = { name: service.name };
+      if (service.status !== undefined) entry.status = service.status;
+      if (service.lines.length > 0) {
+        entry.log = join("services", `${slugify(service.name)}.log`);
+        mkdirSync(join(runDir, "services"), { recursive: true });
+        writeFileSync(join(runDir, entry.log), renderLines(service.lines));
+      }
+      (record.services ??= []).push(entry);
+    }
     writeFileSync(join(runDir, "run.yaml"), stringify(record));
 
     this.index.unshift(record);

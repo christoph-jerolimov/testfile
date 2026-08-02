@@ -105,13 +105,19 @@ export class ViewerServer {
       if (!sub) return this.json(response, 200, run);
       if (sub === "log") {
         const testPath = url.searchParams.get("test");
+        const serviceName = url.searchParams.get("service");
         const text =
           testPath !== null
             ? (() => {
                 const test = run.tests.find((t) => t.path === testPath);
                 return test ? this.history.readLog(run, test) : undefined;
               })()
-            : this.history.readRunLog(run);
+            : serviceName !== null
+              ? (() => {
+                  const service = run.services?.find((s) => s.name === serviceName);
+                  return service ? this.history.readServiceLog(run, service) : undefined;
+                })()
+              : this.history.readRunLog(run);
         if (text === undefined) return this.json(response, 404, { error: "no log recorded" });
         response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
         return void response.end(text);
