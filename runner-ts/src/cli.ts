@@ -427,6 +427,7 @@ interface RunFlags extends FilterFlags {
   dryRun: boolean;
   watch: boolean;
   cache: boolean;
+  forwardEnv: string[];
   reporter?: ReporterKind;
   output: string;
 }
@@ -446,6 +447,12 @@ addFilterOptions(
     .option("--dry-run", "print what would run (with filters applied) without running", false)
     .option("-w, --watch", "re-run the selection when files change", false)
     .option("--no-cache", "ignore cached results (fresh results still refresh the cache)")
+    .option(
+      "--forward-env <pattern>",
+      'forward matching host env vars into the (isolated) test env, e.g. "GITHUB_*" or "*" (repeatable)',
+      collect,
+      []
+    )
     .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
     .option("--output <file>", 'report target file, or "-" for stdout', "-")
     .description("Run the test tree")
@@ -465,6 +472,7 @@ addFilterOptions(
         failFast: options.failFast,
         maxParallel: options.maxParallel,
         noCache: !options.cache,
+        forwardEnv: options.forwardEnv,
       });
       filtered = resolveFilters(session, options);
       if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
@@ -566,6 +574,7 @@ interface TuiCommandFlags extends FilterFlags {
   maxParallel?: number;
   watch: boolean;
   cache: boolean;
+  forwardEnv: string[];
 }
 
 addFilterOptions(
@@ -582,6 +591,12 @@ addFilterOptions(
     )
     .option("-w, --watch", "re-run the selection when files change", false)
     .option("--no-cache", "ignore cached results (fresh results still refresh the cache)")
+    .option(
+      "--forward-env <pattern>",
+      'forward matching host env vars into the (isolated) test env, e.g. "GITHUB_*" or "*" (repeatable)',
+      collect,
+      []
+    )
     .description("Interactive terminal UI: tests, run history and services")
 )
   .action(async (path: string, options: TuiCommandFlags) => {
@@ -600,6 +615,7 @@ addFilterOptions(
         failFast: options.failFast,
         maxParallel: options.maxParallel,
         noCache: !options.cache,
+        forwardEnv: options.forwardEnv,
       });
       let filtered = resolveFilters(session, options);
       if (filtered.leafCount === 0) throw new Error("no tests match the given filters");

@@ -4,6 +4,7 @@ import { resolve as resolvePath } from "node:path";
 import { ResultCache } from "./cache.js";
 import { evaluateCondition } from "./condition.js";
 import { loadEnvFiles } from "./envfile.js";
+import { baseEnv as hostBaseEnv, forwardedEnv } from "./hostenv.js";
 import type { HookDef, ServiceDef, TestfileDoc } from "./model.js";
 import { resolvePorts } from "./ports.js";
 import { walk, type RunNode, type Status } from "./runtree.js";
@@ -23,6 +24,9 @@ export interface RunnerOptions {
   maxParallel?: number;
   // Result cache for tests declaring `inputs`.
   cache?: ResultCache;
+  // Additional host-env forward patterns (e.g. from --forward-env), applied
+  // on top of the document's forwardEnv.
+  forwardEnv?: string[];
 }
 
 // A started service as seen by one test: releasing it stops the service, or
@@ -46,6 +50,7 @@ export class Runner extends EventEmitter {
   private readonly abort = new AbortController();
   private readonly failFast: boolean;
   private readonly cache?: ResultCache;
+  private readonly forwardEnv: string[];
   private readonly globalSlots?: Semaphore;
   // Running shared services, keyed by name + resolved configuration.
   private readonly sharedPool = new Map<
@@ -68,6 +73,7 @@ export class Runner extends EventEmitter {
     this.active = options.active;
     this.failFast = options.failFast ?? false;
     this.cache = options.cache;
+    this.forwardEnv = options.forwardEnv ?? [];
     if (options.maxParallel !== undefined) this.globalSlots = new Semaphore(options.maxParallel);
   }
 
@@ -95,10 +101,9 @@ export class Runner extends EventEmitter {
   }
 
   async run(): Promise<Status> {
-    const baseEnv: Record<string, string> = {};
-    for (const [key, value] of Object.entries(process.env)) {
-      if (value !== undefined) baseEnv[key] = value;
-    }
+    // Tests run in a clean environment: essentials + runner defaults, plus
+    // whatever the Testfile's / the CLI's forwardEnv patterns let through.
+    const baseEnv = hostBaseEnv([...(this.doc.forwardEnv ?? []), ...this.forwardEnv]);
     // Platform facts for `if` conditions, e.g. ${{ env.TESTFILE_OS }} == linux.
     baseEnv.TESTFILE_OS = process.platform;
     baseEnv.TESTFILE_ARCH = process.arch;
@@ -166,7 +171,13 @@ export class Runner extends EventEmitter {
         const where = `test "${node.name}"`;
         const matrix = { ...scopes.matrix, ...node.matrix };
         const withMatrix: Scopes = { ...scopes, matrix };
-        const env = { ...withMatrix.env, ...resolveEnvMap(node.def.env, withMatrix, where) };
+        // precedence: parent env < forwarded host vars < this test's own env
+        const forwarded = forwardedEnv(node.def.forwardEnv);
+        const env = {
+          ...withMatrix.env,
+          ...forwarded,
+          ...resolveEnvMap(node.def.env, withMatrix, where),
+        };
         for (const [key, value] of Object.entries(node.matrix)) {
           env[`TESTFILE_MATRIX_${key.toUpperCase()}`] = value;
         }
@@ -189,9 +200,10 @@ export class Runner extends EventEmitter {
 
         if (node.def.envFile !== undefined) {
           const nodeFileEnv = loadEnvFiles(node.def.envFile, nodeCwd, nodeScopes, where, this.secrets);
-          // precedence: parent env < env file(s) < this test's own env
+          // precedence: parent env < forwarded < env file(s) < own env
           const merged = {
             ...withMatrix.env,
+            ...forwarded,
             ...nodeFileEnv,
             ...resolveEnvMap(node.def.env, withMatrix, where),
           };

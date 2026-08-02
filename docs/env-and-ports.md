@@ -6,6 +6,44 @@ description: Environment variables, random ports and template expressions.
 
 # Environment & ports
 
+## An isolated environment
+
+Tests and services do **not** inherit your shell's (or the CI job's)
+environment — runs behave the same on every machine, and a stray
+`DATABASE_URL` on your laptop can't silently change what is tested. The
+base environment is:
+
+- **Essentials from the host**: `PATH`, `HOME`, `USER`, `LOGNAME`, `SHELL`,
+  `TMPDIR`/`TMP`/`TEMP`, `LANG`, `LC_*`, `TZ` (and their Windows
+  equivalents) pass through, so commands just work.
+- **Runner-provided defaults**: `CI=1`, plus `FORCE_COLOR=1` and
+  `CLICOLOR_FORCE=1` so tools keep their color output even though the
+  runner captures it through pipes. `TESTFILE_OS` and `TESTFILE_ARCH`
+  describe the platform.
+
+Everything else must be forwarded explicitly with `forwardEnv` — a list of
+names or `*` patterns, at the top level or per test (applying to its
+subtree):
+
+```yaml
+version: 1
+forwardEnv:
+  - GITHUB_*            # all GitHub Actions variables, for the whole run
+test:
+  sequence:
+    - name: uses a token
+      forwardEnv: [NPM_TOKEN]
+      command: npm whoami
+    - name: everything    # escape hatch: the full host environment
+      forwardEnv: ["*"]
+      command: ./legacy-test.sh
+```
+
+Forwarded variables override the runner's defaults (forward `CI` to get
+the host's value), while explicit `env` entries and env files win over
+forwarded values. Ad-hoc forwarding without editing the Testfile:
+`testfile run --forward-env 'GITHUB_*'` (also on `testfile tui`).
+
 ## Environment variables
 
 `env` can be set at the top level, on any test and on any service. Maps merge
@@ -28,8 +66,9 @@ test:
       command: npm run test:two
 ```
 
-The runner's own shell environment is the base layer, so `PATH`, `HOME` etc.
-stay available.
+The [isolated base environment](#an-isolated-environment) is the bottom
+layer, so `PATH`, `HOME` etc. stay available while the rest of the host
+environment stays out.
 
 ## Env files and secrets
 

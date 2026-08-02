@@ -28,7 +28,12 @@ export class Session extends EventEmitter {
     readonly baseDir: string,
     // Defaults applied to every run started from this session (CLI flags
     // like --fail-fast / --max-parallel, honored by TUI-started runs too).
-    readonly runDefaults: { failFast?: boolean; maxParallel?: number; noCache?: boolean } = {}
+    readonly runDefaults: {
+      failFast?: boolean;
+      maxParallel?: number;
+      noCache?: boolean;
+      forwardEnv?: string[];
+    } = {}
   ) {
     super();
     validateSemantics(doc);
@@ -77,6 +82,7 @@ export class Session extends EventEmitter {
       failFast: this.runDefaults.failFast,
       maxParallel: this.runDefaults.maxParallel,
       cache: this.cache,
+      forwardEnv: this.runDefaults.forwardEnv,
     });
     this.runner = runner;
     runner.on("update", () => this.emit("update"));

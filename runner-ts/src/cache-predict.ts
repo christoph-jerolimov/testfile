@@ -1,5 +1,6 @@
 import { ResultCache } from "./cache.js";
 import { loadEnvFiles } from "./envfile.js";
+import { baseEnv as hostBaseEnv, forwardedEnv } from "./hostenv.js";
 import type { TestDef } from "./model.js";
 import { resolvePorts } from "./ports.js";
 import type { RunNode } from "./runtree.js";
@@ -28,10 +29,10 @@ export async function predictCacheHits(session: Session, active: Set<number>): P
   const hits = new Set<number>();
   if (!session.cache.enabled) return hits;
 
-  const baseEnv: Record<string, string> = {};
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value !== undefined) baseEnv[key] = value;
-  }
+  const baseEnv = hostBaseEnv([
+    ...(session.doc.forwardEnv ?? []),
+    ...(session.runDefaults.forwardEnv ?? []),
+  ]);
   baseEnv.TESTFILE_OS = process.platform;
   baseEnv.TESTFILE_ARCH = process.arch;
 
@@ -58,7 +59,8 @@ export async function predictCacheHits(session: Session, active: Set<number>): P
       const def: TestDef = node.def;
       const matrix = { ...inherited.matrix, ...node.matrix };
       const withMatrix: Scopes = { ...inherited, matrix };
-      const env = { ...withMatrix.env, ...resolveEnvMap(def.env, withMatrix, where) };
+      const forwarded = forwardedEnv(def.forwardEnv);
+      const env = { ...withMatrix.env, ...forwarded, ...resolveEnvMap(def.env, withMatrix, where) };
       for (const [key, value] of Object.entries(node.matrix)) {
         env[`TESTFILE_MATRIX_${key.toUpperCase()}`] = value;
       }
@@ -70,6 +72,7 @@ export async function predictCacheHits(session: Session, active: Set<number>): P
         const fileEnv = loadEnvFiles(def.envFile, nodeCwd, nodeScopes, where, new Set());
         const merged = {
           ...withMatrix.env,
+          ...forwarded,
           ...fileEnv,
           ...resolveEnvMap(def.env, withMatrix, where),
         };

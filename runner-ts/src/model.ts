@@ -9,6 +9,9 @@ export interface TestfileDoc {
   name?: string;
   env?: EnvMap;
   envFile?: string | string[];
+  // Host-env variable names/patterns forwarded into the test environment
+  // (which is otherwise isolated from the host), e.g. "GITHUB_*" or "*".
+  forwardEnv?: string[];
   ports?: Record<string, number | "random">;
   services?: Record<string, ServiceDef>;
   test: TestDef;
@@ -25,6 +28,7 @@ export interface TestDef {
   tags?: string[];
   env?: EnvMap;
   envFile?: string | string[];
+  forwardEnv?: string[];
   workdir?: string;
   timeout?: Duration;
   continueOnError?: boolean;
