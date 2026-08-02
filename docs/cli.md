@@ -24,6 +24,7 @@ testfile validate [path]   # validate against the JSON schema
 testfile list [path]       # print the expanded tree, incl. matrix instances
 testfile history [path]    # list or show recorded runs
 testfile runs <cmd>        # pack/import/push/pull/sync recorded runs
+testfile serve             # localhost REST API + web viewer over the runs
 testfile completion bash   # shell completions (bash, zsh, fish)
 ```
 
@@ -328,6 +329,31 @@ testfile runs sync owner/repo --artifact my-artifact-name
 Already-imported runs are skipped, so `sync` is incremental — run it again
 any time to top up the local history with the newest CI results. The TUI's
 [runs and results views](#runs-view) pick imported runs up live.
+
+## The web viewer
+
+`testfile serve` starts a small web UI over the recorded runs — the
+browser sibling of the TUI's runs/results views:
+
+```sh
+testfile serve                 # http://127.0.0.1:7357
+testfile serve --port 8080
+```
+
+- **Runs**: a table of all recorded runs; selecting one shows its details,
+  per-test results and logs (merged or per test).
+- **Results**: every recorded test with aggregated pass/fail counts and
+  its executions across all runs.
+- The server watches `.testfile/runs/` and pushes changes to the browser,
+  so runs recorded elsewhere (another terminal, `testfile runs sync`)
+  appear live.
+
+The server binds to `127.0.0.1` **only** — it is never reachable from the
+network. It exposes a read-only REST API for other tooling:
+`/api/summary`, `/api/runs`, `/api/runs/<id>`, `/api/runs/<id>/log`
+(`?test=<path>` for one test), `/api/results` and `/api/events` (SSE).
+The UI itself lives in the `viewer/` workspace (React, bundled with
+esbuild); `serve` picks up its build automatically.
 
 ## Interrupting a run
 

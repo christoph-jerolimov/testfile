@@ -23,6 +23,10 @@
       "description": "Dotenv file(s), relative to this Testfile, loaded for the whole run. Values are treated as secrets: they are masked in recorded logs and never written into run records. Explicit 'env' entries win over env file values.",
       "$ref": "#/$defs/envFileSpec"
     },
+    "forwardEnv": {
+      "description": "Host environment variables forwarded into the test environment, which is otherwise isolated from the host (only essentials like PATH and HOME pass through, and the runner provides CI=1 with color output forced). Each entry is a variable name or a pattern where * matches anything, e.g. \"GITHUB_*\" or just \"*\".",
+      "$ref": "#/$defs/forwardEnvList"
+    },
     "ports": {
       "description": "Named ports. A value of \"random\" allocates a free port on startup; an integer pins a fixed port. Referenced anywhere via ${{ ports.NAME }} templates.",
       "$ref": "#/$defs/portsMap"
@@ -39,6 +43,13 @@
   "$defs": {
     "scalar": {
       "type": ["string", "number", "boolean"]
+    },
+    "forwardEnvList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "envFileSpec": {
       "oneOf": [
@@ -172,6 +183,10 @@
         "envFile": {
           "description": "Dotenv file(s), relative to this test's working directory, loaded for this subtree. Values are treated as secrets: masked in recorded logs and never written into run records. Precedence: parent env < env file(s) < this test's 'env'.",
           "$ref": "#/$defs/envFileSpec"
+        },
+        "forwardEnv": {
+          "description": "Host environment variables forwarded into this test's (and its children's) environment, e.g. \"GITHUB_*\" or \"*\". Precedence: parent env < forwarded < env file(s) < this test's 'env'.",
+          "$ref": "#/$defs/forwardEnvList"
         },
         "workdir": {
           "description": "Working directory for this test and its children, relative to the Testfile location (or absolute).",

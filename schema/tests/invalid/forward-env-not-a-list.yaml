@@ -1,0 +1,5 @@
+# forwardEnv must be a list of patterns, not a single string.
+version: 0
+forwardEnv: GITHUB_*
+test:
+  command: env

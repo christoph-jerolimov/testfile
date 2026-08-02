@@ -1,0 +1,94 @@
+{
+  "name": "testfile-vscode",
+  "displayName": "Testfile",
+  "description": "Run and inspect Testfile test trees: schema validation, run-from-editor code lenses and the recorded run history",
+  "publisher": "testfile",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/christoph-jerolimov/testfile"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Testing"],
+  "keywords": ["testfile", "test runner", "yaml", "testing", "ci"],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "workspaceContains:**/Testfile",
+    "workspaceContains:**/testfile.yaml",
+    "workspaceContains:**/testfile.yml"
+  ],
+  "contributes": {
+    "commands": [
+      { "command": "testfile.runAll", "title": "Testfile: Run All Tests" },
+      { "command": "testfile.runTest", "title": "Testfile: Run Test at Cursor" },
+      { "command": "testfile.openTui", "title": "Testfile: Open the TUI" },
+      { "command": "testfile.serve", "title": "Testfile: Serve the Web Viewer" },
+      {
+        "command": "testfile.refreshRuns",
+        "title": "Testfile: Refresh Runs",
+        "icon": "$(refresh)"
+      }
+    ],
+    "configuration": {
+      "title": "Testfile",
+      "properties": {
+        "testfile.command": {
+          "type": "string",
+          "default": "testfile",
+          "description": "The testfile CLI to invoke (e.g. \"testfile\" or \"node /path/to/runner-ts/dist/cli.js\")."
+        }
+      }
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "testfileRuns",
+          "name": "Testfile Runs",
+          "contextualTitle": "Testfile",
+          "when": "testfile.hasTestfile"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "testfile.refreshRuns",
+          "when": "view == testfileRuns",
+          "group": "navigation"
+        }
+      ]
+    },
+    "yamlValidation": [
+      {
+        "fileMatch": ["Testfile", "testfile.yaml", "testfile.yml"],
+        "url": "./schemas/testfile.schema.json"
+      }
+    ],
+    "configurationDefaults": {
+      "files.associations": {
+        "Testfile": "yaml"
+      }
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "build": "node build.mjs",
+    "test": "npm run typecheck && node --test \"out/**/*.test.js\" && npm run build",
+    "package": "npm run build && npx --yes @vscode/vsce package --no-dependencies",
+    "publish:open-vsx": "npm run build && npx --yes ovsx publish --no-dependencies --pat \"$OVSX_PAT\"",
+    "publish:marketplace": "npm run build && npx --yes @vscode/vsce publish --no-dependencies --pat \"$VSCE_PAT\""
+  },
+  "dependencies": {
+    "yaml": "^2.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.5.4"
+  }
+}

@@ -17,6 +17,10 @@ test:
           command: npm test --workspace schema
         - name: website
           command: npm run build --workspace website
+        - name: viewer
+          command: npm test --workspace viewer
+        - name: vscode-extension
+          command: npm test --workspace vscode-extension
         - name: build-runner
           command: npm run build --workspace runner-ts
         # npm test --workspace runner-ts would rebuild via pretest; the tests

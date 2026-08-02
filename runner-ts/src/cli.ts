@@ -19,6 +19,7 @@ import { loadTestfile } from "./loader.js";
 import { writeReport, type ReporterKind } from "./report.js";
 import { ConsoleReporter } from "./reporter.js";
 import { walk, type RunNode } from "./runtree.js";
+import { findViewerDir, ViewerServer } from "./serve.js";
 import { Session } from "./session.js";
 import { importRunArchive, packRun, s3Pull, s3Push, syncFromGithub } from "./transfer.js";
 import { color, formatMs } from "./util.js";
@@ -427,6 +428,7 @@ interface RunFlags extends FilterFlags {
   dryRun: boolean;
   watch: boolean;
   cache: boolean;
+  forwardEnv: string[];
   reporter?: ReporterKind;
   output: string;
 }
@@ -446,6 +448,12 @@ addFilterOptions(
     .option("--dry-run", "print what would run (with filters applied) without running", false)
     .option("-w, --watch", "re-run the selection when files change", false)
     .option("--no-cache", "ignore cached results (fresh results still refresh the cache)")
+    .option(
+      "--forward-env <pattern>",
+      'forward matching host env vars into the (isolated) test env, e.g. "GITHUB_*" or "*" (repeatable)',
+      collect,
+      []
+    )
     .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
     .option("--output <file>", 'report target file, or "-" for stdout', "-")
     .description("Run the test tree")
@@ -465,6 +473,7 @@ addFilterOptions(
         failFast: options.failFast,
         maxParallel: options.maxParallel,
         noCache: !options.cache,
+        forwardEnv: options.forwardEnv,
       });
       filtered = resolveFilters(session, options);
       if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
@@ -566,6 +575,7 @@ interface TuiCommandFlags extends FilterFlags {
   maxParallel?: number;
   watch: boolean;
   cache: boolean;
+  forwardEnv: string[];
 }
 
 addFilterOptions(
@@ -582,6 +592,12 @@ addFilterOptions(
     )
     .option("-w, --watch", "re-run the selection when files change", false)
     .option("--no-cache", "ignore cached results (fresh results still refresh the cache)")
+    .option(
+      "--forward-env <pattern>",
+      'forward matching host env vars into the (isolated) test env, e.g. "GITHUB_*" or "*" (repeatable)',
+      collect,
+      []
+    )
     .description("Interactive terminal UI: tests, run history and services")
 )
   .action(async (path: string, options: TuiCommandFlags) => {
@@ -600,6 +616,7 @@ addFilterOptions(
         failFast: options.failFast,
         maxParallel: options.maxParallel,
         noCache: !options.cache,
+        forwardEnv: options.forwardEnv,
       });
       let filtered = resolveFilters(session, options);
       if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
@@ -742,6 +759,48 @@ runsCommand
       }
     }
   );
+
+program
+  .command("serve")
+  .argument("[path]", "Testfile or directory containing one", ".")
+  .option(
+    "--port <n>",
+    "port to listen on (always bound to 127.0.0.1 only)",
+    (value: string) => Number.parseInt(value, 10),
+    7357
+  )
+  .description("Serve a localhost REST API and web viewer over the recorded runs")
+  .action(async (path: string, options: { port: number }) => {
+    try {
+      if (!(options.port >= 0 && options.port <= 65535)) {
+        throw new Error("--port must be between 0 and 65535");
+      }
+      const base = resolveHistoryBase(path);
+      let name: string | undefined;
+      try {
+        name = loadTestfile(path).doc.name;
+      } catch {
+        // serving works on the .testfile/ folder alone
+      }
+      const viewerDir = findViewerDir();
+      const server = new ViewerServer({ baseDir: base, port: options.port, name, viewerDir });
+      const port = await server.start();
+      console.log(`${color(32, "●")} serving on http://127.0.0.1:${port} (Ctrl+C to stop)`);
+      if (!viewerDir) {
+        console.log(
+          color(90, "web viewer not built — REST API only (npm run build --workspace viewer)")
+        );
+      }
+      const shutdown = (): void => {
+        server.close();
+        process.exit(0);
+      };
+      process.on("SIGINT", shutdown);
+      process.on("SIGTERM", shutdown);
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
 
 program
   .command("completion")
