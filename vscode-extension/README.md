@@ -24,11 +24,34 @@ format and runner.
 - `testfile.command` — the CLI to invoke (default `testfile`). Point it at
   `node /path/to/runner-ts/dist/cli.js` when working inside this repository.
 
+## Installing
+
+The extension is published to [Open VSX](https://open-vsx.org/) as
+`testfile.testfile-vscode`, so it installs directly in VSCodium, Gitpod,
+Eclipse Theia, code-server and friends. VS Code users can install the same
+`.vsix` from a GitHub release via *Extensions: Install from VSIX...*.
+
 ## Development
 
 ```sh
 npm run typecheck   # tsc
 npm test            # typecheck + unit tests + bundle
 npm run build       # bundle to dist/ and copy the schema
-npx @vscode/vsce package   # build the .vsix
+npm run package     # build the .vsix (vsce)
+```
+
+## Publishing
+
+Pushing a `vscode-v*` tag runs the release workflow
+(`.github/workflows/release-vscode.yaml`): it packages the `.vsix`,
+publishes it to Open VSX (when the `OVSX_PAT` repository secret is set)
+and to the VS Marketplace (when `VSCE_PAT` is set), and attaches the file
+to a GitHub release. Manual publishing:
+
+```sh
+# one-time: create the namespace on open-vsx.org
+npx ovsx create-namespace testfile --pat "$OVSX_PAT"
+
+OVSX_PAT=... npm run publish:open-vsx
+VSCE_PAT=... npm run publish:marketplace
 ```
