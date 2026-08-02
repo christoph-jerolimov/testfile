@@ -5,4 +5,9 @@ import { defineConfig } from "astro/config";
 export default defineConfig({
   site: "https://christoph-jerolimov.github.io",
   base: "/testfile",
+  markdown: {
+    shikiConfig: {
+      themes: { light: "github-light", dark: "github-dark" },
+    },
+  },
 });
