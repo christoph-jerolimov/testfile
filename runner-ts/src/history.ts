@@ -1,6 +1,7 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { parse, stringify } from "yaml";
+import { junitFromRecord } from "./junit.js";
 import type { OutputLine } from "./output.js";
 import type { Status } from "./runtree.js";
 
@@ -44,9 +45,13 @@ export interface RunRecord {
   tests: RunRecordTest[];
   // Services that were started during the run.
   services?: RunRecordService[];
+  // JUnit XML of this run, relative to the run's folder.
+  junit?: string;
 }
 
 export interface RunMeta {
+  // Display name of the project (the Testfile's `name`), for reports.
+  name?: string;
   startedAtMs: number;
   durationMs: number;
   status: "passed" | "failed" | "aborted";
@@ -254,6 +259,20 @@ export class RunHistory {
       }
       (record.services ??= []).push(entry);
     }
+    // JUnit result next to the record, so CI tooling can pick it up from
+    // the run folder (and the uploaded artifact) directly.
+    const logByPath = new Map(tests.map((test) => [test.path, test.lines]));
+    writeFileSync(
+      join(runDir, "junit.xml"),
+      junitFromRecord(record, {
+        name: meta.name,
+        readLog: (test) => {
+          const testLines = logByPath.get(test.path);
+          return testLines && testLines.length > 0 ? renderLines(testLines) : undefined;
+        },
+      })
+    );
+    record.junit = "junit.xml";
     writeFileSync(join(runDir, "run.yaml"), stringify(record));
 
     this.index.unshift(record);

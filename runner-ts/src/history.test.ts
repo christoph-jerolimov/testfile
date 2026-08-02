@@ -151,3 +151,24 @@ test("service logs are persisted per service and appear in the merged log", () =
   assert.match(merged, /ready to accept connections/);
   assert.match(merged, /=== service quiet \(stopped\) ===/);
 });
+
+test("every run folder contains a junit.xml built from the record", () => {
+  const dir = tempDir();
+  const run = new RunHistory(dir).saveRun(
+    { ...meta(Date.UTC(2026, 0, 7), "failed"), name: "demo" },
+    [
+      { path: "all", status: "failed", durationMs: 9, lines: [] },
+      { path: "all/good", status: "passed", durationMs: 3, lines },
+      { path: "all/bad", status: "failed", durationMs: 4, lines: [{ text: "boom", stream: "stderr" }] },
+      { path: "all/off", status: "skipped", lines: [] },
+    ],
+    []
+  );
+  assert.equal(run.junit, "junit.xml");
+  const xml = readFileSync(join(dir, ".testfile", "runs", run.id, "junit.xml"), "utf8");
+  assert.match(xml, /<testsuites name="demo" tests="3" failures="1" skipped="1"/);
+  assert.match(xml, /<testcase name="good" classname="all" time="0.003"\/>/);
+  assert.match(xml, /<failure message="failed">boom/);
+  assert.match(xml, /<skipped\/>/);
+  assert.ok(!xml.includes('name="all" classname="all"'), "the group node is not a testcase");
+});

@@ -141,6 +141,7 @@ export class Session extends EventEmitter {
     const ok = status === "passed" || status === "skipped";
     this.lastRecord = this.history.saveRun(
       {
+        name: this.doc.name,
         startedAtMs,
         durationMs,
         status: ok ? "passed" : runner.interrupted ? "aborted" : "failed",
