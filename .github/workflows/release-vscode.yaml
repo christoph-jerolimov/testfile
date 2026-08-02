@@ -1,0 +1,61 @@
+name: Release VS Code extension
+
+# Publishes the extension when a vscode-v* tag is pushed (e.g. vscode-v0.1.0):
+# - to Open VSX when the OVSX_PAT secret is configured
+# - to the VS Marketplace when the VSCE_PAT secret is configured
+# - the .vsix is always attached to a GitHub release and kept as an artifact
+on:
+  push:
+    tags: ["vscode-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package & publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test --workspace vscode-extension
+      - name: Package the .vsix
+        run: npm run package --workspace vscode-extension
+
+      - name: Publish to Open VSX
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: |
+          if [ -z "$OVSX_PAT" ]; then
+            echo "OVSX_PAT is not configured - skipping the Open VSX publish"
+            exit 0
+          fi
+          npx --yes ovsx publish vscode-extension/*.vsix --pat "$OVSX_PAT"
+
+      - name: Publish to the VS Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "VSCE_PAT is not configured - skipping the Marketplace publish"
+            exit 0
+          fi
+          npx --yes @vscode/vsce publish --packagePath vscode-extension/*.vsix --pat "$VSCE_PAT"
+
+      - name: Attach the .vsix to a GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" vscode-extension/*.vsix \
+            --title "VS Code extension $GITHUB_REF_NAME" \
+            --notes "Install from Open VSX / the VS Marketplace, or download the .vsix below and use \"Install from VSIX...\"." \
+          || gh release upload "$GITHUB_REF_NAME" vscode-extension/*.vsix --clobber
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vsix
+          path: vscode-extension/*.vsix
