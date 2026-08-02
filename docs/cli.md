@@ -242,6 +242,7 @@ run is a self-contained folder:
 .testfile/
   runs/<run-id>/
     run.yaml           # the run's record
+    junit.xml          # the run as JUnit XML, for CI tooling
     tests/<test>.log   # merged stdout+stderr per test
     services/<svc>.log # log of each started service
 ```
