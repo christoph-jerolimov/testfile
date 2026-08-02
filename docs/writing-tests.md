@@ -266,9 +266,9 @@ A tag on a group applies to all tests below it. Run a subset with
 
 ## Timeouts, env, workdir
 
-Every test can set a `timeout` (fails the subtree when exceeded), `env`
-(merged over the parent's environment, child wins) and `workdir` (relative to
-the Testfile):
+Every test can carry a free-form `description`, and can set a `timeout`
+(fails the subtree when exceeded), `env` (merged over the parent's
+environment, child wins) and `workdir` (relative to the Testfile):
 
 ```yaml
 test:

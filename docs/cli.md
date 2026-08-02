@@ -20,6 +20,8 @@ testfile run --verbose     # also stream service output
 testfile run --fail-fast   # abort everything at the first failure
 testfile run --max-parallel 4   # global cap on concurrently running tests
 testfile run --dry-run     # print what would run, without running
+testfile run --watch       # re-run on file changes
+testfile run --reporter junit --output results.xml   # report for CI
 testfile validate [path]   # validate against the JSON schema
 testfile list [path]       # print the expanded tree, incl. matrix instances
 testfile history [path]    # list or show recorded runs
@@ -141,7 +143,8 @@ A summary tree with per-test durations is printed at the end.
 ## The TUI
 
 `testfile tui` opens a two-pane terminal UI with four top-level views,
-switched with `1`/`2`/`3`/`4` (shown in the header line):
+switched with `1`/`2`/`3`/`4` (shown in the header line). It needs an
+interactive terminal — in CI, use `testfile run`.
 
 1. **tests** — the test tree, for selecting and running tests.
 2. **runs** — a table of every recorded run, with details and the merged log.
@@ -321,6 +324,7 @@ the latest *n* workflow runs straight into the local history:
 
 ```sh
 export GITHUB_TOKEN=...                  # a token with actions:read
+                                         # (GH_TOKEN works too)
 testfile runs sync owner/repo            # latest 5 workflow runs
 testfile runs sync owner/repo --latest 20
 testfile runs sync owner/repo --artifact my-artifact-name
