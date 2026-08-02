@@ -242,7 +242,6 @@ run is a self-contained folder:
 .testfile/
   runs/<run-id>/
     run.yaml           # the run's record
-    output.log         # merged stdout+stderr of the whole run
     tests/<test>.log   # merged stdout+stderr per test
 ```
 
