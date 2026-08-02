@@ -1,4 +1,10 @@
-# Testfile specification (v1)
+# Testfile specification (v0)
+
+> **Status: under review.** This specification describes format version 0,
+> a draft that may still change based on feedback. Version 1 — the first
+> version with stability guarantees — is targeted for Q4 2026. Feedback on
+> any part of the format is welcome via
+> [GitHub issues](https://github.com/christoph-jerolimov/testfile/issues).
 
 This document is the normative specification of the Testfile format. The
 machine-readable counterpart is the JSON schema in
@@ -43,7 +49,7 @@ afterwards — including when the user aborts the run with Ctrl+C.
 
 | Field      | Type   | Required | Description |
 | ---------- | ------ | -------- | ----------- |
-| `version`  | `1`    | yes      | Format version. Always `1` today; see the [versioning policy](VERSIONING.md). |
+| `version`  | `0`    | yes      | Format version. Always `0` while the format is under review; see the [versioning policy](VERSIONING.md). |
 | `name`     | string | no       | Display name of the project/Testfile. |
 | `env`      | map    | no       | Environment variables for everything in this file. |
 | `envFile`  | string/array | no | Dotenv file(s), relative to the Testfile, loaded for the whole run. See [Env files](#env-files). |

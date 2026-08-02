@@ -13,14 +13,15 @@ scripts and writes a matching starter Testfile. Or create a file called
 `Testfile` (or `testfile.yaml`) in the root of your project yourself:
 
 ```yaml
-version: 1
+version: 0
 name: my-project
 test:
   name: unit tests
   command: npm test
 ```
 
-Every Testfile needs a `version` (currently always `1`) and exactly one root
+Every Testfile needs a `version` (currently always `0` while the format is
+under review — version 1 is targeted for Q4 2026) and exactly one root
 `test`.
 
 ## 2. Run it
@@ -46,7 +47,7 @@ testfile tui        # interactive terminal UI (tests, runs, results, services)
 Replace the single command with groups as your test suite grows:
 
 ```yaml
-version: 1
+version: 0
 test:
   name: all
   sequence:
@@ -73,3 +74,11 @@ typing:
 ```yaml
 # yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
 ```
+
+## 5. Tell us how it went
+
+Testfile is under review on the way to version 1 (targeted for Q4 2026), and
+feedback from real projects is what shapes it. If something was confusing,
+missing or surprising while you followed this guide, please open a
+[GitHub issue](https://github.com/christoph-jerolimov/testfile/issues) —
+it genuinely helps.

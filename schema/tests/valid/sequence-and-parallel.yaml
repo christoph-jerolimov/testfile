@@ -1,5 +1,5 @@
 # Groups: a sequence containing a parallel group.
-version: 1
+version: 0
 name: groups
 env:
   CI: true

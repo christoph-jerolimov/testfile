@@ -5,7 +5,7 @@ export type EnvMap = Record<string, Scalar>;
 export type Duration = number | string;
 
 export interface TestfileDoc {
-  version: 1;
+  version: 0;
   name?: string;
   env?: EnvMap;
   envFile?: string | string[];

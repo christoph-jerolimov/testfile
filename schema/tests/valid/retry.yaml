@@ -1,5 +1,5 @@
 # Retries: shorthand and object form with a delay.
-version: 1
+version: 0
 test:
   sequence:
     - name: flaky check

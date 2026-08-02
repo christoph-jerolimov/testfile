@@ -1,5 +1,5 @@
 # A matrix expands one test into one instance per combination.
-version: 1
+version: 0
 test:
   name: matrix
   matrix:

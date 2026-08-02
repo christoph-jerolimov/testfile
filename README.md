@@ -17,7 +17,7 @@ describes how a project runs its tests:
   are injected through `${{ ... }}` templates.
 
 ```yaml
-version: 1
+version: 0
 ports:
   web: random
 services:
@@ -36,6 +36,21 @@ test:
         BASE_URL: http://localhost:${{ ports.web }}
       command: npm run test:e2e
 ```
+
+## Status: version 0 — under review
+
+The Testfile format is currently at **`version: 0`**: it is under review and
+may still change based on feedback. **Version 1 is targeted for Q4 2026.**
+Until then, breaking changes are possible between releases (they will be
+called out in release notes), and the [versioning
+policy](spec/VERSIONING.md) describes the stability guarantees version 1
+will bring.
+
+This is exactly the right time to influence the format: please **try it on
+your project and tell us how it goes**. Bug reports, missing features,
+confusing docs, naming nitpicks — everything is useful. Open a [GitHub
+issue](https://github.com/christoph-jerolimov/testfile/issues) with your
+feedback, or a pull request if you want to contribute directly.
 
 ## Repository layout
 
@@ -89,6 +104,15 @@ See [docs/github-action.md](docs/github-action.md) for all inputs.
   tests the runner, and builds the website.
 - [`deploy-website.yaml`](.github/workflows/deploy-website.yaml) publishes
   the website to GitHub Pages on every push to `main`.
+
+## Feedback and contributing
+
+The format is under review until version 1 (targeted for Q4 2026), and
+real-world feedback drives it. If you try Testfile on one of your projects —
+or just read the spec — please share your experience in a [GitHub
+issue](https://github.com/christoph-jerolimov/testfile/issues). Pull
+requests for the spec, schema, docs, runner and conformance suite are
+welcome too.
 
 ## License
 

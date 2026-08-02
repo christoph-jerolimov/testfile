@@ -1,5 +1,5 @@
 # Invalid: port out of range and not "random".
-version: 1
+version: 0
 ports:
   web: 123456
 test:

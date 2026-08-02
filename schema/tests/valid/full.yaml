@@ -1,6 +1,6 @@
 # Kitchen sink: global + scoped services, matrix over database versions,
 # sequence/parallel nesting, dynamic ports and templates.
-version: 1
+version: 0
 name: full example
 env:
   NODE_ENV: test

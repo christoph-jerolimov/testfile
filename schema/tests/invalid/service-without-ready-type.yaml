@@ -1,5 +1,5 @@
 # Invalid: ready must contain at least one of http/tcp/log.
-version: 1
+version: 0
 services:
   web:
     command: npm start

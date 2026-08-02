@@ -2,7 +2,7 @@
 # This repository's own CI, described as a Testfile. The GitHub workflow
 # (.github/workflows/ci.yaml) runs it through the bundled action, so the
 # format, the runner and the action are all exercised by every build.
-version: 1
+version: 0
 name: testfile-monorepo
 env:
   CI: true

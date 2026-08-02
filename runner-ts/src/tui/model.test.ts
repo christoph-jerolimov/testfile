@@ -26,7 +26,7 @@ import {
 import { isMouseSequence, parseWheelEvents } from "./mouse.js";
 
 const doc: TestfileDoc = {
-  version: 1,
+  version: 0,
   test: {
     name: "all",
     sequence: [
@@ -167,7 +167,7 @@ test("logWindow follows the tail and scrolls back with clamping", () => {
 });
 
 const richDoc: TestfileDoc = {
-  version: 1,
+  version: 0,
   env: { BASE: "1" },
   services: { db: { container: { image: "postgres:16", ports: ["5432:5432"] }, ready: { tcp: 5432 } } },
   test: {

@@ -1,5 +1,5 @@
 # Container pull policy, named network and entrypoint override.
-version: 1
+version: 0
 services:
   db:
     container:

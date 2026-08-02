@@ -1,5 +1,5 @@
 # Invalid: a hook must set exactly one of command or script.
-version: 1
+version: 0
 test:
   setup:
     command: ./prepare.sh

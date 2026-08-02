@@ -1,5 +1,5 @@
 # Container services with log/tcp readiness checks, scoped to a subtree.
-version: 1
+version: 0
 ports:
   db: random
 test:

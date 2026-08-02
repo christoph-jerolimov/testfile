@@ -1,23 +1,46 @@
 # Versioning and compatibility policy
 
 This document defines how the Testfile format evolves: what may change
-within format version 1, what forces a version 2, and what runners and
+within a format version, what forces the next one, and what runners and
 users can rely on. The [specification](README.md) describes *what* the
 format is; this document describes *how it is allowed to change*.
+
+## Current status: version 0, under review
+
+The format is currently at **version 0**: a draft that is under review and
+may still change based on feedback. **Version 1 — the first version covered
+by the stability guarantees below — is targeted for Q4 2026.**
+
+During version 0 the compatibility rules of this policy do **not** yet
+apply: any part of the format (fields, defaults, semantics) may change
+between releases. Breaking changes are called out in release notes, and the
+schema, examples and conformance suite are updated in the same commit, but
+there is no migration tooling and no deprecation window.
+
+That freedom is the point of the review phase — it is the last chance to fix
+mistakes cheaply. If a field name feels wrong, a default surprises you, or a
+concept is missing, please say so now in a
+[GitHub issue](https://github.com/christoph-jerolimov/testfile/issues).
+Trying the format on a real project and reporting back is the most valuable
+contribution you can make before version 1 freezes it.
 
 ## The version field
 
 Every Testfile declares its format version:
 
 ```yaml
-version: 1
+version: 0
 ```
 
 The version describes the **document format and its execution semantics**,
 not the version of any runner. There is exactly one current major version at
-a time; today that is `1`.
+a time; today that is `0`.
 
 ## Changes allowed within version 1
+
+*The rules in this and the following sections take effect when version 1
+ships (targeted for Q4 2026). They are stated for version 1 and carry over
+to every later major version.*
 
 The format may grow without a version bump as long as **every valid
 Testfile stays valid and keeps its meaning**. Allowed:

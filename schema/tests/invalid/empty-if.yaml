@@ -1,5 +1,5 @@
 # Invalid: an if condition must not be empty.
-version: 1
+version: 0
 test:
   if: ""
   command: npm test

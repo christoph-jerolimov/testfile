@@ -1,5 +1,5 @@
 # Invalid: shell only applies to command/script tests, not to groups.
-version: 1
+version: 0
 test:
   shell: bash
   sequence:

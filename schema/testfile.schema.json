@@ -2,14 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json",
   "title": "Testfile",
-  "description": "Schema for a Testfile (Testfile, testfile.yaml or testfile.yml): a declarative description of how a project runs its tests. A Testfile is a tree of tests. Each test either runs a command or a script, or groups sub-tests that run in sequence or in parallel. Any test can be expanded through a matrix. Tests can depend on services (local processes or containers) that are started before and gracefully stopped after the test.",
+  "description": "Schema for a Testfile (Testfile, testfile.yaml or testfile.yml): a declarative description of how a project runs its tests. A Testfile is a tree of tests. Each test either runs a command or a script, or groups sub-tests that run in sequence or in parallel. Any test can be expanded through a matrix. Tests can depend on services (local processes or containers) that are started before and gracefully stopped after the test. The format is currently version 0 and under review; version 1 is targeted for Q4 2026. Feedback is welcome via GitHub issues at https://github.com/christoph-jerolimov/testfile/issues.",
   "type": "object",
   "required": ["version", "test"],
   "additionalProperties": false,
   "properties": {
     "version": {
-      "description": "Version of the Testfile format. Currently always 1.",
-      "const": 1
+      "description": "Version of the Testfile format. Currently always 0: the format is under review and may still change. Version 1 is targeted for Q4 2026. Feedback is welcome via GitHub issues at https://github.com/christoph-jerolimov/testfile/issues.",
+      "const": 0
     },
     "name": {
       "description": "Human readable name of this Testfile / project.",

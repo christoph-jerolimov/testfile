@@ -1,5 +1,5 @@
 # Tests running under interpreters other than sh.
-version: 1
+version: 0
 test:
   name: all
   sequence:

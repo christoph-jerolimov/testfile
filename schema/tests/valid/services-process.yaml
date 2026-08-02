@@ -1,5 +1,5 @@
 # A local process service with a random port and an HTTP readiness check.
-version: 1
+version: 0
 ports:
   web: random
 services:

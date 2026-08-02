@@ -22,7 +22,7 @@ Services declared at the top level live for the whole run. Services declared
 on a test start right before that test and stop when its subtree finishes:
 
 ```yaml
-version: 1
+version: 0
 ports:
   web: random
 services:              # for the whole run

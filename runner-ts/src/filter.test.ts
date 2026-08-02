@@ -29,7 +29,7 @@ function filters(partial: Partial<TestFilters>): TestFilters {
 }
 
 const doc: TestfileDoc = {
-  version: 1,
+  version: 0,
   test: {
     name: "all",
     sequence: [
@@ -191,7 +191,7 @@ test("matchesMatrixFilters constrains only nodes that carry the key", () => {
 test("filterByLastFailed selects only tests that failed in the recorded run", async () => {
   const dir = tempDir();
   const mixed: TestfileDoc = {
-    version: 1,
+    version: 0,
     test: {
       name: "root",
       sequence: [

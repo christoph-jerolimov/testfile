@@ -1,5 +1,5 @@
 # Tests that declare produced files to be kept with the run record.
-version: 1
+version: 0
 test:
   sequence:
     - name: unit

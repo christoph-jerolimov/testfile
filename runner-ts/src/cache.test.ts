@@ -38,7 +38,7 @@ test("configKey distinguishes source, env and matrix", () => {
 
 function cachingDoc(): TestfileDoc {
   return {
-    version: 1,
+    version: 0,
     test: {
       name: "unit",
       inputs: ["input.txt"],
@@ -114,7 +114,7 @@ test("predictCacheHits marks unchanged tests without running them", async () => 
   const dir = tempDir();
   writeFileSync(join(dir, "input.txt"), "good");
   const doc: TestfileDoc = {
-    version: 1,
+    version: 0,
     test: {
       name: "root",
       sequence: [
@@ -149,7 +149,7 @@ test("changedLeafIds selects predicted cache misses plus tests without inputs", 
   const dir = tempDir();
   writeFileSync(join(dir, "input.txt"), "good");
   const doc: TestfileDoc = {
-    version: 1,
+    version: 0,
     test: {
       name: "root",
       sequence: [

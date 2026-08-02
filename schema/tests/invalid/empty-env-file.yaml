@@ -1,5 +1,5 @@
 # Invalid: envFile must be a path or a non-empty list of paths.
-version: 1
+version: 0
 envFile: []
 test:
   command: npm test

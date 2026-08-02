@@ -13,7 +13,7 @@ child-over-parent, so a test sees its own variables on top of everything its
 ancestors defined:
 
 ```yaml
-version: 1
+version: 0
 env:
   NODE_ENV: test
 test:
@@ -37,7 +37,7 @@ Load dotenv files instead of hard-coding values — at the top level or per
 test:
 
 ```yaml
-version: 1
+version: 0
 envFile: .env.test          # relative to the Testfile
 test:
   sequence:

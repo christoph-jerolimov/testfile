@@ -1,5 +1,5 @@
 # A parallel group with dependencies between siblings (a DAG).
-version: 1
+version: 0
 test:
   name: all
   parallel:

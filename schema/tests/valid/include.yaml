@@ -1,5 +1,5 @@
 # Composing a monorepo Testfile from per-package Testfiles.
-version: 1
+version: 0
 name: monorepo
 test:
   name: all
