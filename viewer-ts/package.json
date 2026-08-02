@@ -1,11 +1,11 @@
 {
-  "name": "@testfile/runner",
+  "name": "@testfile/viewer-ts",
   "version": "0.1.0",
-  "description": "CLI runner for Testfile / testfile.yaml (inspect recorded runs with @testfile/viewer-ts)",
+  "description": "Read-only viewer tooling over recorded Testfile runs: history, TUI, web-viewer server and run transfer",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
-    "testfile": "./dist/cli.js"
+    "testfile-viewer": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -13,13 +13,14 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
-    "@testfile/schema": "0.1.0",
-    "ajv": "^8.17.1",
     "commander": "^12.1.0",
+    "ink": "^5.2.1",
+    "react": "^18.3.1",
     "yaml": "^2.8.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
+    "@types/react": "^18.3.0",
     "typescript": "^5.8.0"
   }
 }

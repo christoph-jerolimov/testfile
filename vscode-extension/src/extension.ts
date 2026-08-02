@@ -17,15 +17,22 @@ function testfileCommand(): string {
   return vscode.workspace.getConfiguration("testfile").get<string>("command", "testfile") || "testfile";
 }
 
+function viewerCommand(): string {
+  return (
+    vscode.workspace.getConfiguration("testfile").get<string>("viewerCommand", "testfile-viewer") ||
+    "testfile-viewer"
+  );
+}
+
 // All commands run in one shared "Testfile" terminal, so runs, the TUI and
 // the viewer behave exactly like they do outside the editor.
-function runInTerminal(args: string, cwd: string | undefined): void {
+function runInTerminal(args: string, cwd: string | undefined, command = testfileCommand()): void {
   let terminal = vscode.window.terminals.find((t) => t.name === "Testfile");
   if (!terminal || terminal.exitStatus !== undefined) {
     terminal = vscode.window.createTerminal({ name: "Testfile", cwd });
   }
   terminal.show(true);
-  terminal.sendText(`${testfileCommand()} ${args}`);
+  terminal.sendText(`${command} ${args}`);
 }
 
 function workspaceDirOf(uri: vscode.Uri | undefined): string | undefined {
@@ -156,11 +163,11 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
 
     vscode.commands.registerCommand("testfile.openTui", () => {
-      runInTerminal("tui", workspaceDirOf(vscode.window.activeTextEditor?.document.uri));
+      runInTerminal("tui", workspaceDirOf(vscode.window.activeTextEditor?.document.uri), viewerCommand());
     }),
 
     vscode.commands.registerCommand("testfile.serve", () => {
-      runInTerminal("serve", workspaceDirOf(vscode.window.activeTextEditor?.document.uri));
+      runInTerminal("serve", workspaceDirOf(vscode.window.activeTextEditor?.document.uri), viewerCommand());
     }),
 
     vscode.commands.registerCommand("testfile.refreshRuns", () => runs.refresh())

@@ -18,7 +18,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parse } from "yaml";
-import { HISTORY_DIR } from "./history.js";
+import { HISTORY_DIR } from "./runrecord.js";
 
 // Shell-out abstraction, injectable for tests.
 export type Exec = (

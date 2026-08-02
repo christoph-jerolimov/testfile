@@ -6,16 +6,21 @@ description: The testfile command line runner and its interactive terminal UI.
 
 # CLI & TUI
 
-The reference runner lives in
-[`runner-ts`](https://github.com/christoph-jerolimov/testfile/tree/main/runner-ts)
-and installs a `testfile` binary.
+Two binaries share the work: the **runner** `testfile`
+([`runner-ts`](https://github.com/christoph-jerolimov/testfile/tree/main/runner-ts))
+reads the Testfile, runs processes and writes the recorded runs; the
+**viewer** `testfile-viewer`
+([`viewer-ts`](https://github.com/christoph-jerolimov/testfile/tree/main/viewer-ts))
+is strictly read-only over those recorded runs — any tool producing the
+documented [result format](https://github.com/christoph-jerolimov/testfile/tree/main/spec)
+works with it.
 
 ## Commands
 
 ```sh
+# the runner
 testfile init [path]       # create a starter Testfile (from package.json)
 testfile run [path]        # run the tree (default command)
-testfile tui [path]        # interactive terminal UI (tests, runs, results, services)
 testfile run --verbose     # also stream service output
 testfile run --fail-fast   # abort everything at the first failure
 testfile run --max-parallel 4   # global cap on concurrently running tests
@@ -24,10 +29,13 @@ testfile run --watch       # re-run on file changes
 testfile run --reporter junit --output results.xml   # report for CI
 testfile validate [path]   # validate against the JSON schema
 testfile list [path]       # print the expanded tree, incl. matrix instances
-testfile history [path]    # list or show recorded runs
-testfile runs <cmd>        # pack/import/push/pull/sync recorded runs
-testfile serve             # localhost REST API + web viewer over the runs
 testfile completion bash   # shell completions (bash, zsh, fish)
+
+# the viewer (read-only over .testfile/)
+testfile-viewer history        # list or show recorded runs (default command)
+testfile-viewer tui            # terminal UI: runs + results, watching
+testfile-viewer serve          # localhost REST API + web viewer
+testfile-viewer runs <cmd>     # pack/import/push/pull/sync recorded runs
 ```
 
 Tab completion for commands and flags:
@@ -46,8 +54,7 @@ across the *whole* run (group-level `maxParallel` still applies on top).
 `--dry-run` combines with all filter flags, so you can preview exactly what
 a filter expression will run; tests whose [inputs](./writing-tests#result-caching)
 are unchanged are marked `[cached]`, with a would-run/served-from-cache
-summary. `--no-cache`, `--fail-fast` and `--max-parallel` are also accepted
-by `testfile tui` and apply to runs started from it.
+summary.
 
 ## Machine-readable reports
 
@@ -72,7 +79,6 @@ a tight edit-test loop:
 
 ```sh
 testfile run -w -f unit
-testfile tui --watch            # the TUI re-runs your last selection
 ```
 
 Changes are debounced, edits made while a run is in progress trigger one
@@ -129,9 +135,8 @@ filters — `testfile run --failed -t integration` re-runs only the failed
 integration tests.
 
 Different filter kinds are ANDed. Filters that match nothing are an error.
-The same filters on `testfile tui` pre-select the matching tests instead of
-running them immediately. `testfile list` shows each test's tags, so it's an
-easy way to preview what a filter will run.
+`testfile list` shows each test's tags, so it's an easy way to preview what
+a filter will run.
 
 ## Plain output
 
@@ -142,95 +147,25 @@ A summary tree with per-test durations is printed at the end.
 
 ## The TUI
 
-`testfile tui` opens a two-pane terminal UI with four top-level views,
-switched with `1`/`2`/`3`/`4` (shown in the header line). It needs an
-interactive terminal — in CI, use `testfile run`.
+`testfile-viewer tui` opens a read-only two-pane terminal UI over the
+recorded runs (it never starts tests — that is `testfile run`'s job). Two
+views, switched with `1`/`2`:
 
-1. **tests** — the test tree, for selecting and running tests.
-2. **runs** — a table of every recorded run, with details and the merged log.
-3. **results** — every test that appears in a recorded run, with a table of
-   its executions.
-4. **services** — all services the Testfile defines: the ones currently
-   started and the startable ones that run on demand.
+1. **runs** — a table of every recorded run (started, status, duration,
+   per-status counts); the right pane shows the selected run's details —
+   status, env, ports, per-test results, services — and toggles to the
+   merged log with enter.
+2. **results** — every test that appears in a recorded run, with latest
+   status and aggregated pass/fail counts; the right pane shows the
+   selected test's executions across all runs as a table.
 
-`--view runs` (etc.) opens the TUI on another view; the `run` filter flags
-pre-select tests, and `--fail-fast`, `--max-parallel`, `--no-cache` and
-`--watch` apply to runs started from it. The TUI does **not** start any
-tests by itself: pick the tests you want with the selection keys, then press
-enter to run them — as often as you like within one session.
+Both views watch `.testfile/runs/` — runs recorded by other processes
+(say, a `testfile run` in a second terminal, or `testfile-viewer runs
+sync`) appear live. `--view results` opens on the results view.
 
-### Tests view
-
-- The **left pane** lists the whole test tree (including matrix instances)
-  with a selection checkbox per test — `[x]` selected, `[~]` covered by a
-  selected ancestor. Tests that have not run in this session show the
-  result and duration of their most recent recorded run (`last ✔ 1.2s`).
-- The **right pane** has three tabs per test, cycled with the tab key:
-  - **info** — everything known about the test before running it: command
-    or script, shell, working directory, timeout, retry policy, `if`
-    condition, tags, matrix combination, inputs, artifacts, the env
-    declared along its ancestor chain, the services it depends on (with
-    their readiness checks), hooks, and its last recorded result.
-  - **log** — the live (or queued) log while a run is in progress,
-    otherwise the merged stdout+stderr of the test's previous recorded run.
-  - **history** — a table of the test's recorded outcomes: one row per run
-    with start time, status, duration and markers for cached results,
-    artifacts and logs.
-- The **summary line** counts selected, running, queued, passed and failed
-  tests.
-
-### Runs view
-
-The left pane is a table of all recorded runs (newest first) with start
-time, status, duration and per-status test counts; the right pane shows the
-selected run's details — status, duration, env, ports, per-test results —
-and toggles to the run's merged log with enter.
-
-The view is built from the `.testfile/runs/*/run.yaml` files and **watches
-them**: runs recorded by other processes (say, a plain `testfile run` in a
-second terminal) appear live.
-
-### Results view
-
-The left pane lists every test recorded in any run — built purely from the
-run records, so it also covers tests that no longer exist in the current
-Testfile — with its latest status and aggregated pass/fail counts. The
-right pane shows the selected test's executions across all runs as a table:
-one row per run with start time, status, duration and markers for cached
-results, artifacts and logs. Like the runs view it watches the run folders,
-so new executions appear live.
-
-### Services view
-
-The left pane lists every service with its state: `startable` for defined
-services that have not been started (services start with the tests that
-need them), otherwise the live state (starting, ready, stopping, stopped,
-failed) and where it was declared. The right pane shows a running service's
-resolved details — image, port mappings, env (secret values masked) — and
-its live log; for a startable service it shows the declared configuration
-including the readiness and stop behavior. `r` restarts a running service.
-
-### Keys
-
-| Key       | Action |
-| --------- | ------ |
-| `1`/`2`/`3`/`4` | Switch between the tests, runs, results and services views. |
-| `↑`/`↓` (`k`/`j`) | Move the cursor in the active view's list. |
-| Mouse wheel | Scroll the log/detail pane; at the bottom it follows the tail again. |
-| Tab       | Tests view: cycle the detail tabs (info, log, history). |
-| Space     | Toggle selection of the current test (its subtree runs with it). |
-| `a`       | Select all tests (or clear the selection). |
-| `c`       | Select all children of the current test. |
-| `f`       | Select the failed tests — from this session, or from the last recorded run. |
-| Enter     | Tests view: run the selected tests. Runs view: toggle details / merged log. |
-| `/`       | Search: type to filter the tree (matches with their ancestors); enter keeps the filter, esc clears it. |
-| `←`/`→` (`h`/`l`) | Collapse / expand the current group. |
-| PgUp/PgDn (`u`/`d`) | Scroll the log pane; it follows the tail when at the bottom. |
-| `r`       | Services view: stop the service and start it again with the same configuration. |
-| `?`       | Search within the log pane; enter jumps to the latest match, `n`/`N` step older/newer, matches are highlighted. |
-| `w`       | Toggle line wrapping in the log pane. |
-| Esc       | Runs/results/services view: back to the tests view. |
-| `q` / Ctrl+C | While running: stop gracefully, press again to force-kill. Otherwise: quit. |
+Keys: `↑`/`↓` (`k`/`j`) select · enter toggles details/merged log (runs
+view) · `?` in-log search with `n`/`N` · `w` wrap · PgUp/PgDn (`u`/`d`) or
+the mouse wheel scroll the log pane · `q` quits.
 
 ## Run history
 
@@ -259,21 +194,21 @@ use.)
 Browse the history from the command line:
 
 ```sh
-testfile history                          # table of recent runs, newest first
-testfile tui --view runs                  # browse runs in the TUI
-testfile history --run 20260801-1046      # one run in detail (id prefix is ok)
-testfile history --run <id> --log         # merged stdout+stderr of the run
-testfile history --run <id> --log all/e2e # ... of a single test
+testfile-viewer history                   # table of recent runs, newest first
+testfile-viewer tui                       # browse runs in the TUI
+testfile-viewer history --run 20260801-1046      # one run in detail (id prefix is ok)
+testfile-viewer history --run <id> --log         # merged stdout+stderr of the run
+testfile-viewer history --run <id> --log all/e2e # ... of a single test
 ```
 
 The detail view lists every recorded test with status, duration and whether
-a log is available. `history` only needs the `.testfile/` folder, so it also
+a log is available. `testfile-viewer` only needs the `.testfile/` folder, so it also
 works when the Testfile itself has moved or changed.
 
 Compare two runs (older id first, unique prefixes are enough):
 
 ```sh
-testfile history --diff 20260801-1040 20260801-1146
+testfile-viewer history --diff 20260801-1040 20260801-1146
 ```
 
 The diff lists newly failed, fixed and still-failing tests, tests added to
@@ -283,8 +218,8 @@ and more than 20%) of tests that passed in both runs.
 Hunt down flaky tests:
 
 ```sh
-testfile history --flaky            # across all recorded runs
-testfile history --flaky --last 10  # only the 10 most recent runs
+testfile-viewer history --flaky            # across all recorded runs
+testfile-viewer history --flaky --last 10  # only the 10 most recent runs
 ```
 
 A test is flagged when it both passed and failed across the considered runs
@@ -296,15 +231,15 @@ candidates for a `flaky` tag and a [`retry`](./writing-tests#retries).
 ## Sharing runs
 
 Because every run is a self-contained `runs/<id>/` folder, runs can move
-between machines. `testfile runs` packs them as `.tgz` archives and brings
+between machines. `testfile-viewer runs` packs them as `.tgz` archives and brings
 them into the local history, where `history`, `--diff`, `--flaky` and the
 TUI treat them like local runs:
 
 ```sh
-testfile runs pack                       # latest run -> testfile-run-<id>.tgz
-testfile runs pack --run 20260801 -o ci.tgz
-testfile runs import ci.tgz              # import into ./.testfile/runs/
-testfile runs import testfile-run.zip    # a downloaded GitHub run artifact
+testfile-viewer runs pack                       # latest run -> testfile-run-<id>.tgz
+testfile-viewer runs pack --run 20260801 -o ci.tgz
+testfile-viewer runs import ci.tgz              # import into ./.testfile/runs/
+testfile-viewer runs import testfile-run.zip    # a downloaded GitHub run artifact
 ```
 
 Importing skips runs that already exist locally (same id), so repeated
@@ -314,10 +249,10 @@ With the [aws CLI](https://aws.amazon.com/cli/) configured, runs can be
 shared through S3 — for example a CI job pushes, developers pull:
 
 ```sh
-testfile runs push s3://my-bucket/testfile-runs        # latest run
-testfile runs push s3://my-bucket/testfile-runs --run 20260801
-testfile runs pull s3://my-bucket/testfile-runs        # newest archive
-testfile runs pull s3://my-bucket/testfile-runs --run <full-id>
+testfile-viewer runs push s3://my-bucket/testfile-runs        # latest run
+testfile-viewer runs push s3://my-bucket/testfile-runs --run 20260801
+testfile-viewer runs pull s3://my-bucket/testfile-runs        # newest archive
+testfile-viewer runs pull s3://my-bucket/testfile-runs --run <full-id>
 ```
 
 And when CI is the [GitHub Action](./github-action) (which uploads every
@@ -327,9 +262,9 @@ the latest *n* workflow runs straight into the local history:
 ```sh
 export GITHUB_TOKEN=...                  # a token with actions:read
                                          # (GH_TOKEN works too)
-testfile runs sync owner/repo            # latest 5 workflow runs
-testfile runs sync owner/repo --latest 20
-testfile runs sync owner/repo --artifact my-artifact-name
+testfile-viewer runs sync owner/repo            # latest 5 workflow runs
+testfile-viewer runs sync owner/repo --latest 20
+testfile-viewer runs sync owner/repo --artifact my-artifact-name
 ```
 
 Already-imported runs are skipped, so `sync` is incremental — run it again
@@ -338,12 +273,12 @@ any time to top up the local history with the newest CI results. The TUI's
 
 ## The web viewer
 
-`testfile serve` starts a small web UI over the recorded runs — the
-browser sibling of the TUI's runs/results views:
+`testfile-viewer serve` starts a small web UI over the recorded runs — the
+browser sibling of the TUI:
 
 ```sh
-testfile serve                 # http://127.0.0.1:7357
-testfile serve --port 8080
+testfile-viewer serve          # http://127.0.0.1:7357
+testfile-viewer serve --port 8080
 ```
 
 - **Runs**: a table of all recorded runs; selecting one shows its details,
@@ -351,7 +286,7 @@ testfile serve --port 8080
 - **Results**: every recorded test with aggregated pass/fail counts and
   its executions across all runs.
 - The server watches `.testfile/runs/` and pushes changes to the browser,
-  so runs recorded elsewhere (another terminal, `testfile runs sync`)
+  so runs recorded elsewhere (another terminal, `testfile-viewer runs sync`)
   appear live.
 
 The server binds to `127.0.0.1` **only** — it is never reachable from the

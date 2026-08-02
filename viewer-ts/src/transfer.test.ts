@@ -4,7 +4,8 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { RunHistory, type RunMeta } from "./history.js";
+import { writeRun } from "./fixture.js";
+import { RunHistory } from "./runrecord.js";
 import {
   githubRunArchives,
   importRunArchive,
@@ -22,22 +23,16 @@ function tempDir(): string {
   return dir;
 }
 
-const meta: RunMeta = {
-  startedAtMs: Date.UTC(2026, 0, 1, 10, 0, 0),
-  durationMs: 5,
-  status: "passed",
-  exitCode: 0,
-  cancelled: false,
-  env: {},
-  ports: {},
-  selected: ["all"],
-};
+let runCounter = 0;
 
 function recordRun(baseDir: string): string {
-  return new RunHistory(baseDir).saveRun(
-    meta,
-    [{ path: "all/one", status: "passed", durationMs: 3, lines: [{ text: "out", stream: "stdout" }] }],
-    []
+  runCounter++;
+  const stamp = String(runCounter).padStart(2, "0");
+  return writeRun(
+    baseDir,
+    `202601${stamp}-100000-aaaa`,
+    `2026-01-${stamp}T10:00:00.000Z`,
+    [{ path: "all/one", status: "passed", durationMs: 3, log: "out\n" }]
   ).id;
 }
 

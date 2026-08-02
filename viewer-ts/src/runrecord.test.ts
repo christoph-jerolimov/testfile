@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { detectFlaky, diffRuns, type RunRecord } from "./history.js";
-import type { RunRecordTest } from "./history.js";
+import { detectFlaky, diffRuns, type RunRecord } from "./runrecord.js";
+import type { RunRecordTest } from "./runrecord.js";
 
 function record(id: string, tests: RunRecordTest[]): RunRecord {
   return {

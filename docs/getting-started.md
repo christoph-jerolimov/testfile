@@ -39,7 +39,7 @@ Other useful commands:
 ```sh
 testfile validate   # check the file against the JSON schema
 testfile list       # print the expanded test tree without running it
-testfile tui        # interactive terminal UI (tests, runs, results, services)
+testfile-viewer tui # browse recorded runs (read-only terminal UI)
 ```
 
 ## 3. Grow the tree

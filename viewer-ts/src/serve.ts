@@ -6,7 +6,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { RunHistory } from "./history.js";
+import { RunHistory } from "./runrecord.js";
 import { recordedTests } from "./tui/model.js";
 import { watchRuns } from "./tui/watch-runs.js";
 
