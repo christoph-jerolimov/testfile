@@ -6,10 +6,14 @@
 > any part of the format is welcome via
 > [GitHub issues](https://github.com/christoph-jerolimov/testfile/issues).
 
-This document is the normative specification of the Testfile format. The
-machine-readable counterpart is the JSON schema in
-[`../schema/testfile.schema.json`](../schema/testfile.schema.json); if the two
-disagree, this document wins and the schema has a bug.
+This document is the normative specification of the Testfile format — the
+*input* side: how a project describes its tests. The *output* side — how a
+recorded test run looks on disk (`.testfile/runs/<id>/` with `run.yaml`,
+logs and `junit.xml`) — is specified in [RESULTS.md](RESULTS.md), so that
+different tools can generate results and different tools can consume
+them. The machine-readable counterpart of this document is the JSON schema
+in [`../schema/testfile.schema.json`](../schema/testfile.schema.json); if
+the two disagree, this document wins and the schema has a bug.
 
 The execution semantics described here are additionally pinned by the
 runner-independent [conformance suite](../conformance/README.md): every
