@@ -82,7 +82,7 @@ workflow runs and imports them into your local
 `--flaky` and the TUI's runs/results views treat them like local runs:
 
 ```sh
-export GITHUB_TOKEN=...          # a token with actions:read
+export GITHUB_TOKEN=...          # a token with actions:read (GH_TOKEN works too)
 testfile runs sync you/your-repo --latest 10
 testfile history                 # CI runs are now part of the history
 ```
