@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { Runner } from "./executor.js";
 import type { TestfileDoc } from "./model.js";
-import { buildRunTree, type RunNode } from "./runtree.js";
+import { buildRunSuite, type RunTest } from "./runsuite.js";
 
 function makeRunner(doc: TestfileDoc, options: ConstructorParameters<typeof Runner>[3] = {}): Runner {
-  return new Runner(doc, buildRunTree(doc), process.cwd(), options);
+  return new Runner(doc, buildRunSuite(doc), process.cwd(), options);
 }
 
 test("a passing command", async () => {
@@ -57,7 +57,7 @@ test("parallel runs all children and aggregates failures", async () => {
     },
   });
   assert.equal(await runner.run(), "failed");
-  const statuses = runner.root.children.map((c: RunNode) => c.status);
+  const statuses = runner.root.children.map((c: RunTest) => c.status);
   assert.deepEqual(statuses, ["passed", "failed", "passed"]);
 });
 
@@ -235,7 +235,7 @@ test("without shared, every matrix instance starts its own service", async () =>
   assert.equal(runner.services.length, 2);
 });
 
-test("test-scoped services stop when the subtree finishes", async () => {
+test("test-scoped services stop when the owning test finishes", async () => {
   const runner = makeRunner({
     version: 0,
     test: {
@@ -289,7 +289,7 @@ test("a failing dependency skips its dependents but not unrelated siblings", asy
     },
   });
   assert.equal(await runner.run(), "failed");
-  const byName = new Map(runner.root.children.map((c: RunNode) => [c.name, c]));
+  const byName = new Map(runner.root.children.map((c: RunTest) => [c.name, c]));
   assert.equal(byName.get("broken")!.status, "failed");
   assert.equal(byName.get("dependent")!.status, "skipped");
   assert.equal(byName.get("chained")!.status, "skipped");
@@ -432,7 +432,7 @@ test("failFast aborts the rest of the run at the first failure", async () => {
   const startedAt = Date.now();
   assert.equal(await runner.run(), "failed");
   assert.ok(Date.now() - startedAt < 4000, "slow sibling must be aborted, not awaited");
-  const byName = new Map(runner.root.children.map((c: RunNode) => [c.name, c]));
+  const byName = new Map(runner.root.children.map((c: RunTest) => [c.name, c]));
   assert.equal(byName.get("fails-quickly")!.status, "failed");
   assert.equal(byName.get("slow")!.status, "aborted");
   assert.equal(runner.interrupted, false, "fail-fast is not an interrupt");
@@ -584,26 +584,26 @@ test("forwardEnv patterns forward matching host vars, doc env still wins", async
   }
 });
 
-test("per-test forwardEnv applies to the subtree only; * forwards everything", async () => {
-  process.env.TESTFILE_SUBTREE_VAR = "sub";
+test("per-test forwardEnv applies to the nested tests only; * forwards everything", async () => {
+  process.env.TESTFILE_NESTED_VAR = "sub";
   try {
     const runner = makeRunner({
       version: 0,
       test: {
         sequence: [
-          { name: "isolated", command: 'test -z "$TESTFILE_SUBTREE_VAR"' },
+          { name: "isolated", command: 'test -z "$TESTFILE_NESTED_VAR"' },
           {
             name: "group",
-            forwardEnv: ["TESTFILE_SUBTREE_*"],
-            sequence: [{ name: "inherited", command: 'test "$TESTFILE_SUBTREE_VAR" = "sub"' }],
+            forwardEnv: ["TESTFILE_NESTED_*"],
+            sequence: [{ name: "inherited", command: 'test "$TESTFILE_NESTED_VAR" = "sub"' }],
           },
-          { name: "star", forwardEnv: ["*"], command: 'test "$TESTFILE_SUBTREE_VAR" = "sub"' },
+          { name: "star", forwardEnv: ["*"], command: 'test "$TESTFILE_NESTED_VAR" = "sub"' },
         ],
       },
     });
     assert.equal(await runner.run(), "passed");
   } finally {
-    delete process.env.TESTFILE_SUBTREE_VAR;
+    delete process.env.TESTFILE_NESTED_VAR;
   }
 });
 

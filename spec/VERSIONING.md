@@ -88,7 +88,7 @@ it does:
 - Version 1 support in the reference runner is maintained for at least one
   year after version 2 ships; `testfile migrate` tooling is expected to
   accompany the release.
-- The conformance suite gains a `v2/` case tree; existing v1 cases are
+- The conformance suite gains a `v2/` set of cases; existing v1 cases are
   frozen and keep running against v1 documents.
 
 ## Deprecation process

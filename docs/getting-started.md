@@ -30,7 +30,7 @@ under review — version 1 is targeted for Q4 2026) and exactly one root
 npx testfile run
 ```
 
-The runner finds the Testfile in the current directory, runs the tree and
+The runner finds the Testfile in the current directory, runs the suite and
 prints a summary. The exit code is `0` when everything passed, `1` on
 failure, `130` when you interrupted the run.
 
@@ -38,11 +38,11 @@ Other useful commands:
 
 ```sh
 testfile validate   # check the file against the JSON schema
-testfile list       # print the expanded test tree without running it
+testfile list       # print the expanded test suite without running it
 testfile-viewer tui # browse recorded runs (read-only terminal UI)
 ```
 
-## 3. Grow the tree
+## 3. Grow the suite
 
 Replace the single command with groups as your test suite grows:
 

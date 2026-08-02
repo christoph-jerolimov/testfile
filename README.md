@@ -5,9 +5,9 @@
 **Testfile** is a declarative YAML format (`Testfile` / `testfile.yaml`) that
 describes how a project runs its tests:
 
-- Tests form a **tree**: each node runs a `command` or `script`, or groups
-  sub-tests in `sequence` or `parallel`; a **matrix** expands one test into
-  many combinations.
+- Tests form a nested **suite**: each test runs a `command` or `script`, or
+  groups nested tests in `sequence` or `parallel`; a **matrix** expands one
+  test into many combinations.
 - Tests can declare **services** they depend on — the app under test, a
   database in a specific version — as local processes or **containers**
   (podman/docker today, kubernetes planned). The runner starts them, waits

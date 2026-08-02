@@ -19,10 +19,10 @@ test:
           command: npm run test:e2e
 `;
 
-test("listTests walks the tree with paths, lines and default names", () => {
+test("listTests walks the suite with paths, lines and default names", () => {
   const tests = listTests(doc);
   assert.deepEqual(
-    tests.map((t) => `${t.line}:${t.path}${t.isLeaf ? "" : "/*"}`),
+    tests.map((t) => `${t.line}:${t.path}${t.isGroup ? "/*" : ""}`),
     [
       "3:all/*",
       "5:all/lint",

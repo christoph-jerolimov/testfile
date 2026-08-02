@@ -1,6 +1,6 @@
 import type { Runner } from "./executor.js";
 import type { OutputLine } from "./output.js";
-import type { RunNode, Status } from "./runtree.js";
+import type { RunTest, Status } from "./runsuite.js";
 import type { ServiceInstance } from "./services.js";
 import { color, formatMs } from "./util.js";
 
@@ -32,16 +32,16 @@ export class ConsoleReporter {
     private readonly runner: Runner,
     private readonly options: { verbose: boolean } = { verbose: false }
   ) {
-    runner.on("node-start", (node: RunNode) => {
-      this.print(`${glyph("running")} ${this.label(node)}`);
-      if (node.children.length === 0) {
-        node.output.on("line", (line: OutputLine) => this.printLine(node.name, line, false));
+    runner.on("test-start", (test: RunTest) => {
+      this.print(`${glyph("running")} ${this.label(test)}`);
+      if (test.children.length === 0) {
+        test.output.on("line", (line: OutputLine) => this.printLine(test.name, line, false));
       }
     });
-    runner.on("node-end", (node: RunNode) => {
-      const duration = node.startedAt && node.endedAt ? ` (${formatMs(node.endedAt - node.startedAt)})` : "";
-      const error = node.error && node.status !== "passed" ? ` — ${node.error}` : "";
-      this.print(`${glyph(node.status)} ${this.label(node)}${duration}${error}`);
+    runner.on("test-end", (test: RunTest) => {
+      const duration = test.startedAt && test.endedAt ? ` (${formatMs(test.endedAt - test.startedAt)})` : "";
+      const error = test.error && test.status !== "passed" ? ` — ${test.error}` : "";
+      this.print(`${glyph(test.status)} ${this.label(test)}${duration}${error}`);
     });
     runner.on("service-added", (service: ServiceInstance) => {
       this.print(`${color(36, "◆")} service ${service.name} starting`);
@@ -58,8 +58,8 @@ export class ConsoleReporter {
     });
   }
 
-  private label(node: RunNode): string {
-    return `${"  ".repeat(node.depth)}${node.name}`;
+  private label(test: RunTest): string {
+    return `${"  ".repeat(test.depth)}${test.name}`;
   }
 
   private printLine(name: string, line: OutputLine, dim: boolean): void {
@@ -81,11 +81,11 @@ export class ConsoleReporter {
   summary(): void {
     const counts: Partial<Record<Status, number>> = {};
     const lines: string[] = [];
-    const visit = (node: RunNode) => {
-      counts[node.status] = (counts[node.status] ?? 0) + 1;
-      const duration = node.startedAt && node.endedAt ? ` (${formatMs(node.endedAt - node.startedAt)})` : "";
-      lines.push(`${"  ".repeat(node.depth)}${glyph(node.status)} ${node.name}${duration}`);
-      node.children.forEach(visit);
+    const visit = (test: RunTest) => {
+      counts[test.status] = (counts[test.status] ?? 0) + 1;
+      const duration = test.startedAt && test.endedAt ? ` (${formatMs(test.endedAt - test.startedAt)})` : "";
+      lines.push(`${"  ".repeat(test.depth)}${glyph(test.status)} ${test.name}${duration}`);
+      test.children.forEach(visit);
     };
     visit(this.runner.root);
     this.print("");

@@ -46,7 +46,7 @@ export interface TestDef {
   parallel?: TestDef[];
   maxParallel?: number;
   needs?: string[];
-  // Resolved away by the loader (expandIncludes) before the tree is built.
+  // Resolved away by the loader (expandIncludes) before the suite is built.
   include?: string;
 }
 

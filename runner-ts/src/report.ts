@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import type { Session } from "./session.js";
-import { walk, type RunNode } from "./runtree.js";
+import { walk, type RunTest } from "./runsuite.js";
 
 export type ReporterKind = "junit" | "json";
 
@@ -21,41 +21,41 @@ export function buildJsonReport(session: Session): string {
   return `${JSON.stringify(session.lastRecord, null, 2)}\n`;
 }
 
-// JUnit XML with one testcase per executed leaf test. Group paths become the
+// JUnit XML with one testcase per executed test test. Group paths become the
 // classname, failures carry the merged log, skipped tests are marked.
 export function buildJUnitXml(session: Session): string {
   const record = session.lastRecord;
   if (!record) throw new Error("no run to report");
 
-  const leaves: RunNode[] = [];
-  walk(session.tree, (node) => {
-    if (node.children.length === 0 && node.status !== "pending") leaves.push(node);
+  const tests: RunTest[] = [];
+  walk(session.suite, (test) => {
+    if (test.children.length === 0 && test.status !== "pending") tests.push(test);
   });
 
-  const failures = leaves.filter((l) => l.status === "failed" || l.status === "aborted").length;
-  const skipped = leaves.filter((l) => l.status === "skipped").length;
+  const failures = tests.filter((l) => l.status === "failed" || l.status === "aborted").length;
+  const skipped = tests.filter((l) => l.status === "skipped").length;
   const time = (record.durationMs / 1000).toFixed(3);
 
-  const cases = leaves.map((leaf) => {
-    const classname = leaf.path.includes("/")
-      ? leaf.path.slice(0, leaf.path.lastIndexOf("/"))
-      : leaf.path;
+  const cases = tests.map((test) => {
+    const classname = test.path.includes("/")
+      ? test.path.slice(0, test.path.lastIndexOf("/"))
+      : test.path;
     const caseTime =
-      leaf.startedAt !== undefined && leaf.endedAt !== undefined
-        ? ((leaf.endedAt - leaf.startedAt) / 1000).toFixed(3)
+      test.startedAt !== undefined && test.endedAt !== undefined
+        ? ((test.endedAt - test.startedAt) / 1000).toFixed(3)
         : "0.000";
-    const open = `    <testcase name="${escapeXml(leaf.name)}" classname="${escapeXml(classname)}" time="${caseTime}"`;
-    if (leaf.status === "passed") return `${open}/>`;
-    if (leaf.status === "skipped") return `${open}>\n      <skipped/>\n    </testcase>`;
-    const message = escapeXml(leaf.error ?? leaf.status);
-    const log = escapeXml(leaf.output.text());
+    const open = `    <testcase name="${escapeXml(test.name)}" classname="${escapeXml(classname)}" time="${caseTime}"`;
+    if (test.status === "passed") return `${open}/>`;
+    if (test.status === "skipped") return `${open}>\n      <skipped/>\n    </testcase>`;
+    const message = escapeXml(test.error ?? test.status);
+    const log = escapeXml(test.output.text());
     return `${open}>\n      <failure message="${message}">${log}</failure>\n    </testcase>`;
   });
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
-    `<testsuites name="${escapeXml(session.doc.name ?? "testfile")}" tests="${leaves.length}" failures="${failures}" skipped="${skipped}" time="${time}">`,
-    `  <testsuite name="${escapeXml(session.tree.name)}" tests="${leaves.length}" failures="${failures}" skipped="${skipped}" time="${time}" timestamp="${escapeXml(record.startedAt)}">`,
+    `<testsuites name="${escapeXml(session.doc.name ?? "testfile")}" tests="${tests.length}" failures="${failures}" skipped="${skipped}" time="${time}">`,
+    `  <testsuite name="${escapeXml(session.suite.name)}" tests="${tests.length}" failures="${failures}" skipped="${skipped}" time="${time}" timestamp="${escapeXml(record.startedAt)}">`,
     ...cases,
     "  </testsuite>",
     "</testsuites>",

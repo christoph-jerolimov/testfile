@@ -19,7 +19,8 @@ Testfile declares these as **services**. The runner
 ## Declaring services
 
 Services declared at the top level live for the whole run. Services declared
-on a test start right before that test and stop when its subtree finishes:
+on a test start right before that test and stop when it — including all its
+nested tests — finished:
 
 ```yaml
 version: 0
@@ -34,7 +35,7 @@ services:              # for the whole run
       http: http://localhost:${{ ports.web }}/healthz
 test:
   name: integration
-  services:            # only for this subtree
+  services:            # only while this test runs
     postgres:
       container:
         image: docker.io/library/postgres:16

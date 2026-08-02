@@ -6,8 +6,8 @@ description: Commands, scripts, sequences, parallel groups and failure handling.
 
 # Writing tests
 
-A test is a node in the tree. It must contain **exactly one** of `command`,
-`script`, `sequence` or `parallel`.
+A test — the root one or any nested one — must contain **exactly one** of
+`command`, `script`, `sequence` or `parallel`.
 
 ## Commands and scripts
 
@@ -136,7 +136,7 @@ test:
 
 Included tests run with the included file's directory as working
 directory, keep their own `env` and `services` (scoped to the embedded
-subtree), and their named `ports` merge into the root file's ports.
+tests), and their named `ports` merge into the root file's ports.
 Includes nest; cycles and conflicting port definitions are rejected.
 
 ## Result caching
@@ -202,7 +202,7 @@ children; with a matrix they run per instance.
 
 ## Conditional tests
 
-`if` decides whether a test (and its subtree) runs. A false condition marks
+`if` decides whether a test (and its nested tests) runs. A false condition marks
 it *skipped* without failing anything:
 
 ```yaml
@@ -267,8 +267,9 @@ A tag on a group applies to all tests below it. Run a subset with
 ## Timeouts, env, workdir
 
 Every test can carry a free-form `description`, and can set a `timeout`
-(fails the subtree when exceeded), `env` (merged over the parent's
-environment, child wins) and `workdir` (relative to the Testfile):
+(fails the test and everything nested below it when exceeded), `env`
+(merged over the parent's environment, child wins) and `workdir` (relative
+to the Testfile):
 
 ```yaml
 test:

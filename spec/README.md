@@ -31,12 +31,15 @@ current directory, in this order:
 
 ## Concepts
 
-A Testfile describes a **tree of tests**. The root of the document contains
+A Testfile describes a **test suite**. The root of the document contains
 exactly one test. Each test either
 
 - runs a single shell **command**, or
 - runs a multi-line shell **script**, or
-- groups child tests that run in **sequence** or in **parallel**.
+- groups **nested tests** that run in **sequence** or in **parallel**.
+
+Groups nest arbitrarily deep. Throughout this document, a test's *nested
+tests* are all tests contained below it, directly or transitively.
 
 Any test can additionally be expanded by a **matrix** into one instance per
 variable combination.
@@ -81,16 +84,16 @@ Common fields available on every test:
 | ----------------- | -------- | ----------- |
 | `name`            | string   | Display name. Matrix instances get their combination appended, e.g. `integration (postgres=16)`. |
 | `description`     | string   | Free-form description. |
-| `tags`            | array    | Optional labels made of letters and digits only (`[A-Za-z0-9]+`), e.g. `fast`, `slow`, `flaky`, `nightly`, `aws`, `gcp`. A tag applies to the test and its whole subtree. Runners use tags to execute a subset of tests. |
-| `if`              | string   | Condition deciding whether the test (and subtree) runs, see [Conditions](#conditions). A false condition marks the test `skipped` without failing the parent. |
+| `tags`            | array    | Optional labels made of letters and digits only (`[A-Za-z0-9]+`), e.g. `fast`, `slow`, `flaky`, `nightly`, `aws`, `gcp`. A tag applies to the test and all its nested tests. Runners use tags to execute a subset of tests. |
+| `if`              | string   | Condition deciding whether the test (and its nested tests) runs, see [Conditions](#conditions). A false condition marks the test `skipped` without failing the parent. |
 | `env`             | map      | Environment variables, merged over the parent's environment (child wins). |
-| `envFile`         | string/array | Dotenv file(s), relative to the test's working directory, loaded for this subtree. See [Env files](#env-files). |
-| `workdir`         | string   | Working directory for this subtree, relative to the Testfile (or absolute). |
+| `envFile`         | string/array | Dotenv file(s), relative to the test's working directory, loaded for this test and its nested tests. See [Env files](#env-files). |
+| `workdir`         | string   | Working directory for this test and its nested tests, relative to the Testfile (or absolute). |
 | `timeout`         | duration | Abort and fail this test (and its children) after this time. |
 | `continueOnError` | boolean  | The failure of this test is reported but does not fail the parent group. Default `false`. |
 | `retry`           | int/object | Only on `command`/`script` tests: retry on failure. An integer is the number of additional attempts; the object form `{count, delay}` adds a wait between attempts. The test fails when the last attempt fails. |
 | `shell`           | string   | Only on `command`/`script` tests: interpreter instead of `sh`, e.g. `bash`, `bash -e`, `python3`. Split on whitespace and invoked as `<shell...> -c <source>`, so the interpreter must accept `-c`. The default `sh -e` for scripts does not apply — pass flags like `-e` yourself. |
-| `services`        | map      | Services scoped to this subtree, see [Services](#services). |
+| `services`        | map      | Services scoped to this test and its nested tests, see [Services](#services). |
 | `matrix`          | map      | Matrix expansion, see [Matrix](#matrix). |
 | `maxParallel`     | integer  | Only together with `parallel`: cap on concurrently running children. Default: unlimited. |
 | `needs`           | array    | Only on children of a `parallel` group: names of sibling tests that must finish first, turning the group into a DAG. The test starts once all named siblings passed or were skipped; if one failed, the test is skipped. References must name existing, unambiguous siblings and must not form cycles. |
@@ -133,14 +136,14 @@ The runner injects `TESTFILE_OS` (`linux`, `darwin`, `win32`) and
 `TESTFILE_ARCH` into the environment, so platform conditions are written as
 `if: ${{ env.TESTFILE_OS }} == linux`.
 
-A false condition skips the test and its subtree (status `skipped`). This
+A false condition skips the test and its nested tests (status `skipped`). This
 does not fail the surrounding sequence/parallel group; a group whose active
 children all skipped is itself `skipped`. A fully skipped run exits with
 code `0`.
 
 ## Includes
 
-`include` embeds another Testfile as a subtree, composing e.g. per-package
+`include` embeds another Testfile as a nested suite, composing e.g. per-package
 Testfiles of a monorepo into one:
 
 ```yaml
@@ -160,14 +163,14 @@ Rules:
 - The included document must be a valid Testfile itself (including
   `version`). Includes nest; cycles are an error.
 - The included file's directory becomes the working directory of the
-  embedded subtree (`workdir` cannot be set on an include node).
+  embedded tests (`workdir` cannot be set on an include test).
 - The included file's top-level `env` and `services` are scoped to the
-  embedded subtree; `env` set on the include node wins over the included
+  embedded tests; `env` set on the include test wins over the included
   file's values.
 - The included file's `ports` merge into the including document's `ports`.
   Two definitions of the same port name with different values are an error.
-- Other fields on the include node (`name`, `tags`, `if`, `timeout`,
-  `setup`/`teardown`, `matrix`, ...) apply to the embedded subtree as usual.
+- Other fields on the include test (`name`, `tags`, `if`, `timeout`,
+  `setup`/`teardown`, `matrix`, ...) apply to the embedded tests as usual.
 
 ## Hooks
 
@@ -268,7 +271,7 @@ service sees the environment of the test that started it; if it dies
 unexpectedly, all tests depending on it are aborted.
 
 If a service exits by itself while dependent tests are still running, the
-runner marks the service as failed and aborts the dependent subtree.
+runner marks the service as failed and aborts the dependent tests.
 
 ### Containers
 
@@ -331,7 +334,7 @@ Further host variables must be **forwarded explicitly** with `forwardEnv`:
 a list of variable names or patterns where `*` matches any run of
 characters — `GITHUB_*`, `MY_TOKEN`, or just `*` for everything. It is
 available at the top level (applies to the whole run) and on any test
-(applies to its subtree). Forwarded values override the runner-provided
+(applies to its nested tests). Forwarded values override the runner-provided
 defaults, so forwarding `CI` restores the host's value.
 
 On top of that base, the environment of a test/service is built by
@@ -339,17 +342,17 @@ merging, child over parent:
 
 1. the base environment described above (plus top-level forwarded vars),
 2. the top level `env`,
-3. `env` and forwarded variables of each ancestor test down to the node,
-4. the node's own `env`.
+3. `env` and forwarded variables of each ancestor test down to the test itself,
+4. the test's own `env`.
 
 String values anywhere in the document may contain templates of the form
 `${{ scope.name }}` with these scopes:
 
 | Scope    | Example              | Meaning |
 | -------- | -------------------- | ------- |
-| `env`    | `${{ env.HOME }}`    | Value from the merged environment at that node. |
+| `env`    | `${{ env.HOME }}`    | Value from the merged environment at that test. |
 | `ports`  | `${{ ports.web }}`   | A resolved named port. |
-| `matrix` | `${{ matrix.node }}` | A matrix variable of the closest expanded ancestor (or the node itself). |
+| `matrix` | `${{ matrix.node }}` | A matrix variable of the closest expanded ancestor (or the test itself). |
 
 A template may carry a default after `||`, used when the reference is
 undefined **or empty**: `${{ env.PORT || 3000 }}`. The default is plain text

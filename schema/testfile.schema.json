@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json",
   "title": "Testfile",
-  "description": "Schema for a Testfile (Testfile, testfile.yaml or testfile.yml): a declarative description of how a project runs its tests. A Testfile is a tree of tests. Each test either runs a command or a script, or groups sub-tests that run in sequence or in parallel. Any test can be expanded through a matrix. Tests can depend on services (local processes or containers) that are started before and gracefully stopped after the test. The format is currently version 0 and under review; version 1 is targeted for Q4 2026. Feedback is welcome via GitHub issues at https://github.com/christoph-jerolimov/testfile/issues.",
+  "description": "Schema for a Testfile (Testfile, testfile.yaml or testfile.yml): a declarative description of how a project runs its tests. A Testfile describes a test suite: tests nest. Each test either runs a command or a script, or groups nested tests that run in sequence or in parallel. Any test can be expanded through a matrix. Tests can depend on services (local processes or containers) that are started before and gracefully stopped after the test. The format is currently version 0 and under review; version 1 is targeted for Q4 2026. Feedback is welcome via GitHub issues at https://github.com/christoph-jerolimov/testfile/issues.",
   "type": "object",
   "required": ["version", "test"],
   "additionalProperties": false,
@@ -36,7 +36,7 @@
       "$ref": "#/$defs/servicesMap"
     },
     "test": {
-      "description": "The root test of the tree.",
+      "description": "The root test of the suite.",
       "$ref": "#/$defs/test"
     }
   },
@@ -151,7 +151,7 @@
     },
     "test": {
       "type": "object",
-      "description": "A node in the test tree. Exactly one of 'command', 'script', 'sequence', 'parallel' or 'include' must be set.",
+      "description": "A single test of the suite. Exactly one of 'command', 'script', 'sequence', 'parallel' or 'include' must be set.",
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -162,12 +162,12 @@
           "type": "string"
         },
         "if": {
-          "description": "Condition deciding whether this test (and its subtree) runs. Supports templates, truthiness (\"\", \"false\", \"0\", \"no\", \"off\" are false), \"a == b\" / \"a != b\" string comparison, and a leading \"!\" negating the whole expression. Unknown template references resolve to \"\". A false condition marks the test as skipped without failing the parent. Example: \"${{ env.CI }}\" or \"${{ env.TESTFILE_OS }} == linux\".",
+          "description": "Condition deciding whether this test (and its nested tests) runs. Supports templates, truthiness (\"\", \"false\", \"0\", \"no\", \"off\" are false), \"a == b\" / \"a != b\" string comparison, and a leading \"!\" negating the whole expression. Unknown template references resolve to \"\". A false condition marks the test as skipped without failing the parent. Example: \"${{ env.CI }}\" or \"${{ env.TESTFILE_OS }} == linux\".",
           "type": "string",
           "minLength": 1
         },
         "tags": {
-          "description": "Optional labels (letters and digits only) to group tests, e.g. fast, slow, flaky, nightly, aws, gcp. A tag applies to the whole subtree; runners can filter by tag to execute a subset of tests.",
+          "description": "Optional labels (letters and digits only) to group tests, e.g. fast, slow, flaky, nightly, aws, gcp. A tag applies to the test and all its nested tests; runners can filter by tag to execute a subset of tests.",
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
@@ -181,7 +181,7 @@
           "$ref": "#/$defs/envMap"
         },
         "envFile": {
-          "description": "Dotenv file(s), relative to this test's working directory, loaded for this subtree. Values are treated as secrets: masked in recorded logs and never written into run records. Precedence: parent env < env file(s) < this test's 'env'.",
+          "description": "Dotenv file(s), relative to this test's working directory, loaded for this test and its nested tests. Values are treated as secrets: masked in recorded logs and never written into run records. Precedence: parent env < env file(s) < this test's 'env'.",
           "$ref": "#/$defs/envFileSpec"
         },
         "forwardEnv": {
@@ -227,7 +227,7 @@
           ]
         },
         "services": {
-          "description": "Services scoped to this subtree: started before this test runs, gracefully stopped when it finishes.",
+          "description": "Services scoped to this test and its nested tests: started before this test runs, gracefully stopped when it finishes.",
           "$ref": "#/$defs/servicesMap"
         },
         "inputs": {
@@ -291,7 +291,7 @@
           }
         },
         "include": {
-          "description": "Path or glob (relative to this Testfile) of another Testfile - or a directory containing one - to embed here. The included file's env and services are scoped to the embedded subtree, its ports merge into this file's ports, and its tests run with the included file's directory as working directory. A glob matching several files embeds them as a parallel group. Not templated; 'workdir' cannot be combined with include.",
+          "description": "Path or glob (relative to this Testfile) of another Testfile - or a directory containing one - to embed here. The included file's env and services are scoped to the embedded tests, its ports merge into this file's ports, and its tests run with the included file's directory as working directory. A glob matching several files embeds them as a parallel group. Not templated; 'workdir' cannot be combined with include.",
           "type": "string",
           "minLength": 1
         },

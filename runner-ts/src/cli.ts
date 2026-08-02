@@ -2,14 +2,14 @@
 import { existsSync, statSync, type FSWatcher } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
-import { changedLeafIds, predictCacheHits } from "./cache-predict.js";
+import { changedTestIds, predictCacheHits } from "./cache-predict.js";
 import { generateCompletion, type CompletionModel } from "./completion.js";
 import {
   filterByLastFailed,
   hasFilters,
   parseMatrixFilters,
   parseTagFilters,
-  selectLeaves,
+  selectTests,
   splitGenericFilters,
   type TestFilters,
 } from "./filter.js";
@@ -18,7 +18,7 @@ import { initTestfile } from "./init.js";
 import { loadTestfile } from "./loader.js";
 import { writeReport, type ReporterKind } from "./report.js";
 import { ConsoleReporter } from "./reporter.js";
-import { walk, type RunNode } from "./runtree.js";
+import { walk, type RunTest } from "./runsuite.js";
 import { Session } from "./session.js";
 import { color, formatMs } from "./util.js";
 import { watchDirectory, WatchScheduler } from "./watch.js";
@@ -36,7 +36,7 @@ interface FilterFlags {
   changed: boolean;
 }
 
-// --changed narrows a resolved selection to the leaves that would actually
+// --changed narrows a resolved selection to the tests that would actually
 // execute (predicted cache misses).
 async function applyChanged(
   session: Session,
@@ -44,14 +44,14 @@ async function applyChanged(
   changed: boolean
 ): Promise<ReturnType<typeof resolveFilters>> {
   if (!changed) return filtered;
-  const leaves = await changedLeafIds(session, filtered.active);
-  if (leaves.length === 0) {
+  const tests = await changedTestIds(session, filtered.active);
+  if (tests.length === 0) {
     throw new Error("nothing changed — every selected test would be served from the cache");
   }
   return {
-    selection: leaves,
-    active: session.activeSetFor(leaves),
-    leafCount: leaves.length,
+    selection: tests,
+    active: session.activeSetFor(tests),
+    testCount: tests.length,
     filtered: true,
   };
 }
@@ -61,7 +61,7 @@ async function applyChanged(
 function resolveFilters(
   session: Session,
   flags: FilterFlags
-): { selection: number[]; active: Set<number>; leafCount: number; filtered: boolean } {
+): { selection: number[]; active: Set<number>; testCount: number; filtered: boolean } {
   const generic = splitGenericFilters(flags.filter);
   const filters: TestFilters = {
     any: generic.nameOrTag,
@@ -70,40 +70,40 @@ function resolveFilters(
     matrix: parseMatrixFilters([...flags.filterMatrix, ...generic.matrixSpecs]),
   };
   if (!hasFilters(filters) && !flags.failed) {
-    const active = session.activeSetFor([session.tree.id]);
-    let leafCount = 0;
+    const active = session.activeSetFor([session.suite.id]);
+    let testCount = 0;
     for (const id of active) {
-      if (session.byId.get(id)?.children.length === 0) leafCount++;
+      if (session.byId.get(id)?.children.length === 0) testCount++;
     }
-    return { selection: [session.tree.id], active, leafCount, filtered: false };
+    return { selection: [session.suite.id], active, testCount, filtered: false };
   }
-  let leaves = selectLeaves(session.tree, filters);
+  let tests = selectTests(session.suite, filters);
   if (flags.failed) {
-    leaves = filterByLastFailed(leaves, session.history.runs[0]);
-    if (leaves.length === 0) throw new Error("nothing failed in the last recorded run");
+    tests = filterByLastFailed(tests, session.history.runs[0]);
+    if (tests.length === 0) throw new Error("nothing failed in the last recorded run");
   }
-  const selection = leaves.map((leaf) => leaf.id);
-  return { selection, active: session.activeSetFor(selection), leafCount: leaves.length, filtered: true };
+  const selection = tests.map((test) => test.id);
+  return { selection, active: session.activeSetFor(selection), testCount: tests.length, filtered: true };
 }
 
 // Shared by `list` and `run --dry-run`.
-function printTree(session: Session, active: Set<number>, annotate?: (node: RunNode) => string): void {
+function printSuite(session: Session, active: Set<number>, annotate?: (test: RunTest) => string): void {
   for (const [name] of Object.entries(session.doc.services ?? {})) {
     console.log(`${color(36, "◆")} service ${name}`);
   }
-  walk(session.tree, (node: RunNode) => {
-    if (!active.has(node.id)) return;
-    const marker = node.children.length > 0 ? color(90, node.kind) : "";
+  walk(session.suite, (test: RunTest) => {
+    if (!active.has(test.id)) return;
+    const marker = test.children.length > 0 ? color(90, test.kind) : "";
     // Matrix instances share their wrapper's def; print tags only once.
     const tags =
-      node.def.tags && node.parent?.def !== node.def
-        ? color(90, `[${node.def.tags.join(", ")}]`)
+      test.def.tags && test.parent?.def !== test.def
+        ? color(90, `[${test.def.tags.join(", ")}]`)
         : "";
-    const extra = annotate?.(node) ?? "";
-    console.log(`${"  ".repeat(node.depth)}${node.name} ${tags} ${marker}${extra}`.replace(/ +$/, ""));
-    for (const [name] of Object.entries(node.def.services ?? {})) {
-      if (!node.isMatrixWrapper) {
-        console.log(`${"  ".repeat(node.depth + 1)}${color(36, "◆")} service ${name}`);
+    const extra = annotate?.(test) ?? "";
+    console.log(`${"  ".repeat(test.depth)}${test.name} ${tags} ${marker}${extra}`.replace(/ +$/, ""));
+    for (const [name] of Object.entries(test.def.services ?? {})) {
+      if (!test.isMatrixWrapper) {
+        console.log(`${"  ".repeat(test.depth + 1)}${color(36, "◆")} service ${name}`);
       }
     }
   });
@@ -158,16 +158,16 @@ addFilterOptions(
   program
     .command("list")
     .argument("[path]", "Testfile or directory containing one", ".")
-    .description("Print the expanded test tree (including matrix instances)")
+    .description("Print the expanded test suite (including matrix instances)")
 )
   .action(async (path: string, flags: FilterFlags) => {
     try {
       const { path: file, doc } = loadTestfile(path);
       const session = new Session(doc, dirname(file));
       let filtered = resolveFilters(session, flags);
-      if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
+      if (filtered.testCount === 0) throw new Error("no tests match the given filters");
       filtered = await applyChanged(session, filtered, flags.changed);
-      printTree(session, filtered.active);
+      printSuite(session, filtered.active);
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;
@@ -209,7 +209,7 @@ addFilterOptions(
     )
     .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
     .option("--output <file>", 'report target file, or "-" for stdout', "-")
-    .description("Run the test tree")
+    .description("Run the test suite")
 )
   .action(async (path: string, options: RunFlags) => {
     let session: Session;
@@ -229,7 +229,7 @@ addFilterOptions(
         forwardEnv: options.forwardEnv,
       });
       filtered = resolveFilters(session, options);
-      if (filtered.leafCount === 0) throw new Error("no tests match the given filters");
+      if (filtered.testCount === 0) throw new Error("no tests match the given filters");
       filtered = await applyChanged(session, filtered, options.changed);
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
@@ -239,10 +239,10 @@ addFilterOptions(
 
     if (options.dryRun) {
       const hits = await predictCacheHits(session, filtered.active);
-      printTree(session, filtered.active, (node) =>
-        hits.has(node.id) ? ` ${color(90, "[cached]")}` : ""
+      printSuite(session, filtered.active, (test) =>
+        hits.has(test.id) ? ` ${color(90, "[cached]")}` : ""
       );
-      const fresh = filtered.leafCount - hits.size;
+      const fresh = filtered.testCount - hits.size;
       console.log(
         color(
           90,

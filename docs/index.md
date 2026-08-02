@@ -18,9 +18,9 @@ the repository next to your code.
 
 It is built around three ideas:
 
-1. **Tests form a tree.** The root of the file contains one test. Every test
-   either runs a shell command or script, or groups sub-tests that run in
-   sequence or in parallel. A matrix can expand one test into many
+1. **Tests nest.** The root of the file contains one test. Every test
+   either runs a shell command or script, or groups nested tests that run
+   in sequence or in parallel — together they form the test suite. A matrix can expand one test into many
    combinations (Node versions × databases, for example).
 
 2. **Tests can need services.** Real test suites need the app under test, a
