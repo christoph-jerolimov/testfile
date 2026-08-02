@@ -17,8 +17,8 @@ test:
           command: npm test --workspace schema
         - name: website
           command: npm run build --workspace website
-        - name: viewer
-          command: npm test --workspace viewer
+        - name: viewer-web
+          command: npm test --workspace viewer-web
         - name: vscode-extension
           command: npm test --workspace vscode-extension
         - name: build-runner

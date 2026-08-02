@@ -7,7 +7,7 @@
   "workspaces": [
     "schema",
     "runner-ts",
-    "viewer",
+    "viewer-web",
     "vscode-extension",
     "website",
     "conformance"
