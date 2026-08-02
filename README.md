@@ -56,7 +56,7 @@ feedback, or a pull request if you want to contribute directly.
 
 | Folder | Contents |
 | ------ | -------- |
-| [`spec/`](spec/) | The normative specification of the Testfile format. |
+| [`spec/`](spec/) | The normative specification: the Testfile format and the [test result format](spec/RESULTS.md). |
 | [`docs/`](docs/) | End-user documentation, published at [christoph-jerolimov.github.io/testfile](https://christoph-jerolimov.github.io/testfile/). |
 | [`schema/`](schema/) | The JSON schema, plus `tests/valid` and `tests/invalid` example files that CI validates on every change. |
 | [`website/`](website/) | Astro site that renders `docs/`, published to GitHub Pages. |
