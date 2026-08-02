@@ -8,6 +8,7 @@
     "schema",
     "runner-ts",
     "viewer",
+    "vscode-extension",
     "website",
     "conformance"
   ],
