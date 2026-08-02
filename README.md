@@ -46,6 +46,8 @@ test:
 | [`schema/`](schema/) | The JSON schema, plus `tests/valid` and `tests/invalid` example files that CI validates on every change. |
 | [`website/`](website/) | Astro site that renders `docs/`, published to GitHub Pages. |
 | [`runner-ts/`](runner-ts/) | The reference runner: a `testfile` CLI with an interactive TUI, written in TypeScript. |
+| [`viewer/`](viewer/) | The React web viewer over recorded runs, served locally by `testfile serve`. |
+| [`vscode-extension/`](vscode-extension/) | VS Code extension: schema validation, run-from-editor code lenses and the recorded-runs view. |
 | [`conformance/`](conformance/) | Runner-independent conformance suite: cases with expected outcomes that any runner implementation must satisfy. |
 
 This repository is an npm-workspaces monorepo and eats its own dog food: its
