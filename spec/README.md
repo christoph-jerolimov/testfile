@@ -306,11 +306,30 @@ services; second Ctrl+C: force kill).
 
 ## Environment and templates
 
-The environment of a test/service is built by merging, child over parent:
+Tests and services run in an **isolated environment**: variables of the
+host (the user's shell, the CI job) do not leak in. The base environment
+consists of
 
-1. the runner's own environment (the user's shell environment),
+- a small allowlist of essentials from the host: `PATH`, `HOME`, `USER`,
+  `LOGNAME`, `SHELL`, `TMPDIR`/`TMP`/`TEMP`, `LANG`, `LC_*`, `TZ` (plus
+  their Windows equivalents), and
+- values the runner provides: `CI=1`, `FORCE_COLOR=1` and
+  `CLICOLOR_FORCE=1` (so tools emit color even though their output is a
+  pipe), and `TESTFILE_OS`/`TESTFILE_ARCH`.
+
+Further host variables must be **forwarded explicitly** with `forwardEnv`:
+a list of variable names or patterns where `*` matches any run of
+characters — `GITHUB_*`, `MY_TOKEN`, or just `*` for everything. It is
+available at the top level (applies to the whole run) and on any test
+(applies to its subtree). Forwarded values override the runner-provided
+defaults, so forwarding `CI` restores the host's value.
+
+On top of that base, the environment of a test/service is built by
+merging, child over parent:
+
+1. the base environment described above (plus top-level forwarded vars),
 2. the top level `env`,
-3. `env` of each ancestor test down to the node,
+3. `env` and forwarded variables of each ancestor test down to the node,
 4. the node's own `env`.
 
 String values anywhere in the document may contain templates of the form
@@ -336,8 +355,8 @@ strings like `500ms`, `30s`, `5m`, `1h`.
 `${{ ... }}` templates in values. Multiple files load in order; later files
 win. A missing file is an error.
 
-Precedence, lowest to highest: runner environment < env file(s) < explicit
-`env` of the same level. Top-level `envFile` paths resolve relative to the
+Precedence, lowest to highest: inherited environment < forwarded host
+variables < env file(s) < explicit `env` of the same level. Top-level `envFile` paths resolve relative to the
 Testfile; test-level paths resolve relative to the test's working directory.
 
 Values loaded from env files are treated as **secrets**: runners must mask

@@ -1,0 +1,17 @@
+# Host env vars must not reach tests unless forwarded via forwardEnv; the
+# runner provides CI=1 and forces color output.
+env:
+  CONFTEST_LEAK: "yes"
+exitCode: 0
+status: passed
+tests:
+  - path: env/isolated
+    status: passed
+  - path: env/ci-default
+    status: passed
+  - path: env/color-default
+    status: passed
+  - path: env/essentials
+    status: passed
+  - path: env/forwarded
+    status: passed

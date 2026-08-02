@@ -538,3 +538,84 @@ test("requestStop aborts the run gracefully", async () => {
   assert.equal(runner.interrupted, true);
   assert.equal(runner.root.children[1].status, "aborted");
 });
+
+test("host env does not leak into tests; essentials, CI=1 and color do", async () => {
+  process.env.TESTFILE_LEAKY_SECRET = "oops";
+  try {
+    const runner = makeRunner({
+      version: 1,
+      test: {
+        sequence: [
+          { name: "no-leak", command: 'test -z "$TESTFILE_LEAKY_SECRET"' },
+          { name: "path", command: 'test -n "$PATH" && test -n "$HOME"' },
+          { name: "ci", command: 'test "$CI" = "1"' },
+          { name: "color", command: 'test "$FORCE_COLOR" = "1"' },
+        ],
+      },
+    });
+    assert.equal(await runner.run(), "passed");
+  } finally {
+    delete process.env.TESTFILE_LEAKY_SECRET;
+  }
+});
+
+test("forwardEnv patterns forward matching host vars, doc env still wins", async () => {
+  process.env.TESTFILE_FWD_ONE = "one";
+  process.env.TESTFILE_FWD_TWO = "two";
+  process.env.TESTFILE_OTHER = "other";
+  try {
+    const runner = makeRunner({
+      version: 1,
+      forwardEnv: ["TESTFILE_FWD_*"],
+      env: { TESTFILE_FWD_TWO: "overridden" },
+      test: {
+        sequence: [
+          { name: "match", command: 'test "$TESTFILE_FWD_ONE" = "one"' },
+          { name: "doc-env-wins", command: 'test "$TESTFILE_FWD_TWO" = "overridden"' },
+          { name: "no-match", command: 'test -z "$TESTFILE_OTHER"' },
+        ],
+      },
+    });
+    assert.equal(await runner.run(), "passed");
+  } finally {
+    delete process.env.TESTFILE_FWD_ONE;
+    delete process.env.TESTFILE_FWD_TWO;
+    delete process.env.TESTFILE_OTHER;
+  }
+});
+
+test("per-test forwardEnv applies to the subtree only; * forwards everything", async () => {
+  process.env.TESTFILE_SUBTREE_VAR = "sub";
+  try {
+    const runner = makeRunner({
+      version: 1,
+      test: {
+        sequence: [
+          { name: "isolated", command: 'test -z "$TESTFILE_SUBTREE_VAR"' },
+          {
+            name: "group",
+            forwardEnv: ["TESTFILE_SUBTREE_*"],
+            sequence: [{ name: "inherited", command: 'test "$TESTFILE_SUBTREE_VAR" = "sub"' }],
+          },
+          { name: "star", forwardEnv: ["*"], command: 'test "$TESTFILE_SUBTREE_VAR" = "sub"' },
+        ],
+      },
+    });
+    assert.equal(await runner.run(), "passed");
+  } finally {
+    delete process.env.TESTFILE_SUBTREE_VAR;
+  }
+});
+
+test("--forward-env (runner option) forwards like the document field", async () => {
+  process.env.TESTFILE_CLI_FWD = "cli";
+  try {
+    const runner = makeRunner(
+      { version: 1, test: { command: 'test "$TESTFILE_CLI_FWD" = "cli"' } },
+      { forwardEnv: ["TESTFILE_CLI_*"] }
+    );
+    assert.equal(await runner.run(), "passed");
+  } finally {
+    delete process.env.TESTFILE_CLI_FWD;
+  }
+});

@@ -1,0 +1,15 @@
+version: 1
+test:
+  name: env
+  sequence:
+    - name: isolated
+      command: test -z "$CONFTEST_LEAK"
+    - name: ci-default
+      command: test "$CI" = "1"
+    - name: color-default
+      command: test "$FORCE_COLOR" = "1"
+    - name: essentials
+      command: test -n "$PATH"
+    - name: forwarded
+      forwardEnv: [CONFTEST_*]
+      command: test "$CONFTEST_LEAK" = "yes"
