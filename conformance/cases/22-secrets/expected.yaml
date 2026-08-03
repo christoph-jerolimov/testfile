@@ -1,0 +1,7 @@
+env:
+  CONFORMANCE_SECRET: top-secret-value
+exitCode: 0
+status: passed
+tests:
+  - path: root
+    status: passed

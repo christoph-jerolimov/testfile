@@ -104,3 +104,42 @@ test("a missing env file fails the run", async () => {
   assert.equal(await session.runAll(), "failed");
   assert.match(session.runner!.root.error ?? "", /cannot read env file/);
 });
+
+test("secrets are forwarded from the host and masked in the record", async () => {
+  const { Session } = await import("./session.js");
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "testfile-secrets-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+
+  process.env.TESTFILE_TEST_TOKEN = "s3cr3t-value";
+  try {
+    const session = new Session(
+      {
+        version: 0,
+        secrets: ["TESTFILE_TEST_TOKEN"],
+        env: { DERIVED: "prefix-${{ env.TESTFILE_TEST_TOKEN }}" },
+        test: {
+          name: "root",
+          // the secret reaches the test even though the env is isolated
+          command: 'test "$TESTFILE_TEST_TOKEN" = "s3cr3t-value" && echo "token is s3cr3t-value"',
+        },
+      },
+      dir
+    );
+    assert.equal(await session.runAll(), "passed");
+
+    const record = session.lastRecord!;
+    const history = new (await import("./history.js")).RunHistory(dir);
+    const log = history.readLog(record, record.tests.find((t) => t.path === "root")!)!;
+    assert.ok(!log.includes("s3cr3t-value"), "the secret is masked in the recorded log");
+    assert.ok(log.includes("***"), "and replaced by a mask");
+    assert.ok(
+      !JSON.stringify(record.env).includes("s3cr3t-value"),
+      "and masked where it appears in the recorded env"
+    );
+  } finally {
+    delete process.env.TESTFILE_TEST_TOKEN;
+  }
+});

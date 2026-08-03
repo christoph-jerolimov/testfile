@@ -30,6 +30,9 @@
       "description": "Host environment variables forwarded into the test environment, which is otherwise isolated from the host (only essentials like PATH and HOME pass through, and the runner provides CI=1 with color output forced). Each entry is a variable name or a pattern where * matches anything, e.g. \"GITHUB_*\" or just \"*\".",
       "$ref": "#/$defs/forwardEnvList"
     },
+    "secrets": {
+      "$ref": "#/$defs/secretList"
+    },
     "ports": {
       "description": "Named ports. A value of \"random\" allocates a free port on startup; an integer pins a fixed port. Referenced anywhere via ${{ ports.NAME }} templates.",
       "$ref": "#/$defs/portsMap"
@@ -194,6 +197,9 @@
         "forwardEnv": {
           "description": "Host environment variables forwarded into this test's (and its children's) environment, e.g. \"GITHUB_*\" or \"*\". Precedence: parent env < forwarded < env file(s) < this test's 'env'.",
           "$ref": "#/$defs/forwardEnvList"
+        },
+        "secrets": {
+          "$ref": "#/$defs/secretList"
         },
         "workdir": {
           "description": "Working directory for this test and its children, relative to the Testfile location (or absolute).",
@@ -823,6 +829,14 @@
             "minLength": 1
           }
         }
+      }
+    },
+    "secretList": {
+      "description": "Names of environment variables that hold secrets. They are forwarded from the host environment (how CI secret stores hand them over) even though the test environment is otherwise isolated, and their values are masked in recorded logs and run records. A value assigned to one of these names in `env` is treated as secret too.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
       }
     }
   }
