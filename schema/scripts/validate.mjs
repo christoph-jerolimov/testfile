@@ -2,7 +2,7 @@
 // Validates the JSON schema itself, all examples in tests/valid (must pass),
 // all examples in tests/invalid (must fail), and the repository's own Testfile.
 import { readFileSync, readdirSync, existsSync } from "node:fs";
-import { join, dirname, resolve, basename } from "node:path";
+import { join, dirname, resolve, basename, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
@@ -19,15 +19,15 @@ const validate = ajv.compile(schema);
 
 let failures = 0;
 
-function check(file, expectValid) {
+function check(file, expectValid, name = `${expectValid ? "valid" : "invalid"}/${basename(file)}`) {
   const doc = parse(readFileSync(file, "utf8"));
   const valid = validate(doc);
   const label = expectValid ? "valid" : "invalid";
   if (valid === expectValid) {
-    console.log(`  ok      ${label}/${basename(file)}`);
+    console.log(`  ok      ${name}`);
   } else {
     failures++;
-    console.error(`  FAILED  ${label}/${basename(file)} — expected ${label} but was ${valid ? "valid" : "invalid"}`);
+    console.error(`  FAILED  ${name} — expected ${label} but was ${valid ? "valid" : "invalid"}`);
     if (!valid) {
       for (const err of validate.errors ?? []) {
         console.error(`          ${err.instancePath || "/"} ${err.message}`);
@@ -57,6 +57,30 @@ const rootTestfile = join(schemaDir, "..", "Testfile");
 if (existsSync(rootTestfile)) {
   console.log("Repository Testfile:");
   check(rootTestfile, true);
+}
+
+// The examples gallery on the website renders these files; they must stay
+// valid against the current schema, including the ones nested in the
+// monorepo example.
+const examplesDir = join(schemaDir, "..", "examples");
+if (existsSync(examplesDir)) {
+  console.log("Examples:");
+  const found = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    )) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.name === "Testfile") found.push(path);
+    }
+  };
+  walk(examplesDir);
+  if (found.length === 0) {
+    failures++;
+    console.error("  FAILED  no example Testfiles found");
+  }
+  for (const file of found) check(file, true, relative(join(schemaDir, ".."), file));
 }
 
 if (failures > 0) {

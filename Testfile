@@ -12,33 +12,66 @@ test:
   name: ci
   sequence:
     - name: install
+      tags: [setup]
       command: npm ci --no-audit --no-fund
     - name: checks
       parallel:
         - name: schema
+          tags: [fast, schema]
           command: npm test --workspace schema
+          inputs:
+            - schema/**
+            - Testfile
+            - examples/**/Testfile
         - name: website
+          tags: [docs]
           command: npm run build --workspace website
+          inputs:
+            - website/**
+            - docs/**
+            - examples/**
+            - package-lock.json
         - name: viewer-web
+          tags: [fast, unit]
           command: npm test --workspace viewer-web
+          inputs:
+            - viewer-web/src/**
+            - viewer-web/package.json
+            - viewer-web/tsconfig*.json
+            - viewer-web/build.mjs
         - name: vscode-extension
+          tags: [fast, unit, editor]
           command: npm test --workspace vscode-extension
+          inputs:
+            - vscode-extension/src/**
+            - vscode-extension/package.json
+            - vscode-extension/build.mjs
+            - schema/testfile.schema.json
         - name: build-runner
+          tags: [build]
           command: npm run build --workspace runner-ts
         - name: viewer-ts
+          tags: [fast, unit]
           command: npm test --workspace viewer-ts
+          inputs:
+            - viewer-ts/src/**
+            - viewer-ts/package.json
+            - viewer-ts/tsconfig.json
         # npm test --workspace runner-ts would rebuild via pretest; the tests
         # run against the one build above so nothing rewrites dist mid-run.
         - name: runner-tests
+          tags: [fast, unit]
           needs: [build-runner]
           workdir: runner-ts
           command: node --test "dist/**/*.test.js"
         - name: conformance
+          tags: [slow, conformance]
           needs: [build-runner]
           command: npm test --workspace conformance
         # The examples gallery on the website renders these files, so they
         # must stay valid.
         - name: examples
+          tags: [fast, docs]
           needs: [build-runner]
           script: |
             for dir in examples/*/; do
@@ -51,6 +84,7 @@ test:
         # the pinned chromium build is downloaded, so rendering matches the
         # committed screenshots everywhere.
         - name: viewer-e2e
+          tags: [slow, e2e, browser]
           needs: [viewer-ts, viewer-web]
           workdir: viewer-web
           services:
@@ -73,6 +107,7 @@ test:
         # What the dedicated action self-test job used to check: running the
         # smoke Testfile produces a passing JUnit report.
         - name: action-smoke
+          tags: [action]
           needs: [build-runner]
           script: |
             out=$(mktemp)
