@@ -4,9 +4,12 @@ import { getCollection } from "astro:content";
 interface Props {
   title: string;
   description?: string;
+  // The docs sidebar; the landing page turns it off and links the
+  // documentation from the header instead.
+  sidebar?: boolean;
 }
 
-const { title, description } = Astro.props;
+const { title, description, sidebar = true } = Astro.props;
 const docs = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.order);
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const currentPath = Astro.url.pathname.replace(/\/$/, "");
@@ -22,49 +25,52 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
   </head>
   <body>
     <header>
-      <a class="brand" href={`${base}/`}>Testfile</a>
+      <a class="brand" href={`${base}/`}><span class="brand-icon">🐙</span>Testfile</a>
       <nav class="top">
+        <a href={`${base}/docs/${docs[0].id}`}>Documentation</a>
         <a href="https://github.com/christoph-jerolimov/testfile">GitHub</a>
       </nav>
     </header>
-    <div class="wrap">
-      <aside>
-        <nav>
-          <p class="nav-title">Documentation</p>
-          <ul>
-            {
-              docs.map((doc) => {
-                const href = `${base}/docs/${doc.id}`;
-                return (
-                  <li>
-                    <a href={href} aria-current={currentPath === href ? "page" : undefined}>
-                      {doc.data.title}
-                    </a>
-                  </li>
-                );
-              })
-            }
-          </ul>
-          <p class="nav-title">Project</p>
-          <ul>
-            <li>
-              <a href="https://github.com/christoph-jerolimov/testfile/blob/main/spec/README.md">
-                Specification
-              </a>
-            </li>
-            <li>
-              <a href="https://github.com/christoph-jerolimov/testfile/blob/main/spec/VERSIONING.md">
-                Versioning policy
-              </a>
-            </li>
-            <li>
-              <a href="https://github.com/christoph-jerolimov/testfile/blob/main/schema/testfile.schema.json">
-                JSON schema
-              </a>
-            </li>
-          </ul>
-        </nav>
-      </aside>
+    <div class={`wrap ${sidebar ? "" : "no-sidebar"}`}>
+      {
+        sidebar && (
+          <aside>
+            <nav>
+              <p class="nav-title">Documentation</p>
+              <ul>
+                {docs.map((doc) => {
+                  const href = `${base}/docs/${doc.id}`;
+                  return (
+                    <li>
+                      <a href={href} aria-current={currentPath === href ? "page" : undefined}>
+                        {doc.data.title}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p class="nav-title">Project</p>
+              <ul>
+                <li>
+                  <a href="https://github.com/christoph-jerolimov/testfile/blob/main/spec/README.md">
+                    Specification
+                  </a>
+                </li>
+                <li>
+                  <a href="https://github.com/christoph-jerolimov/testfile/blob/main/spec/VERSIONING.md">
+                    Versioning policy
+                  </a>
+                </li>
+                <li>
+                  <a href="https://github.com/christoph-jerolimov/testfile/blob/main/schema/testfile.schema.json">
+                    JSON schema
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </aside>
+        )
+      }
       <main>
         <slot />
       </main>
@@ -75,7 +81,10 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
         --fg: #1c1e21;
         --muted: #57606a;
         --border: #d0d7de;
+        /* blue + red highlights: the CI-friendly pair (running/planned vs
+           failed) instead of green/red */
         --accent: #0969da;
+        --accent-red: #cf222e;
         --code-bg: #f6f8fa;
       }
       @media (prefers-color-scheme: dark) {
@@ -85,6 +94,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
           --muted: #8b949e;
           --border: #30363d;
           --accent: #58a6ff;
+          --accent-red: #ff7b72;
           --code-bg: #161b22;
         }
       }
@@ -111,6 +121,13 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
         color: var(--fg);
         text-decoration: none;
       }
+      .brand-icon {
+        margin-right: 0.45rem;
+      }
+      nav.top {
+        display: flex;
+        gap: 1.25rem;
+      }
       nav.top a {
         color: var(--muted);
         text-decoration: none;
@@ -124,6 +141,9 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
         margin: 0 auto;
         gap: 2rem;
         padding: 0 1.5rem;
+      }
+      .wrap.no-sidebar {
+        max-width: 68rem;
       }
       aside {
         flex: 0 0 14rem;
