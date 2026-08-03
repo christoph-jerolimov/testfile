@@ -79,6 +79,19 @@ for (const name of readdirSync(join(here, "cases")).sort()) {
   const caseDir = join(here, "cases", name);
   const expected = parse(readFileSync(join(caseDir, "expected.yaml"), "utf8"));
 
+  // Cases may require tools (e.g. a container engine); missing tools skip
+  // the case instead of failing it, so the suite stays runnable everywhere.
+  const missing = (expected.requires ?? []).filter(
+    (tool) =>
+      spawnSync("sh", ["-c", `command -v ${tool} >/dev/null 2>&1 && ${tool} info >/dev/null 2>&1`])
+        .status !== 0
+  );
+  if (missing.length > 0) {
+    console.log(`  skip    ${name} (requires ${missing.join(", ")})`);
+    ran--;
+    continue;
+  }
+
   // hermetic: every case runs on a fresh copy and may write files
   const work = mkdtempSync(join(tmpdir(), `testfile-conformance-`));
   cpSync(caseDir, work, { recursive: true });

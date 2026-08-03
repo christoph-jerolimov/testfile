@@ -24,7 +24,12 @@ The harness (`run.mjs`) runs every case against the runner under test:
    `expected.yaml`. A test expectation may additionally pin `cached`
    (whether the result came from the runner's result cache) and
    `artifacts` (the number of collected artifact files).
-4. When `expected.yaml` contains a `reruns` list, the runner is invoked
+4. When `expected.yaml` lists `requires` (tool names, e.g. `podman`),
+   the harness checks each with `command -v <tool> && <tool> info`; a
+   missing tool **skips** the case instead of failing it, so the suite
+   stays runnable everywhere while CI (where the tools exist) enforces
+   it.
+5. When `expected.yaml` contains a `reruns` list, the runner is invoked
    again in the **same working copy** for each entry — this pins
    cross-run semantics like result caching. An entry's optional `before`
    shell command mutates the copy first (e.g. touching an input file);

@@ -17,6 +17,9 @@ export const ESSENTIAL_HOST_ENV = [
   "TEMP",
   "LANG",
   "TZ",
+  // Session runtime dir: rootless container engines (podman) and other
+  // tools locate their sockets through it.
+  "XDG_RUNTIME_DIR",
   "SYSTEMROOT",
   "COMSPEC",
   "PATHEXT",
