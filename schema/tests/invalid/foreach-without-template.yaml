@@ -1,0 +1,5 @@
+# foreach requires a template
+version: 0
+test:
+  name: packages
+  foreach: packages/*

@@ -15,8 +15,9 @@ const schemaTests = join(repoRoot, "schema", "tests");
 
 test("all valid schema examples load", () => {
   for (const file of readdirSync(join(schemaTests, "valid"))) {
-    if (file === "include.yaml") {
-      // its include targets exist only in real projects; schema-validate only
+    if (file === "include.yaml" || file === "foreach.yaml") {
+      // their include/foreach targets exist only in real projects;
+      // schema-validate these without expanding them
       const doc: unknown = parse(readFileSync(join(schemaTests, "valid", file), "utf8"));
       validateDoc(doc);
       continue;

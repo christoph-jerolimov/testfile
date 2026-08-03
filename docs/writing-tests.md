@@ -187,6 +187,62 @@ directory, keep their own `env` and `services` (scoped to the embedded
 tests), and their named `ports` merge into the root file's ports.
 Includes nest; cycles and conflicting port definitions are rejected.
 
+## One test per folder or file
+
+`include` embeds a per-package Testfile; `foreach` is for the common case
+where the packages have no Testfile of their own but all run the same
+commands. It expands a glob into one test per match, generated from a
+template:
+
+```yaml
+- name: packages
+  foreach: packages/*        # matches folders
+  template:
+    workdir: ${{ each.path }}
+    sequence:
+      - name: build
+        command: npm run build
+      - name: test
+        command: npm test
+```
+
+That runs build and test in `packages/api`, `packages/ui`, … as a parallel
+group — the same shape a glob `include` produces, without a file per
+package.
+
+Inside the template, `${{ each.* }}` refers to the match:
+
+| Reference | Example for `packages/api` |
+| --------- | -------------------------- |
+| `${{ each.path }}` | `packages/api` (relative to the Testfile) |
+| `${{ each.name }}` | `api` |
+| `${{ each.dir }}` | `packages` |
+| `${{ each.absolute }}` | `/home/me/project/packages/api` |
+
+A template without its own `name` is named after the match, so the run
+tree reads `packages/api`, `packages/ui`.
+
+The long form selects what is matched and what to skip:
+
+```yaml
+- name: fixtures
+  foreach:
+    glob: test/cases/*
+    folder: false          # default true
+    file: true             # default false
+    ignore:
+      - test/cases/broken  # exact match ...
+      - "**/*.tmp"         # ... or a glob
+  template:
+    name: case ${{ each.name }}
+    command: ./run-case.sh ${{ each.path }}
+```
+
+Matches are sorted alphabetically, so the generated suite is stable.
+Generated tests are ordinary tests: they can carry tags, services,
+`inputs`, or contain another `foreach`. A glob that matches nothing is an
+error — that is nearly always a typo rather than an empty package set.
+
 ## Result caching
 
 Declare what a test depends on, and unchanged inputs skip the test on the

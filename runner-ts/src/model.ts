@@ -25,6 +25,17 @@ export interface TestfileDoc {
 // YAML; matrix.ts separates them again.
 export type MatrixDef = Record<string, Scalar[] | Record<string, Scalar>[]>;
 
+// Generating one test per matching path from a template.
+export interface ForeachDef {
+  // Glob relative to the Testfile, e.g. "packages/*" - matches folders by
+  // default, files when `file` is true.
+  glob: string;
+  folder?: boolean;
+  file?: boolean;
+  // Glob patterns of matches to skip.
+  ignore?: string[];
+}
+
 export interface TestDef {
   name?: string;
   description?: string;
@@ -45,6 +56,11 @@ export interface TestDef {
   inputs?: string[];
   artifacts?: string[];
   matrix?: MatrixDef;
+  // Generates one test per matching path from `template`.
+  foreach?: ForeachDef | string;
+  // The test generated per `foreach` match; ${{ each.* }} references the
+  // match (path, name, dir, absolute).
+  template?: TestDef;
   command?: string;
   script?: string;
   shell?: string;

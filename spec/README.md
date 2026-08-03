@@ -76,6 +76,7 @@ A test is an object with **exactly one** of the following variant fields:
 | `script`   | string        | A multi-line shell script, executed with `sh -e`. The test passes iff it exits with code 0. |
 | `sequence` | array of test | Children run one after another. The first failure stops the sequence and fails it, unless the failing child sets `continueOnError`. |
 | `parallel` | array of test | Children run concurrently. The group fails if any child fails. |
+| `foreach`  | string/object | Glob (relative to this Testfile, not templated) expanded into one test per matching path, generated from `template`, see [Foreach](#foreach). |
 | `include`  | string        | Path or glob (relative to this Testfile, not templated) of another Testfile — or a directory containing one — embedded here, see [Includes](#includes). |
 
 Common fields available on every test:
@@ -144,6 +145,27 @@ A false condition skips the test and its nested tests (status `skipped`). This
 does not fail the surrounding sequence/parallel group; a group whose active
 children all skipped is itself `skipped`. A fully skipped run exits with
 code `0`.
+
+## Foreach
+
+`foreach` generates one test per matching path. The string form is the
+glob; the object form adds `folder` (default `true`), `file` (default
+`false`) and `ignore` (glob patterns of matches to skip).
+
+A test with `foreach` must have a `template` test and no other variant
+field. Runners expand it when loading the file:
+
+- matches are collected relative to the Testfile's directory and ordered
+  alphabetically; a glob matching nothing is an error;
+- for every match the template is cloned and `${{ each.path }}`,
+  `${{ each.name }}`, `${{ each.dir }}` and `${{ each.absolute }}` are
+  substituted in every string of the clone. Other templates (`env`,
+  `ports`, `matrix`) stay untouched and are resolved at run time;
+- a clone without a `name` is named after the match;
+- the clones become the test's `parallel` children.
+
+Generated tests are ordinary tests and may themselves contain `include`,
+`matrix` or another `foreach`.
 
 ## Includes
 

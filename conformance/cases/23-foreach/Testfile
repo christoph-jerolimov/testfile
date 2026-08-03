@@ -1,0 +1,22 @@
+version: 0
+test:
+  name: root
+  sequence:
+    # one test per folder, skipping one
+    - name: per-folder
+      foreach:
+        glob: packages/*
+        ignore: [packages/skipme]
+      template:
+        name: ${{ each.name }}
+        workdir: ${{ each.path }}
+        command: 'test -f marker'
+    # ... and one per file when files are requested instead
+    - name: per-file
+      foreach:
+        glob: packages/*
+        folder: false
+        file: true
+      template:
+        name: ${{ each.name }}
+        command: 'test -f ${{ each.path }}'
