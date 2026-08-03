@@ -7,7 +7,15 @@ import { dirname, resolve } from "node:path";
 import { Command } from "commander";
 import { detectFlaky, diffRuns, HISTORY_DIR, RunHistory, type RunRecord } from "./runrecord.js";
 import { findViewerDir, ViewerServer } from "./serve.js";
-import { importRunArchive, packRun, s3Pull, s3Push, syncFromGithub } from "./transfer.js";
+import {
+  githubRunArchives,
+  importRunArchive,
+  packRun,
+  s3List,
+  s3Pull,
+  s3Push,
+  syncFromGithub,
+} from "./transfer.js";
 import { color, formatMs, pad } from "./util.js";
 
 const program = new Command();
@@ -231,10 +239,9 @@ program
     }
   });
 
-// --- testfile-viewer runs: list recorded runs (default command), plus the
-// pack/share/sync subcommands ----------------------------------------------
+// --- testfile-viewer runs: list recorded runs (the default command) -------
 
-const runsCommand = program
+program
   .command("runs", { isDefault: true })
   .argument("[path]", "directory containing a .testfile folder", ".")
   .option("--json [file]", "write the runs as JSON, to a file or (without a value) stdout")
@@ -242,7 +249,7 @@ const runsCommand = program
   .option("--last <n>", "with --flaky: only consider the most recent n runs", (v: string) =>
     Number.parseInt(v, 10)
   )
-  .description("List recorded runs (the default command); subcommands pack, share and sync them")
+  .description("List recorded runs (the default command)")
   .action((path: string, options: { json?: string | boolean; flaky: boolean; last?: number }) => {
     try {
       const history = loadedHistory(path);
@@ -316,7 +323,13 @@ function reportImport(result: { imported: string[]; skipped: string[] }): void {
   }
 }
 
-runsCommand
+// --- testfile-viewer archive: local run archives --------------------------
+
+const archiveCommand = program
+  .command("archive")
+  .description("Pack recorded runs as .tgz archives and import them");
+
+archiveCommand
   .command("pack")
   .argument("[path]", "directory containing a .testfile folder", ".")
   .option("--run <id>", "run to pack, id prefix is enough (default: the latest run)")
@@ -334,9 +347,9 @@ runsCommand
     }
   });
 
-runsCommand
+archiveCommand
   .command("import")
-  .argument("<archive>", '.tgz ("runs pack") or .zip (a GitHub run artifact)')
+  .argument("<archive>", '.tgz ("archive pack") or .zip (a GitHub run artifact)')
   .argument("[path]", "directory containing a .testfile folder", ".")
   .description("Import a packed run into the local history")
   .action((archive: string, path: string) => {
@@ -347,9 +360,15 @@ runsCommand
     }
   });
 
-runsCommand
+// --- testfile-viewer s3: share runs via an S3 bucket ----------------------
+
+const s3Command = program
+  .command("s3")
+  .description("Share runs via an S3 bucket (uses the aws CLI)");
+
+s3Command
   .command("push")
-  .argument("<s3-prefix>", "s3://bucket/prefix to upload to (uses the aws CLI)")
+  .argument("<s3-prefix>", "s3://bucket/prefix to upload to")
   .argument("[path]", "directory containing a .testfile folder", ".")
   .option("--run <id>", "run to push, id prefix is enough (default: the latest run)")
   .description("Pack a recorded run and upload it to S3")
@@ -364,9 +383,9 @@ runsCommand
     }
   });
 
-runsCommand
+s3Command
   .command("pull")
-  .argument("<s3-prefix>", "s3://bucket/prefix to download from (uses the aws CLI)")
+  .argument("<s3-prefix>", "s3://bucket/prefix to download from")
   .argument("[path]", "directory containing a .testfile folder", ".")
   .option("--run <id>", "exact run id to pull (default: the newest archive)")
   .description("Download a run archive from S3 into the local history")
@@ -378,30 +397,62 @@ runsCommand
     }
   });
 
-runsCommand
-  .command("sync")
-  .argument("<owner/repo>", "GitHub repository whose workflow runs to sync from")
-  .argument("[path]", "directory containing a .testfile folder", ".")
-  .option(
-    "--latest <n>",
-    "number of recent workflow runs to consider",
-    (value: string) => Number.parseInt(value, 10),
-    5
-  )
-  .option("--artifact <name>", "artifact name the action uploads", "testfile-run")
-  .description("Download the run artifacts of recent GitHub Actions runs (needs GITHUB_TOKEN)")
+s3Command
+  .command("list")
+  .argument("<s3-prefix>", "s3://bucket/prefix to list")
+  .description("List the run archives available under an S3 prefix (newest first)")
+  .action((prefix: string) => {
+    try {
+      const names = s3List(prefix);
+      if (names.length === 0) {
+        console.log(color(90, `no run archives under ${prefix}`));
+        return;
+      }
+      for (const name of names) console.log(name);
+      console.log(color(90, `\npull one with: testfile-viewer s3 pull ${prefix} --run <id>`));
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
+
+// --- testfile-viewer github: run artifacts of GitHub Actions runs ---------
+
+const githubCommand = program
+  .command("github")
+  .description("Bring run artifacts of GitHub Actions runs into the local history (needs GITHUB_TOKEN)");
+
+function githubToken(): string {
+  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+  if (!token) throw new Error("set GITHUB_TOKEN (or GH_TOKEN) to access workflow artifacts");
+  return token;
+}
+
+function addGithubOptions(command: ReturnType<Command["command"]>): ReturnType<Command["command"]> {
+  return command
+    .option(
+      "--latest <n>",
+      "number of recent workflow runs to consider",
+      (value: string) => Number.parseInt(value, 10),
+      5
+    )
+    .option("--artifact <name>", "artifact name the action uploads", "testfile-run");
+}
+
+addGithubOptions(
+  githubCommand
+    .command("sync")
+    .argument("<owner/repo>", "GitHub repository whose workflow runs to sync from")
+    .argument("[path]", "directory containing a .testfile folder", ".")
+    .description("Download the run artifacts of recent workflow runs and import them")
+)
   .action(async (repo: string, path: string, options: { latest: number; artifact: string }) => {
     try {
       if (!(options.latest >= 1)) throw new Error("--latest must be a positive integer");
-      const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-      if (!token) {
-        throw new Error("set GITHUB_TOKEN (or GH_TOKEN) to download workflow artifacts");
-      }
       const result = await syncFromGithub(resolveHistoryBase(path), {
         repo,
         latest: options.latest,
         artifact: options.artifact,
-        token,
+        token: githubToken(),
       });
       if (result.archives === 0) {
         console.log(
@@ -409,6 +460,43 @@ runsCommand
         );
       }
       reportImport(result);
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
+
+addGithubOptions(
+  githubCommand
+    .command("list")
+    .argument("<owner/repo>", "GitHub repository whose workflow runs to list")
+    .description("List the run artifacts available in recent workflow runs")
+)
+  .action(async (repo: string, options: { latest: number; artifact: string }) => {
+    try {
+      if (!(options.latest >= 1)) throw new Error("--latest must be a positive integer");
+      const archives = await githubRunArchives({
+        repo,
+        latest: options.latest,
+        artifact: options.artifact,
+        token: githubToken(),
+      });
+      if (archives.length === 0) {
+        console.log(
+          color(90, `no "${options.artifact}" artifacts in the last ${options.latest} workflow runs`)
+        );
+        return;
+      }
+      const rows = archives.map((archive) => [
+        String(archive.workflowRun),
+        archive.workflowName || "-",
+        archive.createdAt ? archive.createdAt.replace("T", " ").slice(0, 19) : "-",
+        archive.sizeBytes !== undefined ? `${Math.max(1, Math.round(archive.sizeBytes / 1024))} KiB` : "-",
+      ]);
+      const header = ["WORKFLOW RUN", "WORKFLOW", "CREATED", "SIZE"];
+      const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
+      console.log(color(1, header.map((h, i) => pad(h, widths[i])).join("  ")));
+      for (const row of rows) console.log(row.map((cell, i) => pad(cell, widths[i])).join("  "));
+      console.log(color(90, `\nimport them with: testfile-viewer github sync ${repo}`));
     } catch (err) {
       commandFailed(err);
     }

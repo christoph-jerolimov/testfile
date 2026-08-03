@@ -117,7 +117,9 @@ running without a command is the same as `testfile-viewer runs`.
 ### `testfile-viewer runs [path]`
 
 List the recorded runs as a table, newest first (the default command).
-Sharing subcommands are listed [below](#testfile-viewer-runs-subcommands).
+Sharing lives under its own commands: [`archive`](#testfile-viewer-archive-subcommands),
+[`s3`](#testfile-viewer-s3-subcommands) and
+[`github`](#testfile-viewer-github-subcommands).
 
 | Option | Description |
 | ------ | ----------- |
@@ -159,11 +161,11 @@ the recorded runs.
 | `--port <n>` | Port to listen on, always bound to `127.0.0.1` only (default: `7357`). |
 | `--name <name>` | Display name shown in the web viewer. |
 
-### `testfile-viewer runs` subcommands
+### `testfile-viewer archive` subcommands
 
-Pack, [share and sync](./cli#sharing-runs) recorded runs.
+Pack recorded runs as local archives and [import](./cli#sharing-runs) them.
 
-#### `runs pack [path]`
+#### `archive pack [path]`
 
 Pack a recorded run as a `.tgz` archive.
 
@@ -172,22 +174,25 @@ Pack a recorded run as a `.tgz` archive.
 | `--run <id>` | Run to pack, id prefix is enough (default: the latest run). |
 | `-o, --output <file>` | Target file (default: `testfile-run-<id>.tgz`). |
 
-#### `runs import <archive> [path]`
+#### `archive import <archive> [path]`
 
 Import a packed run into the local history. `archive` is a `.tgz` (from
-`runs pack`) or a `.zip` (a downloaded GitHub run artifact). Already
+`archive pack`) or a `.zip` (a downloaded GitHub run artifact). Already
 imported run ids are skipped. No options.
 
-#### `runs push <s3-prefix> [path]`
+### `testfile-viewer s3` subcommands
 
-Pack a recorded run and upload it to S3 (`s3://bucket/prefix`, uses the
-`aws` CLI).
+Share runs via an S3 bucket (`s3://bucket/prefix`, uses the `aws` CLI).
+
+#### `s3 push <s3-prefix> [path]`
+
+Pack a recorded run and upload it to S3.
 
 | Option | Description |
 | ------ | ----------- |
 | `--run <id>` | Run to push, id prefix is enough (default: the latest run). |
 
-#### `runs pull <s3-prefix> [path]`
+#### `s3 pull <s3-prefix> [path]`
 
 Download a run archive from S3 into the local history.
 
@@ -195,12 +200,28 @@ Download a run archive from S3 into the local history.
 | ------ | ----------- |
 | `--run <id>` | Exact run id to pull (default: the newest archive). |
 
-#### `runs sync <owner/repo> [path]`
+#### `s3 list <s3-prefix>`
 
-Download the run artifacts of recent GitHub Actions workflow runs into the
-local history (needs `GITHUB_TOKEN` or `GH_TOKEN` with `actions:read`).
+List the run archives available under the prefix, newest first. No
+options.
+
+### `testfile-viewer github` subcommands
+
+Bring the run artifacts of GitHub Actions workflow runs into the local
+history. Both subcommands need `GITHUB_TOKEN` or `GH_TOKEN` (with
+`actions:read`) and take the same options:
 
 | Option | Description |
 | ------ | ----------- |
 | `--latest <n>` | Number of recent workflow runs to consider (default: `5`). |
 | `--artifact <name>` | Artifact name the action uploads (default: `testfile-run`). |
+
+#### `github sync <owner/repo> [path]`
+
+Download the run artifacts of recent workflow runs and import them
+(already imported run ids are skipped).
+
+#### `github list <owner/repo>`
+
+List the run artifacts available in recent workflow runs — workflow run
+id, workflow name, creation time and size — without downloading anything.
