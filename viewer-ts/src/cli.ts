@@ -6,6 +6,7 @@ import { Command } from "commander";
 import { registerArchive } from "./commands/archive.js";
 import { registerDiff } from "./commands/diff.js";
 import { registerGithub } from "./commands/github.js";
+import { registerGitlab } from "./commands/gitlab.js";
 import { registerRun } from "./commands/run.js";
 import { registerRuns } from "./commands/runs.js";
 import { registerS3 } from "./commands/s3.js";
@@ -28,5 +29,6 @@ registerRuns(program);
 registerArchive(program);
 registerS3(program);
 registerGithub(program);
+registerGitlab(program);
 
 await program.parseAsync(process.argv);

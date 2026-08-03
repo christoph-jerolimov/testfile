@@ -79,16 +79,22 @@ function importRunDir(baseDir: string, dir: string, id: string, out: ImportResul
 // directly at the root (run.yaml next to the logs - the layout of a
 // GitHub artifact zip, which wraps the uploaded folder's contents).
 export function importExtracted(baseDir: string, tmp: string, out: ImportResult): void {
-  const rootRecord = readRecordId(join(tmp, "run.yaml"));
-  if (rootRecord !== undefined) {
-    importRunDir(baseDir, tmp, rootRecord, out);
-    return;
-  }
-  for (const entry of readdirSync(tmp, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue;
-    const id = readRecordId(join(tmp, entry.name, "run.yaml"));
-    if (id !== undefined) importRunDir(baseDir, join(tmp, entry.name), id, out);
-  }
+  // Archives nest differently depending on who made them: the run folder
+  // itself (tgz), its contents at the root (GitHub artifacts), or the
+  // declared paths .testfile/runs/<id>/ (GitLab, Jenkins, Buildkite). Walk
+  // until a run.yaml turns up, but not into a run folder's own subfolders.
+  const visit = (dir: string, depth: number): void => {
+    const id = readRecordId(join(dir, "run.yaml"));
+    if (id !== undefined) {
+      importRunDir(baseDir, dir, id, out);
+      return;
+    }
+    if (depth === 0) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) visit(join(dir, entry.name), depth - 1);
+    }
+  };
+  visit(tmp, 4);
 }
 
 // The run id from a run.yaml, or undefined when the file is not a readable

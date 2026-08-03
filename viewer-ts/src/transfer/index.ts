@@ -3,3 +3,4 @@
 export * from "./archive.js";
 export * from "./s3.js";
 export * from "./github.js";
+export * from "./gitlab.js";
