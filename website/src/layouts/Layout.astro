@@ -28,6 +28,8 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
       <a class="brand" href={`${base}/`}><span class="brand-icon">🐙</span>Testfile</a>
       <nav class="top">
         <a href={`${base}/docs/${docs[0].id}`}>Documentation</a>
+      </nav>
+      <nav class="top right">
         <a href="https://github.com/christoph-jerolimov/testfile">GitHub</a>
       </nav>
     </header>
@@ -111,7 +113,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
       header {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 1.75rem;
         padding: 0.75rem 1.5rem;
         border-bottom: 1px solid var(--border);
       }
@@ -127,6 +129,10 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
       nav.top {
         display: flex;
         gap: 1.25rem;
+      }
+      /* everything after the brand sits left; this one is pushed to the end */
+      nav.top.right {
+        margin-left: auto;
       }
       nav.top a {
         color: var(--muted);

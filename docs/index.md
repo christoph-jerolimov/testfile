@@ -10,12 +10,6 @@ A **Testfile** is a YAML file — named `Testfile`, `testfile.yaml` or
 `testfile.yml` — that describes how your project runs its tests, checked into
 the repository next to your code.
 
-> **Status: under review.** The format is currently at `version: 0` and may
-> still change based on feedback. Version 1 is targeted for Q4 2026. Please
-> try it on your project and tell us what works and what doesn't in a
-> [GitHub issue](https://github.com/christoph-jerolimov/testfile/issues) —
-> feedback and contributions are very welcome.
-
 It is built around three ideas:
 
 1. **Tests nest.** The root of the file contains one test. Every test
