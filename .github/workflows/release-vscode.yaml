@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm ci --no-audit --no-fund
       - run: npm test --workspace vscode-extension
       - name: Package the .vsix
         run: npm run package --workspace vscode-extension

@@ -10,7 +10,7 @@ test:
   name: ci
   sequence:
     - name: install
-      command: npm ci
+      command: npm ci --no-audit --no-fund
     - name: checks
       parallel:
         - name: schema
