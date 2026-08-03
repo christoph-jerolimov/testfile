@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import { parse } from "yaml";
+import { expandForeach } from "./foreach.js";
 import type { ServiceDef, TestDef, TestfileDoc } from "./model.js";
 import { defaultName } from "./runsuite.js";
 
@@ -86,6 +87,9 @@ export function validateSemantics(doc: TestfileDoc): void {
     if (def.include !== undefined) {
       errors.push(`${path}: unresolved include - includes are expanded when loading a Testfile from disk`);
     }
+    if (def.foreach !== undefined) {
+      errors.push(`${path}: unresolved foreach - foreach is expanded when loading a Testfile from disk`);
+    }
     if (def.needs?.length && !inParallel) {
       errors.push(`${path}: "needs" is only allowed on children of a parallel group`);
     }
@@ -148,6 +152,11 @@ export function expandIncludes(doc: TestfileDoc, filePath: string): void {
 }
 
 function expandTest(root: TestfileDoc, def: TestDef, baseDir: string, stack: string[]): void {
+  // `foreach` first: it generates tests that may themselves include or
+  // contain another foreach.
+  if (def.foreach !== undefined) {
+    expandForeach(def, baseDir);
+  }
   if (def.include !== undefined) {
     const pattern = def.include;
     const where = `include "${pattern}"`;

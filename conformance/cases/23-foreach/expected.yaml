@@ -1,0 +1,12 @@
+exitCode: 0
+status: passed
+tests:
+  - path: root/per-folder/alpha
+    status: passed
+  - path: root/per-folder/beta
+    status: passed
+  - path: root/per-file/loose.txt
+    status: passed
+absentTests:
+  - root/per-folder/skipme
+  - root/per-folder/loose.txt

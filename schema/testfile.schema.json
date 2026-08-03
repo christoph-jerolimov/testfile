@@ -161,7 +161,7 @@
     },
     "test": {
       "type": "object",
-      "description": "A single test of the suite. Exactly one of 'command', 'script', 'sequence', 'parallel' or 'include' must be set.",
+      "description": "A single test of the suite. Exactly one of 'command', 'script', 'sequence', 'parallel', 'include' or 'foreach' must be set.",
       "additionalProperties": false,
       "properties": {
         "name": {
@@ -274,6 +274,13 @@
         "matrix": {
           "$ref": "#/$defs/matrix"
         },
+        "foreach": {
+          "$ref": "#/$defs/foreach"
+        },
+        "template": {
+          "description": "The test generated per `foreach` match. ${{ each.path }}, ${{ each.name }}, ${{ each.dir }} and ${{ each.absolute }} reference the match.",
+          "$ref": "#/$defs/test"
+        },
         "command": {
           "description": "A single shell command to run. The test passes when the command exits with code 0.",
           "type": "string",
@@ -354,11 +361,22 @@
           "required": [
             "include"
           ]
+        },
+        {
+          "required": [
+            "foreach"
+          ]
         }
       ],
       "dependentRequired": {
         "maxParallel": [
           "parallel"
+        ],
+        "foreach": [
+          "template"
+        ],
+        "template": [
+          "foreach"
         ]
       },
       "dependentSchemas": {
@@ -838,6 +856,45 @@
         "type": "string",
         "minLength": 1
       }
+    },
+    "foreach": {
+      "description": "Generates one test per matching path from `template`: the counterpart of `include` for projects without a per-package Testfile. Matches folders by default; the generated tests form a parallel group. A string is shorthand for {glob: ...}.",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "glob"
+          ],
+          "properties": {
+            "glob": {
+              "description": "Glob relative to the Testfile, e.g. \"packages/*\".",
+              "type": "string",
+              "minLength": 1
+            },
+            "folder": {
+              "description": "Match directories. Default true.",
+              "type": "boolean"
+            },
+            "file": {
+              "description": "Match files. Default false.",
+              "type": "boolean"
+            },
+            "ignore": {
+              "description": "Glob patterns of matches to skip, e.g. [\"packages/legacy\", \"**/fixtures\"].",
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

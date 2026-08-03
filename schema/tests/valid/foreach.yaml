@@ -1,0 +1,8 @@
+version: 0
+test:
+  name: packages
+  foreach: packages/*
+  template:
+    name: ${{ each.name }}
+    workdir: ${{ each.path }}
+    command: npm test
