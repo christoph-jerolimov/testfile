@@ -66,6 +66,7 @@ previews exactly what a filtered `run` would execute.
 | `--failed` | Only tests that failed (or were aborted) in the last recorded run. |
 | `--changed` | Only tests whose `inputs` match files [changed against the base branch](./writing-tests#change-based-selection), plus local changes. |
 | `--changed-since <ref>` | Base branch/ref for `--changed`, e.g. `origin/main` (implies `--changed`). |
+| `--shard <i/n>` | Run only this shard of the selected tests, e.g. `2/4`. Time-balanced from the [run history](./cli#run-history) when it has durations, round-robin otherwise. |
 
 ### `testfile tags [path]`
 

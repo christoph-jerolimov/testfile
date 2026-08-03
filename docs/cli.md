@@ -179,6 +179,37 @@ separately) that carry the tag directly **or inherited from an ancestor** —
 the same semantics `-t` filters with. The count view also reports how many
 tests have no tag at all; the JSON export always includes both numbers.
 
+## Sharding across machines
+
+Large suites split across CI machines with `--shard i/n`: every shard runs
+the same command with a different index and executes its share of the
+selected tests.
+
+```sh
+testfile run --shard 1/4      # on machine 1
+testfile run --shard 2/4      # on machine 2, ...
+```
+
+Each shard computes the same split from the same suite, so no coordination
+between machines is needed. When the local [run history](#run-history)
+knows how long tests took, the split is **time-balanced** (longest test
+first into the emptiest shard) instead of by count:
+
+```
+shard 1/3: 1 of 6 tests, ~611ms of recorded work
+shard 3/3: 3 of 6 tests, ~48ms of recorded work
+```
+
+On a fresh machine without history — the usual CI case — the tests are
+dealt round-robin in suite order. To get balancing there, restore
+`.testfile/` from a cache or import a previous run first
+([`archive import`](#sharing-runs), [`github sync`](./github-action#bringing-ci-runs-home)).
+
+Sharding composes with the filters: `-t slow --shard 2/3` shards only the
+slow tests. Each shard records its own run, so publish them under distinct
+artifact names and merge locally by importing all of them — the viewer
+shows them as separate runs of the same suite.
+
 ## Changes
 
 `testfile changes` shows exactly what `--changed` selects tests from: the
