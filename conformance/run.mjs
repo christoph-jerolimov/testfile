@@ -21,6 +21,58 @@ const filter = process.argv[2];
 let failures = 0;
 let ran = 0;
 
+// One runner invocation; returns { status, report } and appends problems.
+function invoke(work, resultFile, env, expected, problems, label) {
+  rmSync(resultFile, { force: true });
+  const proc = spawnSync("sh", ["-c", `${runner} run "${work}" --reporter json --output "${resultFile}"`], {
+    encoding: "utf8",
+    env: { ...process.env, ...(env ?? {}) },
+    timeout: 120_000,
+  });
+  if (proc.status !== expected.exitCode) {
+    problems.push(`${label}exit code: expected ${expected.exitCode}, got ${proc.status}`);
+  }
+  let report;
+  if (existsSync(resultFile)) {
+    report = JSON.parse(readFileSync(resultFile, "utf8"));
+  } else {
+    problems.push(`${label}no JSON report was written`);
+  }
+  if (report) checkReport(report, expected, problems, label);
+  return proc;
+}
+
+function checkReport(report, expected, problems, label) {
+  if (report.status !== expected.status) {
+    problems.push(`${label}run status: expected ${expected.status}, got ${report.status}`);
+  }
+  for (const want of expected.tests ?? []) {
+    const got = report.tests.find((t) => t.path === want.path);
+    if (!got) {
+      problems.push(`${label}missing test "${want.path}" in the report`);
+      continue;
+    }
+    if (got.status !== want.status) {
+      problems.push(`${label}test "${want.path}": expected ${want.status}, got ${got.status}`);
+    }
+    if (want.cached !== undefined && Boolean(got.cached) !== want.cached) {
+      problems.push(
+        `${label}test "${want.path}": expected cached=${want.cached}, got ${Boolean(got.cached)}`
+      );
+    }
+    if (want.artifacts !== undefined && (got.artifacts?.length ?? 0) !== want.artifacts) {
+      problems.push(
+        `${label}test "${want.path}": expected ${want.artifacts} artifacts, got ${got.artifacts?.length ?? 0}`
+      );
+    }
+  }
+  for (const path of expected.absentTests ?? []) {
+    if (report.tests.some((t) => t.path === path)) {
+      problems.push(`${label}test "${path}" must not appear in the report`);
+    }
+  }
+}
+
 for (const name of readdirSync(join(here, "cases")).sort()) {
   if (filter && !name.includes(filter)) continue;
   ran++;
@@ -33,39 +85,19 @@ for (const name of readdirSync(join(here, "cases")).sort()) {
   rmSync(join(work, "expected.yaml"));
   const resultFile = join(work, "conformance-result.json");
 
-  const proc = spawnSync("sh", ["-c", `${runner} run "${work}" --reporter json --output "${resultFile}"`], {
-    encoding: "utf8",
-    env: { ...process.env, ...(expected.env ?? {}) },
-    timeout: 120_000,
-  });
-
   const problems = [];
-  if (proc.status !== expected.exitCode) {
-    problems.push(`exit code: expected ${expected.exitCode}, got ${proc.status}`);
-  }
-  let report;
-  if (existsSync(resultFile)) {
-    report = JSON.parse(readFileSync(resultFile, "utf8"));
-  } else {
-    problems.push("no JSON report was written");
-  }
-  if (report) {
-    if (report.status !== expected.status) {
-      problems.push(`run status: expected ${expected.status}, got ${report.status}`);
+  let lastProc = invoke(work, resultFile, expected.env, expected, problems, "");
+
+  // Re-runs in the same working copy pin cross-run semantics like result
+  // caching. An optional `before` shell command mutates the copy first.
+  (expected.reruns ?? []).forEach((rerun, index) => {
+    const label = `rerun ${index + 1}: `;
+    if (rerun.before) {
+      const prep = spawnSync("sh", ["-c", rerun.before], { cwd: work, encoding: "utf8" });
+      if (prep.status !== 0) problems.push(`${label}before-command failed: ${prep.stderr}`);
     }
-    for (const want of expected.tests ?? []) {
-      const got = report.tests.find((t) => t.path === want.path);
-      if (!got) problems.push(`missing test "${want.path}" in the report`);
-      else if (got.status !== want.status) {
-        problems.push(`test "${want.path}": expected ${want.status}, got ${got.status}`);
-      }
-    }
-    for (const path of expected.absentTests ?? []) {
-      if (report.tests.some((t) => t.path === path)) {
-        problems.push(`test "${path}" must not appear in the report`);
-      }
-    }
-  }
+    lastProc = invoke(work, resultFile, expected.env, rerun, problems, label);
+  });
 
   if (problems.length === 0) {
     console.log(`  ok      ${name}`);
@@ -73,8 +105,8 @@ for (const name of readdirSync(join(here, "cases")).sort()) {
     failures++;
     console.error(`  FAILED  ${name}`);
     for (const problem of problems) console.error(`          ${problem}`);
-    if (proc.stdout) console.error(indent(tail(proc.stdout)));
-    if (proc.stderr) console.error(indent(tail(proc.stderr)));
+    if (lastProc.stdout) console.error(indent(tail(lastProc.stdout)));
+    if (lastProc.stderr) console.error(indent(tail(lastProc.stderr)));
   }
   rmSync(work, { recursive: true, force: true });
 }

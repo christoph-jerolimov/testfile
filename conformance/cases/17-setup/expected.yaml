@@ -1,0 +1,8 @@
+# setup runs before the test's body (the body sees its side effects); a
+# failing setup fails the test, skips the body and still runs teardown.
+exitCode: 0
+status: passed
+tests:
+  - { path: root/ok, status: passed }
+  - { path: root/bad-setup, status: failed }
+  - { path: root/after, status: passed }

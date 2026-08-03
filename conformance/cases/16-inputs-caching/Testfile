@@ -1,0 +1,9 @@
+version: 0
+test:
+  name: root
+  sequence:
+    - name: cachable
+      inputs: [data/*.txt]
+      command: echo computing
+    - name: always
+      command: echo always
