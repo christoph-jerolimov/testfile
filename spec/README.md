@@ -376,6 +376,19 @@ Precedence, lowest to highest: inherited environment < forwarded host
 variables < env file(s) < explicit `env` of the same level. Top-level `envFile` paths resolve relative to the
 Testfile; test-level paths resolve relative to the test's working directory.
 
+### Secrets
+
+`secrets` (top level and per test) names environment variables that hold
+secrets. Runners must
+
+- take their values from the host environment even though the test
+  environment is otherwise isolated (CI secret stores hand secrets over as
+  environment variables), unless the surrounding Testfile environment
+  already defines the name, and
+- treat those values as secrets: masked in recorded logs and never written
+  verbatim into a run record. A value assigned to a secret name in `env`
+  is secret as well.
+
 Values loaded from env files are treated as **secrets**: runners must mask
 them in recorded logs (and never write them into run records). Note that the
 live terminal output is not masked.

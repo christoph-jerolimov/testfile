@@ -95,6 +95,40 @@ Values loaded from env files are treated as **secrets**: they are masked as
 `***` in the logs recorded under `.testfile/` and never written into
 the recorded `run.yaml` — so tokens and passwords don't end up in your run history.
 
+### Secrets from the CI environment
+
+CI systems hand secrets over as environment variables, and the test
+environment is otherwise [isolated](#an-isolated-environment) from the
+host. `secrets` names the variables that carry them — they are forwarded
+*and* masked:
+
+```yaml
+version: 0
+secrets: [NPM_TOKEN, DATABASE_PASSWORD]   # for the whole run
+test:
+  sequence:
+    - name: publish dry-run
+      secrets: [REGISTRY_TOKEN]           # ... or only for one test
+      command: npm publish --dry-run
+```
+
+That covers GitHub Actions (`env: {NPM_TOKEN: ${{ secrets.NPM_TOKEN }}}` in
+the workflow), GitLab CI variables, Jenkins credentials and Vault-style
+tools that export into the environment — anything that ends up as an env
+var works, no per-provider integration needed.
+
+A value assigned to a secret name inside `env` is treated as secret too,
+so a derived value stays masked:
+
+```yaml
+secrets: [DATABASE_URL]
+env:
+  DATABASE_URL: postgres://user:${{ env.DATABASE_PASSWORD }}@localhost/app
+```
+
+Masking applies to recorded logs and to the recorded `env`; the live
+terminal output is not masked, exactly as with env files.
+
 ## Named ports
 
 Hard-coded ports make test runs collide — with each other and with whatever

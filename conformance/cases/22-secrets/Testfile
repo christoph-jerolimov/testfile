@@ -1,0 +1,6 @@
+version: 0
+secrets: [CONFORMANCE_SECRET]
+test:
+  name: root
+  # the secret reaches the test although the environment is isolated
+  command: 'test "$CONFORMANCE_SECRET" = "top-secret-value"'

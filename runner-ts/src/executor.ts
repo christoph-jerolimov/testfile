@@ -123,7 +123,13 @@ export class Runner extends EventEmitter {
       const bootstrap: Scopes = { env: baseEnv, ports: this.ports, matrix: {} };
       const fileEnv = loadEnvFiles(this.doc.envFile, this.baseDir, bootstrap, "Testfile", this.secrets);
       const withFiles = { ...baseEnv, ...fileEnv };
+      // Secrets named at document level come from the host (that is how CI
+      // secret stores hand them over) and are registered for masking.
+      const docSecrets = collectSecrets(this.doc.secrets, withFiles, this.secrets);
+      Object.assign(withFiles, docSecrets);
       this.docEnv = resolveEnvMap(this.doc.env, { ...bootstrap, env: withFiles }, "Testfile");
+      // ... and a value assigned to a secret name in `env` is secret too
+      registerSecretValues(this.doc.secrets, this.docEnv, this.secrets);
       const scopes: Scopes = { ...bootstrap, env: { ...withFiles, ...this.docEnv } };
       await this.startServices(this.doc.services, scopes, this.baseDir, started, this.abort);
       await this.runTest(this.root, scopes, this.baseDir, this.abort.signal);
@@ -183,11 +189,14 @@ export class Runner extends EventEmitter {
         const withMatrix: Scopes = { ...scopes, matrix };
         // precedence: parent env < forwarded host vars < this test's own env
         const forwarded = forwardedEnv(test.def.forwardEnv);
+        const testSecrets = collectSecrets(test.def.secrets, withMatrix.env, this.secrets);
         const env = {
           ...withMatrix.env,
           ...forwarded,
+          ...testSecrets,
           ...resolveEnvMap(test.def.env, withMatrix, where),
         };
+        registerSecretValues(test.def.secrets, env, this.secrets);
         for (const [key, value] of Object.entries(test.matrix)) {
           env[`TESTFILE_MATRIX_${key.toUpperCase()}`] = value;
         }
@@ -766,6 +775,36 @@ function nearestContainer(test: RunTest): TestContainerDef | undefined {
     if (node.def.container) return node.def.container;
   }
   return undefined;
+}
+
+// Secret variables are taken from the host unless the surrounding
+// environment already defines them; their values are registered for
+// masking in recorded logs and records.
+function collectSecrets(
+  names: readonly string[] | undefined,
+  inherited: Record<string, string>,
+  sink: Set<string>
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const name of names ?? []) {
+    const value = inherited[name] ?? process.env[name];
+    if (value === undefined || value === "") continue;
+    out[name] = value;
+    sink.add(value);
+  }
+  return out;
+}
+
+// Values a Testfile assigned to a secret name (e.g. env: {TOKEN: ...}).
+function registerSecretValues(
+  names: readonly string[] | undefined,
+  env: Record<string, string>,
+  sink: Set<string>
+): void {
+  for (const name of names ?? []) {
+    const value = env[name];
+    if (value) sink.add(value);
+  }
 }
 
 function withNote(note: string | undefined, reason: string): string {

@@ -12,6 +12,10 @@ export interface TestfileDoc {
   // Host-env variable names/patterns forwarded into the test environment
   // (which is otherwise isolated from the host), e.g. "GITHUB_*" or "*".
   forwardEnv?: string[];
+  // Names of environment variables holding secrets: forwarded from the
+  // host (that is how CI secret stores hand them over) and masked in
+  // recorded logs and run records.
+  secrets?: string[];
   ports?: Record<string, number | "random">;
   services?: Record<string, ServiceDef>;
   test: TestDef;
@@ -29,6 +33,8 @@ export interface TestDef {
   env?: EnvMap;
   envFile?: string | string[];
   forwardEnv?: string[];
+  // Secret environment variables for this test and its nested tests.
+  secrets?: string[];
   workdir?: string;
   timeout?: Duration;
   continueOnError?: boolean;
