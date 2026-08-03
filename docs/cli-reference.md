@@ -97,8 +97,15 @@ while writing). No options.
 
 ### `testfile init [path]`
 
-Create a starter Testfile in the given directory (derived from
-`package.json` scripts when present). No options.
+Create a starter Testfile in the given directory, derived from what the
+project already has: `package.json` scripts plus
+[imported](./getting-started#1-create-a-testfile) docker-compose services,
+GitHub workflow steps and Make/Task/just targets.
+
+| Option | Description |
+| ------ | ----------- |
+| `--from <file>` | Import this file instead of the auto-detected ones: a docker-compose file, a GitHub workflow, a `Makefile`, a `Taskfile` or a `justfile`. Repeatable. |
+| `--no-detect` | Do not look for importable files automatically. |
 
 ### `testfile completion <shell>`
 

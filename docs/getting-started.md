@@ -8,9 +8,9 @@ description: Write your first Testfile and run it.
 
 ## 1. Create a Testfile
 
-The quickest start is `testfile init`: it inspects your `package.json`
-scripts and writes a matching starter Testfile. Or create a file called
-`Testfile` (or `testfile.yaml`) in the root of your project yourself:
+The quickest start is `testfile init`: it converts what your project
+already has into a starter Testfile. Or create a file called `Testfile`
+(or `testfile.yaml`) in the root of your project yourself:
 
 ```yaml
 version: 0
@@ -23,6 +23,29 @@ test:
 Every Testfile needs a `version` (currently always `0` while the format is
 under review — version 1 is targeted for Q4 2026) and exactly one root
 `test`.
+
+### Importing what you have
+
+`testfile init` looks for files that already describe your setup and
+converts them, so the first version is rarely empty:
+
+| Source | Becomes |
+| ------ | ------- |
+| `package.json` scripts | tests for `lint`, `typecheck`, `test`, `test:*`, `build` |
+| `compose.yaml` / `docker-compose.yaml` | `services` — image, ports (as [random ports](./env-and-ports#named-ports)), env, volumes, `healthcheck` → [`ready`](./services#readiness-checks), `depends_on` → [`needs`](./services#service-dependencies) |
+| `.github/workflows/*.yaml` | one test per job, its `run:` steps as a sequence (`uses:` steps are dropped) |
+| `Makefile`, `Taskfile.yaml`, `justfile` | tests for targets that look like checks (`test`, `lint`, `check`, `e2e`, …) |
+
+```sh
+testfile init                          # auto-detect all of the above
+testfile init --from docker-compose.yml   # just this file
+testfile init --no-detect              # package.json scripts only
+```
+
+The conversion is deliberately best-effort: anything that could not be
+translated — a service without a health check, dropped action steps, a
+build matrix — is written into the file as a `# note:` comment and printed,
+so you know where to look. Read the result before trusting it.
 
 ## 2. Run it
 
