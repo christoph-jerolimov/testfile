@@ -27,6 +27,8 @@ against your repository's Testfile. The job fails when tests fail.
 | ----- | ------- | ----------- |
 | `path` | `.` | Testfile or directory containing one. |
 | `filter` / `filter-name` / `filter-tags` / `filter-matrix` | – | Same as the `-f`/`-n`/`-t`/`-m` [CLI filters](./cli#filtering). |
+| `changed` | `false` | Run only tests whose `inputs` match files [changed against the base branch](./writing-tests#change-based-selection) (`--changed`). |
+| `changed-since` | PR target branch | Base branch/ref for `changed`. Defaults to `github.base_ref`, so on pull requests the diff is against the PR's target branch. |
 | `fail-fast` | `false` | Abort the whole run at the first failure. |
 | `max-parallel` | – | Global cap on concurrently running tests. |
 | `reporter` / `output` | – | Write [machine-readable results](./cli#machine-readable-reports) (`junit` or `json`). |
@@ -52,6 +54,24 @@ Only the fast tests on pull requests, everything nightly:
   with:
     filter-tags: nightly
 ```
+
+Only the tests a pull request could have affected, diffed against the PR's
+target branch (note `fetch-depth: 0` — change detection needs the base
+branch in the checkout, which a shallow single-commit clone doesn't have):
+
+```yaml
+- uses: actions/checkout@v7
+  with:
+    fetch-depth: 0
+- uses: christoph-jerolimov/testfile@main
+  with:
+    changed: true
+```
+
+Tests without [`inputs`](./writing-tests#result-caching) always run, so a
+suite adopts this incrementally: declare `inputs` on the expensive tests
+first. Each selected test's log and `run.yaml` record why it ran — which
+input pattern matched how many changed files.
 
 JUnit results for your test-report tooling:
 

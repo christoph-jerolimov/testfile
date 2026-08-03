@@ -22,6 +22,9 @@ export interface RunTest {
   status: Status;
   // True when the result was reused from the cache (inputs unchanged).
   cached?: boolean;
+  // For tests with `inputs`: why the test ran or was served from the cache
+  // (cache hit/miss detail, --changed selection); recorded in run.yaml.
+  reason?: string;
   // The working directory the test actually ran in; used to collect artifacts.
   resolvedCwd?: string;
   // Why a test was skipped: a false `if` condition does not block dependents,
@@ -120,6 +123,7 @@ export function buildRunSuite(doc: TestfileDoc): RunTest {
 export function resetTest(test: RunTest): void {
   test.status = "pending";
   test.cached = undefined;
+  test.reason = undefined;
   test.skipReason = undefined;
   test.resolvedCwd = undefined;
   test.timedOut = false;

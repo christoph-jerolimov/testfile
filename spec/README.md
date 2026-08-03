@@ -393,9 +393,20 @@ and reuse its previous result, under these rules:
   `--no-cache`, which still refreshes stored results).
 
 Cache storage is runner-specific (the reference runner uses
-`.testfile/cache.json`). Caching is optional runner behavior: a runner that
-never caches — like one executing the conformance suite — is fully
-conforming.
+`.testfile/cache.json`) and **local to one machine**: reuse only happens
+when the same suite runs again on the same working copy. Distributing or
+restoring a cache across machines (e.g. onto CI runners) is outside this
+spec; runners that support it must still apply the reuse rules above.
+Caching is optional runner behavior: a runner that never caches — like one
+executing the conformance suite — is fully conforming.
+
+Runners may additionally use the `inputs` declarations for **change-based
+test selection** — e.g. the reference runner's `--changed` runs only tests
+whose inputs match a file that differs from a git base branch. That is a
+selection feature, not result reuse: deselected tests are simply not part
+of the run, and no cached result is reported for them. Runners that record
+runs should state *why* an `inputs` test ran or was reused (the reference
+runner's `reason` field, see the [result format](./RESULTS.md)).
 
 ## Exit code
 

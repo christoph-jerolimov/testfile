@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { existsSync, statSync, type FSWatcher } from "node:fs";
 import { dirname, resolve } from "node:path";
+import { writeFileSync } from "node:fs";
 import { Command } from "commander";
-import { changedTestIds, predictCacheHits } from "./cache-predict.js";
+import { gitChangedSelection, predictCacheHits } from "./cache-predict.js";
 import { generateCompletion, type CompletionModel } from "./completion.js";
+import { collectGitChanges } from "./gitchanges.js";
 import {
   filterByLastFailed,
   hasFilters,
@@ -34,24 +36,40 @@ interface FilterFlags {
   filterMatrix: string[];
   failed: boolean;
   changed: boolean;
+  changedSince?: string;
 }
 
-// --changed narrows a resolved selection to the tests that would actually
-// execute (predicted cache misses).
+// --changed narrows a resolved selection to the tests whose `inputs` match
+// a file changed against the base branch (committed or dirty in the working
+// copy); tests without `inputs` always count as changed. Needs a git
+// checkout - see the `changes` command to inspect what it selects from.
 async function applyChanged(
   session: Session,
   filtered: ReturnType<typeof resolveFilters>,
-  changed: boolean
+  flags: Pick<FilterFlags, "changed" | "changedSince">
 ): Promise<ReturnType<typeof resolveFilters>> {
-  if (!changed) return filtered;
-  const tests = await changedTestIds(session, filtered.active);
-  if (tests.length === 0) {
-    throw new Error("nothing changed — every selected test would be served from the cache");
+  if (!flags.changed && flags.changedSince === undefined) return filtered;
+  const changes = collectGitChanges(session.baseDir, flags.changedSince);
+  const { ids, notes } = await gitChangedSelection(session, filtered.active, changes);
+  if (ids.length === 0) {
+    throw new Error(
+      `nothing to run: no selected test has inputs matching the ` +
+        `${changes.files.length} changed file${changes.files.length === 1 ? "" : "s"} ` +
+        `against ${changes.baseRef} (see: testfile changes)`
+    );
   }
+  session.selectionNotes = notes;
+  console.log(
+    color(
+      90,
+      `--changed: ${ids.length} of ${filtered.testCount} tests selected ` +
+        `(${changes.files.length} files changed against ${changes.baseRef})`
+    )
+  );
   return {
-    selection: tests,
-    active: session.activeSetFor(tests),
-    testCount: tests.length,
+    selection: ids,
+    active: session.activeSetFor(ids),
+    testCount: ids.length,
     filtered: true,
   };
 }
@@ -116,7 +134,8 @@ function addFilterOptions(command: Command): Command {
     .option("-t, --filter-tags <tags>", "only tests tagged with any of these comma-separated tags (repeatable)", collect, [])
     .option("-m, --filter-matrix <key:value>", "only matrix instances with this value (repeatable)", collect, [])
     .option("--failed", "only tests that failed in the last recorded run", false)
-    .option("--changed", "only tests whose inputs changed (predicted cache misses)", false);
+    .option("--changed", "only tests whose inputs match files changed against the base branch (plus local changes)", false)
+    .option("--changed-since <ref>", "base branch/ref for --changed, e.g. origin/main (implies --changed)");
 }
 
 program
@@ -166,7 +185,7 @@ addFilterOptions(
       const session = new Session(doc, dirname(file));
       let filtered = resolveFilters(session, flags);
       if (filtered.testCount === 0) throw new Error("no tests match the given filters");
-      filtered = await applyChanged(session, filtered, flags.changed);
+      filtered = await applyChanged(session, filtered, flags);
       printSuite(session, filtered.active);
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
@@ -230,7 +249,7 @@ addFilterOptions(
       });
       filtered = resolveFilters(session, options);
       if (filtered.testCount === 0) throw new Error("no tests match the given filters");
-      filtered = await applyChanged(session, filtered, options.changed);
+      filtered = await applyChanged(session, filtered, options);
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;
@@ -319,6 +338,56 @@ addFilterOptions(
         });
         console.log(color(36, "watching for changes... (Ctrl+C to exit)"));
       }
+    }
+  });
+
+program
+  .command("changes")
+  .argument("[path]", "directory (or Testfile) whose git repository to inspect", ".")
+  .option("--changed-since <ref>", "base branch/ref to diff against (default: auto-detected)")
+  .option("--files", "print only the file paths, one per line", false)
+  .option("--json [file]", "write the changes as JSON, to a file or (without a value) stdout")
+  .description("Show the files changed against the base branch - what --changed selects tests from")
+  .action((path: string, options: { changedSince?: string; files: boolean; json?: string | boolean }) => {
+    try {
+      const target = resolve(path);
+      const dir = existsSync(target) && statSync(target).isDirectory() ? target : dirname(target);
+      const changes = collectGitChanges(dir, options.changedSince);
+
+      if (options.json !== undefined && options.json !== false) {
+        const json = `${JSON.stringify(changes, null, 2)}\n`;
+        if (typeof options.json === "string") {
+          writeFileSync(options.json, json);
+          console.log(color(90, `changes written to ${options.json}`));
+        } else {
+          process.stdout.write(json);
+        }
+        return;
+      }
+      if (options.files) {
+        for (const file of changes.files) console.log(file.path);
+        return;
+      }
+
+      console.log(`base:  ${changes.baseRef} (${changes.baseCommit.slice(0, 9)})`);
+      console.log(`head:  ${changes.headCommit?.slice(0, 9) ?? "(no commits yet)"}`);
+      console.log(`root:  ${changes.gitRoot}`);
+      console.log("");
+      if (changes.files.length === 0) {
+        console.log(color(90, "no changes"));
+        return;
+      }
+      const width = Math.max(...changes.files.map((file) => file.path.length), 4);
+      console.log(color(90, `${"file".padEnd(width)}  source  status`));
+      for (const file of changes.files) {
+        console.log(`${file.path.padEnd(width)}  ${file.source.padEnd(6)}  ${file.status}`);
+      }
+      console.log(
+        color(90, `\n${changes.files.length} changed file${changes.files.length === 1 ? "" : "s"}`)
+      );
+    } catch (err) {
+      console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
+      process.exitCode = 1;
     }
   });
 

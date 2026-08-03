@@ -161,6 +161,44 @@ forces execution (and refreshes the cache); combined with
 [watch mode](./cli#watch-mode) caching makes the edit-test loop touch only
 what actually changed.
 
+Every test with `inputs` states in its log — and as `reason` in the
+recorded `run.yaml` — why it ran or didn't: a cache hit, a first run, or
+which input pattern saw how many changed files (named individually for
+small sets).
+
+**The cache is local to one machine.** It lives in `.testfile/cache.json`
+next to the run history, keyed by file hashes on that machine — it only
+kicks in when the same suite runs twice on the same checkout. A CI runner
+that starts from a fresh clone has an empty cache, so caching does **not**
+speed up CI unless you persist and restore `.testfile/cache.json` yourself
+(a shared volume, `actions/cache`, or committing it — not recommended). For
+CI, use [change-based selection](#change-based-selection) instead: it needs
+only the git history, which every CI checkout already has.
+
+## Change-based selection
+
+`testfile run --changed` uses git instead of a warm cache to decide what to
+run: it collects every file that differs between a **base branch** and the
+current commit, plus everything changed locally (staged, unstaged and
+untracked), and selects the tests whose `inputs` patterns match at least
+one of those files. Tests without `inputs` always run — the runner cannot
+know what they depend on.
+
+- The base branch defaults to the remote's default branch (`origin/HEAD`,
+  falling back to `origin/main`, `origin/master`, `main`, `master`);
+  `--changed-since <ref>` picks another one, e.g. `--changed-since origin/release-2.0`.
+- The diff starts at the merge base (fork point), so commits that are only
+  on the base branch don't count as your changes.
+- Selected tests log — and record in `run.yaml` — which pattern matched how
+  many changed files.
+- `testfile changes` shows the exact file list this selection works from,
+  see [the CLI reference](./cli#changes).
+
+On a pull request, running with `--changed-since <target branch>` gives CI
+runs that only execute the tests your PR could have affected — no shared
+cache required. The [GitHub action](./github-action) wires this up
+automatically.
+
 ## Artifacts
 
 Declare files a test produces — coverage, screenshots, reports — and the

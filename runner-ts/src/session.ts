@@ -22,6 +22,9 @@ export class Session extends EventEmitter {
   lastRecord?: RunRecord;
   // The selection of the most recent run, e.g. for watch-mode re-runs.
   lastSelection?: number[];
+  // Why the current selection picked each test (set by --changed); passed
+  // to the Runner so the notes land in logs and run records.
+  selectionNotes?: Map<number, string>;
 
   constructor(
     readonly doc: TestfileDoc,
@@ -83,6 +86,7 @@ export class Session extends EventEmitter {
       maxParallel: this.runDefaults.maxParallel,
       cache: this.cache,
       forwardEnv: this.runDefaults.forwardEnv,
+      selectionNotes: this.selectionNotes,
     });
     this.runner = runner;
     runner.on("update", () => this.emit("update"));
@@ -135,6 +139,7 @@ export class Session extends EventEmitter {
         lines: mask(test.output.lines),
         artifacts: collectArtifacts(test),
         cached: test.cached === true ? true : undefined,
+        reason: test.reason,
       });
     });
     // A fully condition-skipped run counts as success: nothing failed.
