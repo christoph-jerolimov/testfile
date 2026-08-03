@@ -58,6 +58,8 @@ export interface RunRecord {
   status: "passed" | "failed" | "aborted";
   exitCode: number;
   cancelled: boolean;
+  // Who ran it: a GitHub login when known, else the hostname. Optional.
+  machine?: string;
   // Env provided by the Testfile (top level, resolved) and the resolved ports.
   env: Record<string, string>;
   ports: Record<string, number>;
@@ -80,6 +82,7 @@ export interface RunMeta {
   status: "passed" | "failed" | "aborted";
   exitCode: number;
   cancelled: boolean;
+  machine?: string;
   env: Record<string, string>;
   ports: Record<string, number>;
   selected: string[];
@@ -244,6 +247,7 @@ export class RunHistory {
       status: meta.status,
       exitCode: meta.exitCode,
       cancelled: meta.cancelled,
+      ...(meta.machine ? { machine: meta.machine } : {}),
       env: meta.env,
       ports: meta.ports,
       selected: meta.selected,

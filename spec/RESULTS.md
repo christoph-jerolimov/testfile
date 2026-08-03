@@ -57,6 +57,7 @@ A YAML document with these fields:
 | `durationMs` | integer | yes      | Wall-clock duration of the whole run. |
 | `status`     | string  | yes      | `passed`, `failed` or `aborted` (user interrupt). |
 | `exitCode`   | integer | yes      | The runner's exit code for this run (`0`, `1`, `130`). |
+| `machine`    | string  | no       | Who ran the suite: a CI actor name (`GITHUB_ACTOR`, `GITLAB_USER_LOGIN`, `BUILDKITE_BUILD_CREATOR`), a GitHub login from an authenticated `gh`, or the hostname. Free-form identifier; consumers must not parse it. |
 | `cancelled`  | boolean | yes      | True when the run was interrupted. |
 | `env`        | map     | yes      | The resolved top-level `env` of the Testfile (may be empty). Secret values are masked. |
 | `ports`      | map     | yes      | The resolved named ports (may be empty). |

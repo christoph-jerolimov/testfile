@@ -44,6 +44,8 @@ export interface RunRecord {
   status: "passed" | "failed" | "aborted";
   exitCode: number;
   cancelled: boolean;
+  // Who ran it (CI actor, gh login or hostname); absent in older records.
+  machine?: string;
   env: Record<string, string>;
   ports: Record<string, number>;
   selected: string[];
