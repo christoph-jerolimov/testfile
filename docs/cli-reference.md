@@ -209,7 +209,9 @@ options.
 
 Bring the run artifacts of GitHub Actions workflow runs into the local
 history. Both subcommands need `GITHUB_TOKEN` or `GH_TOKEN` (with
-`actions:read`) and take the same options:
+`actions:read`) — with the [gh CLI](https://cli.github.com/) logged in,
+`export GITHUB_TOKEN=$(gh auth token)` sets one up. They take the same
+options:
 
 | Option | Description |
 | ------ | ----------- |
