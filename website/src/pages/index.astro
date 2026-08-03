@@ -33,10 +33,9 @@ test:
         Declare how your project is tested — <span class="grad">don't script it</span>.
       </h1>
       <p class="lead">
-        One YAML file describes the whole suite: sequences, parallel groups
-        and matrix tests, with the services they depend on started and
-        health-checked for you. Every run is recorded — and CI runs from
-        GitHub Actions sync straight into your local history.
+        A YAML file that describes the whole test setup, with the services
+        your tests depend on started and health-checked for you. Every run
+        is recorded — and even CI runs can be inspected locally.
       </p>
       <div class="cta">
         <a class="button primary" href={`${base}/docs/getting-started`}>Get started</a>
@@ -59,17 +58,27 @@ test:
 
   <section class="features">
     <div class="feature">
-      <h3><span class="marker blue"></span>Declarative suites</h3>
+      <h3><span class="marker blue"></span>Simple definitions</h3>
       <p>
-        Sequences, parallel groups and <a href={`${base}/docs/matrix`}>matrix tests</a>
-        in plain YAML — with filters, retries, conditions and
+        The setup is easy: a name and a command is a test, and
+        <a href={`${base}/docs/getting-started`}><code>testfile init</code></a>
+        writes the first version for you. Plain YAML, validated by a
+        schema, readable in every code review.
+      </p>
+    </div>
+    <div class="feature">
+      <h3><span class="marker red"></span>Scales with requirements</h3>
+      <p>
+        Grow from one command to sequences, parallel groups and
+        <a href={`${base}/docs/matrix`}>matrix tests</a> — with filters,
+        retries, conditions and
         <a href={`${base}/docs/writing-tests#result-caching`}>result caching</a>
-        instead of CI scripting. The same file runs locally, in watch mode
+        when the suite gets big. The same file runs locally, in watch mode
         and on CI.
       </p>
     </div>
     <div class="feature">
-      <h3><span class="marker red"></span>Services as dependencies</h3>
+      <h3><span class="marker blue"></span>Manages your services</h3>
       <p>
         The app under test and databases as containers are just
         <a href={`${base}/docs/services`}>dependencies of a test</a>: started
@@ -78,25 +87,17 @@ test:
         wired in for parallel-safe runs.
       </p>
     </div>
-    <div class="feature">
-      <h3><span class="marker blue"></span>GitHub &amp; local, in sync</h3>
-      <p>
-        Every run is recorded in an
-        <a href="https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md">open result format</a>.
-        The <a href={`${base}/docs/github-action`}>GitHub Action</a> uploads
-        it, <code>testfile-viewer github sync</code> brings it home — diff,
-        flaky-hunt and browse CI runs next to local ones.
-      </p>
-    </div>
   </section>
 
   <section class="viewer">
-    <h2>Every run, at your fingertips</h2>
+    <h2>Unified viewer for local and CI runs</h2>
     <p class="viewer-lead">
       Browse recorded runs in the terminal (<code>testfile-viewer tui</code>)
       or in the browser (<code>testfile-viewer serve</code>): statuses,
       durations, per-test logs, service logs — and <em>why</em> a test ran
-      or came from the cache.
+      or came from the cache. <code>testfile-viewer github sync</code>
+      brings <a href={`${base}/docs/github-action`}>GitHub Actions runs</a>
+      into the same history.
     </p>
     <div class="shot">
       <img
