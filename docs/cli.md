@@ -15,6 +15,9 @@ is strictly read-only over those recorded runs — any tool producing the
 documented [result format](https://github.com/christoph-jerolimov/testfile/tree/main/spec)
 works with it.
 
+This page is the guided tour; the [CLI reference](./cli-reference) lists
+every command with all of its arguments and options.
+
 ## Commands
 
 ```sh
