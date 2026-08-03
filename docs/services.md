@@ -50,6 +50,41 @@ test:
 
 A service runs either a local `command`/`script` or a `container`.
 
+## Service dependencies
+
+Services in one map start concurrently. When one of them needs another to
+be up first — the app that talks to the database on boot — declare it with
+`needs`:
+
+```yaml
+services:
+  db:
+    container:
+      image: docker.io/library/postgres:16-alpine
+      ports: ["${{ ports.db }}:5432"]
+      env:
+        POSTGRES_PASSWORD: test
+    ready:
+      log: database system is ready to accept connections
+  app:
+    # starts only once db passed its readiness check
+    needs: [db]
+    command: npm start
+    env:
+      DATABASE_URL: postgresql://postgres:test@127.0.0.1:${{ ports.db }}/postgres
+    ready:
+      http: http://127.0.0.1:${{ ports.app }}/healthz
+```
+
+`needs` is docker-compose's `depends_on`, except it always waits for the
+[readiness check](#readiness-checks), never just for the process or
+container to exist — which is the difference between a working setup and a
+retry loop in your app. Names must refer to services in the same map, and
+cycles are rejected when the Testfile is loaded. Services without `needs`
+still start immediately and in parallel, so only the actual chain is
+serialized. If a dependency never becomes ready, the services that need it
+are never started and the test fails with the dependency's error.
+
 ## Sharing services
 
 By default every test (and every matrix instance) starts its own copy of the

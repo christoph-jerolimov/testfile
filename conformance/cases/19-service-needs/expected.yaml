@@ -1,0 +1,5 @@
+exitCode: 0
+status: passed
+tests:
+  - path: root
+    status: passed

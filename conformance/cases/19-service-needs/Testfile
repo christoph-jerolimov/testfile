@@ -1,0 +1,25 @@
+version: 0
+services:
+  first:
+    # becomes ready late on purpose: a racing "second" would win the file
+    script: |
+      sleep 0.5
+      echo first >> order.txt
+      echo first-ready
+      sleep 30
+    ready:
+      log: first-ready
+      timeout: 30s
+  second:
+    needs: [first]
+    script: |
+      echo second >> order.txt
+      echo second-ready
+      sleep 30
+    ready:
+      log: second-ready
+      timeout: 30s
+test:
+  name: root
+  # the startup order is recorded by the services themselves
+  command: 'test "$(tr "\n" " " < order.txt)" = "first second " '

@@ -61,6 +61,9 @@ export interface HookDef {
 export interface ServiceDef {
   description?: string;
   shared?: boolean;
+  // Names of services in the same map that must be ready before this one
+  // starts (docker-compose's depends_on, but always health-gated).
+  needs?: string[];
   env?: EnvMap;
   workdir?: string;
   command?: string;
