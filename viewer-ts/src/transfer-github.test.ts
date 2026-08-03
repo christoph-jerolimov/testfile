@@ -6,16 +6,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { writeRun } from "./fixture.js";
 import { RunHistory } from "./runrecord.js";
-import {
-  githubRunArchives,
-  importRunArchive,
-  packRun,
-  s3List,
-  s3Pull,
-  s3Push,
-  syncFromGithub,
-  type Exec,
-} from "./transfer.js";
+import { githubRunArchives, packRun, syncFromGithub, type Exec } from "./transfer/index.js";
 
 function tempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "testfile-transfer-"));
@@ -52,80 +43,6 @@ function fakeAws(
   };
   return { exec, calls };
 }
-
-test("packRun and importRunArchive round-trip a run between histories", () => {
-  const source = tempDir();
-  const id = recordRun(source);
-  const archive = join(tempDir(), "run.tgz");
-  packRun(source, id, archive);
-  assert.ok(existsSync(archive));
-
-  const target = tempDir();
-  const first = importRunArchive(target, archive);
-  assert.deepEqual(first, { imported: [id], skipped: [] });
-  const history = new RunHistory(target);
-  assert.equal(history.runs[0]?.id, id);
-  assert.equal(history.readLog(history.runs[0], history.runs[0].tests[0]), "out\n");
-  assert.equal(readFileSync(join(target, ".testfile", ".gitignore"), "utf8"), "*\n");
-
-  // importing again leaves the local run untouched
-  assert.deepEqual(importRunArchive(target, archive), { imported: [], skipped: [id] });
-});
-
-test("packRun rejects unknown runs, import rejects archives without runs", () => {
-  const dir = tempDir();
-  assert.throws(() => packRun(dir, "nope", join(dir, "x.tgz")), /no recorded run "nope"/);
-
-  const stray = join(dir, "stray.tgz");
-  spawnSync("sh", ["-c", `mkdir -p ${dir}/junk/sub && tar -czf ${stray} -C ${dir}/junk sub`]);
-  assert.throws(() => importRunArchive(tempDir(), stray), /does not contain a recorded run/);
-});
-
-test("s3Push packs and uploads to <prefix>/<run-id>.tgz", () => {
-  const dir = tempDir();
-  const id = recordRun(dir);
-  const { exec, calls } = fakeAws(() => undefined);
-  const url = s3Push(dir, id, "s3://bucket/runs/", exec);
-  assert.equal(url, `s3://bucket/runs/${id}.tgz`);
-  assert.equal(calls.length, 1);
-  assert.equal(calls[0][0], "aws");
-  assert.deepEqual(calls[0].slice(1, 3), ["s3", "cp"]);
-  assert.equal(calls[0][4], url);
-});
-
-test("s3List returns archives newest first, s3Pull imports the latest", () => {
-  const source = tempDir();
-  const id = recordRun(source);
-  const prepared = join(tempDir(), `${id}.tgz`);
-  packRun(source, id, prepared);
-
-  const listing = [
-    `2026-01-01 10:00:05        123 ${id}.tgz`,
-    "2026-01-01 09:00:05        120 20251231-090000-aaaa.tgz",
-    "", // trailing blank line
-  ].join("\n");
-  const { exec, calls } = fakeAws((command, args) => {
-    if (args[1] === "ls") return { status: 0, stdout: listing };
-    if (args[1] === "cp") {
-      cpSync(prepared, args[3]); // "download" to the requested local file
-      return { status: 0, stdout: "" };
-    }
-    return undefined;
-  });
-
-  assert.deepEqual(s3List("s3://bucket/runs", exec), [
-    `${id}.tgz`,
-    "20251231-090000-aaaa.tgz",
-  ]);
-
-  const target = tempDir();
-  const result = s3Pull(target, "s3://bucket/runs", undefined, exec);
-  assert.equal(result.archive, `${id}.tgz`);
-  assert.deepEqual(result.imported, [id]);
-  assert.equal(new RunHistory(target).runs[0]?.id, id);
-  const cp = calls.find((call) => call[2] === "cp");
-  assert.equal(cp?.[3], `s3://bucket/runs/${id}.tgz`);
-});
 
 interface FakeResponseInit {
   json?: unknown;
@@ -206,25 +123,6 @@ test("githubRunArchives lists matching, unexpired artifacts of recent runs", asy
     },
   ]);
   assert.ok(requests.every((request) => request.auth === "Bearer tok"), "every call authenticates");
-});
-
-test("importRunArchive accepts a zip of the run folder's contents", () => {
-  const source = tempDir();
-  const id = recordRun(source);
-  const staging = tempDir();
-  // the layout of a GitHub artifact: run.yaml and the logs at the zip root
-  spawnSync("zip", ["-q", "-r", join(staging, "artifact.zip"), "."], {
-    cwd: join(source, ".testfile", "runs", id),
-  });
-
-  const target = tempDir();
-  assert.deepEqual(importRunArchive(target, join(staging, "artifact.zip")), {
-    imported: [id],
-    skipped: [],
-  });
-  const history = new RunHistory(target);
-  assert.equal(history.runs[0]?.id, id);
-  assert.equal(history.readLog(history.runs[0], history.runs[0].tests[0]), "out\n");
 });
 
 test("syncFromGithub imports artifact zips holding the run contents directly", async () => {
