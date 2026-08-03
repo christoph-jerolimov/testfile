@@ -1,0 +1,18 @@
+/* Applied only while taking screenshots: force one font stack so the
+   committed images compare equal across machines, and hide blinking
+   carets. The pinned browser build keeps the rest of the rendering
+   identical. DejaVu ships on the GitHub runners and most Linux images. */
+* {
+  font-family: "DejaVu Sans", sans-serif !important;
+  caret-color: transparent !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+.mono,
+pre,
+code,
+td.mono,
+.log {
+  font-family: "DejaVu Sans Mono", monospace !important;
+}

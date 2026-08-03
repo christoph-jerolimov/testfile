@@ -1,0 +1,7 @@
+out/
+test-results/
+playwright-report/
+# The committed e2e fixture must survive the repo-wide `.testfile/` and
+# `*.log` ignore rules - it IS a .testfile folder with logs, on purpose.
+!e2e/fixture/.testfile/
+!e2e/fixture/.testfile/**

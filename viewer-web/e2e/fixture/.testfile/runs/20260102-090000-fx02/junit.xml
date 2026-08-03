@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="e2e-fixture" tests="2" failures="1">
+  <testsuite name="e2e-fixture" tests="2" failures="1" timestamp="2026-01-02T09:00:00.000Z">
+    <testcase name="build" classname="ci" time="0.04"/>
+    <testcase name="unit" classname="ci" time="2.9">
+      <failure message="failed">boom: expected 4 to equal 5</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

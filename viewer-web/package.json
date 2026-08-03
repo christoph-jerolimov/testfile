@@ -8,9 +8,14 @@
   "scripts": {
     "build": "node build.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "npm run typecheck && npm run build"
+    "test:unit": "tsc -p tsconfig.test.json && node --test \"out/**/*.test.js\"",
+    "test": "npm run typecheck && npm run test:unit && npm run build",
+    "test:e2e": "npm run build && playwright test",
+    "test:e2e:update": "npm run build && playwright test --update-snapshots"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.0",
+    "@types/node": "^22.5.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "esbuild": "^0.24.0",

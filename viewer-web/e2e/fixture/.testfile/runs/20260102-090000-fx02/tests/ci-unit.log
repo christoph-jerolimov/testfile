@@ -1,0 +1,4 @@
+# cache miss: src/**: 1 changed file (src/math.ts)
+41 tests passed
+boom: expected 4 to equal 5
+    at math.test.ts:12
