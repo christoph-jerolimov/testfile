@@ -5,6 +5,7 @@ import { writeFileSync } from "node:fs";
 import { Command } from "commander";
 import { gitChangedSelection, predictCacheHits } from "./cache-predict.js";
 import { generateCompletion, type CompletionModel } from "./completion.js";
+import { durationsFrom, parseShard, selectShard } from "./shard.js";
 import { collectGitChanges } from "./gitchanges.js";
 import {
   filterByLastFailed,
@@ -38,6 +39,7 @@ interface FilterFlags {
   failed: boolean;
   changed: boolean;
   changedSince?: string;
+  shard?: string;
 }
 
 // --changed narrows a resolved selection to the tests whose `inputs` match
@@ -71,6 +73,44 @@ async function applyChanged(
     selection: ids,
     active: session.activeSetFor(ids),
     testCount: ids.length,
+    filtered: true,
+  };
+}
+
+// --shard i/n keeps only this shard's share of the selected leaf tests.
+// Every shard computes the same split from the same suite, so no
+// coordination is needed; recorded durations make it time-balanced.
+function applyShard(
+  session: Session,
+  filtered: ReturnType<typeof resolveFilters>,
+  spec: string | undefined
+): ReturnType<typeof resolveFilters> {
+  if (spec === undefined) return filtered;
+  const shard = parseShard(spec);
+  const leaves: { id: number; path: string }[] = [];
+  walk(session.suite, (test) => {
+    if (filtered.active.has(test.id) && test.children.length === 0) {
+      leaves.push({ id: test.id, path: test.path });
+    }
+  });
+  const durations = durationsFrom(session.history.runs);
+  const result = selectShard(leaves, shard, durations);
+  if (result.ids.length === 0) {
+    throw new Error(
+      `--shard ${shard.index}/${shard.total} selects no tests (only ${leaves.length} to distribute)`
+    );
+  }
+  console.log(
+    color(
+      90,
+      `shard ${shard.index}/${shard.total}: ${result.ids.length} of ${leaves.length} tests` +
+        (result.balanced ? `, ~${formatMs(result.estimateMs ?? 0)} of recorded work` : "")
+    )
+  );
+  return {
+    selection: result.ids,
+    active: session.activeSetFor(result.ids),
+    testCount: result.ids.length,
     filtered: true,
   };
 }
@@ -136,7 +176,11 @@ function addFilterOptions(command: Command): Command {
     .option("-m, --filter-matrix <key:value>", "only matrix instances with this value (repeatable)", collect, [])
     .option("--failed", "only tests that failed in the last recorded run", false)
     .option("--changed", "only tests whose inputs match files changed against the base branch (plus local changes)", false)
-    .option("--changed-since <ref>", "base branch/ref for --changed, e.g. origin/main (implies --changed)");
+    .option("--changed-since <ref>", "base branch/ref for --changed, e.g. origin/main (implies --changed)")
+    .option(
+      "--shard <i/n>",
+      "run only this shard of the selected tests, e.g. 2/4 (time-balanced from the run history)"
+    );
 }
 
 program
@@ -202,6 +246,7 @@ addFilterOptions(
       let filtered = resolveFilters(session, flags);
       if (filtered.testCount === 0) throw new Error("no tests match the given filters");
       filtered = await applyChanged(session, filtered, flags);
+      filtered = applyShard(session, filtered, flags.shard);
       printSuite(session, filtered.active);
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
@@ -266,6 +311,7 @@ addFilterOptions(
       filtered = resolveFilters(session, options);
       if (filtered.testCount === 0) throw new Error("no tests match the given filters");
       filtered = await applyChanged(session, filtered, options);
+      filtered = applyShard(session, filtered, options.shard);
     } catch (err) {
       console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
       process.exitCode = 1;
