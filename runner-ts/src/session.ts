@@ -5,7 +5,12 @@ import { ResultCache } from "./cache.js";
 import { maskSecrets } from "./envfile.js";
 import { Runner } from "./executor.js";
 import type { OutputLine } from "./output.js";
-import { RunHistory, type RunLogInput, type RunRecord } from "./history.js";
+import {
+  RunHistory,
+  type RunLogInput,
+  type RunRecord,
+  type RunRecordSuiteNode,
+} from "./history.js";
 import { validateSemantics } from "./loader.js";
 import type { TestfileDoc } from "./model.js";
 import { buildRunSuite, resetTest, walk, type RunTest, type Status } from "./runsuite.js";
@@ -159,6 +164,7 @@ export class Session extends EventEmitter {
         selected: selectedIds
           .map((id) => this.byId.get(id)?.path)
           .filter((path): path is string => path !== undefined),
+        suite: suiteStructure(this.suite),
       },
       tests,
       runner.services.map((service) => ({
@@ -168,6 +174,26 @@ export class Session extends EventEmitter {
       }))
     );
   }
+}
+
+// The Testfile's shape as recorded in run.yaml: the whole tree, including
+// tests this run filtered out, so the record explains itself. Matrix
+// wrappers stay in the tree - they carry the definition their expanded
+// instances share.
+function suiteStructure(test: RunTest): RunRecordSuiteNode {
+  const node: RunRecordSuiteNode = {
+    name: test.name,
+    path: test.path,
+    kind: test.kind,
+  };
+  if (test.def.tags && test.def.tags.length > 0) node.tags = [...test.def.tags];
+  if (Object.keys(test.matrix).length > 0) node.matrix = { ...test.matrix };
+  // Matrix instances share their wrapper's definition; listing its services
+  // once on the wrapper would repeat them on every instance.
+  const services = Object.keys(test.def.services ?? {});
+  if (services.length > 0 && !test.isMatrixWrapper) node.services = services;
+  if (test.children.length > 0) node.children = test.children.map(suiteStructure);
+  return node;
 }
 
 // Matches a test's artifact globs against its working directory. Runs after

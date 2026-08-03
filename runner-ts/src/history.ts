@@ -25,6 +25,24 @@ export interface RunRecordTest {
   reason?: string;
 }
 
+// The shape of the Testfile itself, recorded so a run.yaml alone explains
+// the tree: which tests nest under which group, what kind they are, which
+// tags they carry and which matrix combination they belong to. Includes
+// tests that were filtered out of this run.
+export interface RunRecordSuiteNode {
+  name: string;
+  // Names joined with "/" from the root - the key `tests[].path` uses.
+  path: string;
+  kind: "command" | "script" | "sequence" | "parallel" | "matrix";
+  // Tags declared on this test (ancestors' tags apply to it as well).
+  tags?: string[];
+  // Matrix combination of an expanded instance, e.g. {node: "22"}.
+  matrix?: Record<string, string>;
+  // Names of the services this test declares.
+  services?: string[];
+  children?: RunRecordSuiteNode[];
+}
+
 export interface RunRecordService {
   name: string;
   // Last observed status (ready, stopped, failed, ...), when known.
@@ -45,6 +63,8 @@ export interface RunRecord {
   ports: Record<string, number>;
   // Paths of the tests the user selected for this run.
   selected: string[];
+  // The Testfile's test tree, including tests this run did not execute.
+  suite?: RunRecordSuiteNode;
   tests: RunRecordTest[];
   // Services that were started during the run.
   services?: RunRecordService[];
@@ -63,6 +83,7 @@ export interface RunMeta {
   env: Record<string, string>;
   ports: Record<string, number>;
   selected: string[];
+  suite?: RunRecordSuiteNode;
 }
 
 export interface RunLogInput {
@@ -226,6 +247,8 @@ export class RunHistory {
       env: meta.env,
       ports: meta.ports,
       selected: meta.selected,
+      // the tree first, so the file reads like the Testfile it came from
+      ...(meta.suite ? { suite: meta.suite } : {}),
       tests: [],
     };
 

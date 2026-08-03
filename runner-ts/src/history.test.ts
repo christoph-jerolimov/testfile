@@ -172,3 +172,61 @@ test("every run folder contains a junit.xml built from the record", () => {
   assert.match(xml, /<skipped\/>/);
   assert.ok(!xml.includes('name="all" classname="all"'), "the group node is not a testcase");
 });
+
+test("run.yaml records the Testfile's tree, tags and matrix combinations", async () => {
+  const { Session } = await import("./session.js");
+  const dir = tempDir();
+  const session = new Session(
+    {
+      version: 0,
+      test: {
+        name: "root",
+        sequence: [
+          { name: "lint", tags: ["fast"], command: "true" },
+          {
+            name: "checks",
+            tags: ["slow"],
+            parallel: [
+              { name: "unit", command: "true" },
+              {
+                name: "db ${{ matrix.db }}",
+                matrix: { db: ["pg", "mysql"] },
+                services: { database: { command: "sleep 30", ready: { log: "x" } } },
+                command: "true",
+              },
+            ],
+          },
+        ],
+      },
+    },
+    dir
+  );
+  // only one test runs; the recorded tree still describes the whole file
+  await session.runSelected([[...session.byId.values()].find((t) => t.name === "lint")!.id]);
+
+  const suite = session.lastRecord!.suite!;
+  assert.equal(suite.path, "root");
+  assert.equal(suite.kind, "sequence");
+  assert.deepEqual(suite.children!.map((child) => child.name), ["lint", "checks"]);
+  assert.deepEqual(suite.children![0].tags, ["fast"], "own tags are recorded");
+
+  const checks = suite.children![1];
+  assert.equal(checks.kind, "parallel");
+  assert.deepEqual(checks.tags, ["slow"]);
+  const wrapper = checks.children!.find((child) => child.kind === "matrix")!;
+  assert.deepEqual(
+    wrapper.children!.map((instance) => instance.matrix),
+    [{ db: "pg" }, { db: "mysql" }],
+    "every matrix instance carries its combination"
+  );
+  assert.deepEqual(wrapper.children![0].services, ["database"], "declared services are listed");
+  // the filtered-out tests are in the tree but not in the results
+  assert.deepEqual(
+    session.lastRecord!.tests.map((entry) => entry.path),
+    ["root", "root/lint"]
+  );
+
+  // and it survives a round trip through the recorded file
+  const reloaded = new RunHistory(dir).runs[0];
+  assert.deepEqual(reloaded.suite, suite);
+});
