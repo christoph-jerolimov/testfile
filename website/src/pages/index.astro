@@ -1,9 +1,27 @@
 ---
 import { getCollection } from "astro:content";
+import { Code } from "astro:components";
 import Layout from "../layouts/Layout.astro";
 
 const docs = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.order);
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+const example = `version: 0
+ports:
+  web: random
+services:
+  web:
+    command: npm start
+    env:
+      PORT: \${{ ports.web }}
+    ready:
+      http: http://localhost:\${{ ports.web }}/healthz
+test:
+  sequence:
+    - name: lint
+      command: npm run lint
+    - name: e2e
+      command: npm run test:e2e`;
 ---
 
 <Layout title="Home" description="Testfile — a declarative YAML format for running your project's tests.">
@@ -21,22 +39,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     <a href="https://github.com/christoph-jerolimov/testfile/issues">GitHub issue</a>
     — contributions are welcome.
   </p>
-  <pre><code>version: 0
-ports:
-  web: random
-services:
-  web:
-    command: npm start
-    env:
-      PORT: $&lcub;&lcub; ports.web &rcub;&rcub;
-    ready:
-      http: http://localhost:$&lcub;&lcub; ports.web &rcub;&rcub;/healthz
-test:
-  sequence:
-    - name: lint
-      command: npm run lint
-    - name: e2e
-      command: npm run test:e2e</code></pre>
+  <Code code={example} lang="yaml" themes={{ light: "github-light", dark: "github-dark" }} />
   <h2>Documentation</h2>
   <ul>
     {
