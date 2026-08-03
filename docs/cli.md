@@ -144,6 +144,34 @@ Different filter kinds are ANDed. Filters that match nothing are an error.
 `testfile list` shows each test's tags, so it's an easy way to preview what
 a filter will run.
 
+## Tags
+
+`testfile tags` inventories every tag of the full expanded suite —
+[included Testfiles](./writing-tests#including-other-testfiles) and matrix
+instances included — so you know what `-t` can filter on:
+
+```sh
+$ testfile tags                    # all tags, alphabetically
+fast
+integration
+nightly
+
+$ testfile tags --order appearance # in document order
+$ testfile tags --order count      # most-used first, with counts
+3  fast
+2  nightly
+1  integration
+
+12 tests, 4 without any tag
+
+$ testfile tags --json             # machine-readable, or --json tags.json
+```
+
+Counts count runnable tests (command/script leaves, every matrix instance
+separately) that carry the tag directly **or inherited from an ancestor** —
+the same semantics `-t` filters with. The count view also reports how many
+tests have no tag at all; the JSON export always includes both numbers.
+
 ## Changes
 
 `testfile changes` shows exactly what `--changed` selects tests from: the

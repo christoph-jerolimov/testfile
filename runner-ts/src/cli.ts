@@ -22,6 +22,7 @@ import { writeReport, type ReporterKind } from "./report.js";
 import { ConsoleReporter } from "./reporter.js";
 import { walk, type RunTest } from "./runsuite.js";
 import { Session } from "./session.js";
+import { collectTags, sortTags } from "./tags.js";
 import { color, formatMs } from "./util.js";
 import { watchDirectory, WatchScheduler } from "./watch.js";
 
@@ -338,6 +339,65 @@ addFilterOptions(
         });
         console.log(color(36, "watching for changes... (Ctrl+C to exit)"));
       }
+    }
+  });
+
+program
+  .command("tags")
+  .argument("[path]", "Testfile or directory containing one", ".")
+  .option("--order <order>", "alpha (default), appearance (document order) or count", "alpha")
+  .option("--json [file]", "write the tags as JSON, to a file or (without a value) stdout")
+  .description("List all tags of the full test suite (including included Testfiles)")
+  .action((path: string, options: { order: string; json?: string | boolean }) => {
+    try {
+      if (options.order !== "alpha" && options.order !== "appearance" && options.order !== "count") {
+        throw new Error(`unknown --order "${options.order}", expected alpha, appearance or count`);
+      }
+      const { path: file, doc } = loadTestfile(path);
+      const session = new Session(doc, dirname(file));
+      const summary = collectTags(session.suite);
+      const tags = sortTags(summary.tags, options.order);
+
+      if (options.json !== undefined && options.json !== false) {
+        const json = `${JSON.stringify(
+          {
+            order: options.order,
+            tags: tags.map(({ name, count, appearance }) => ({ name, count, appearance })),
+            untagged: summary.untagged,
+            tests: summary.tests,
+          },
+          null,
+          2
+        )}\n`;
+        if (typeof options.json === "string") {
+          writeFileSync(options.json, json);
+          console.log(color(90, `tags written to ${options.json}`));
+        } else {
+          process.stdout.write(json);
+        }
+        return;
+      }
+
+      if (tags.length === 0 && options.order !== "count") {
+        console.log(color(90, "no tags declared"));
+        return;
+      }
+      if (options.order === "count") {
+        const width = Math.max(...tags.map((tag) => String(tag.count).length), 1);
+        for (const tag of tags) console.log(`${String(tag.count).padStart(width)}  ${tag.name}`);
+        console.log(
+          color(
+            90,
+            `${tags.length > 0 ? "\n" : ""}${summary.tests} test${summary.tests === 1 ? "" : "s"}, ` +
+              `${summary.untagged} without any tag`
+          )
+        );
+      } else {
+        for (const tag of tags) console.log(tag.name);
+      }
+    } catch (err) {
+      console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
+      process.exitCode = 1;
     }
   });
 
