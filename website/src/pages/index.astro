@@ -41,7 +41,7 @@ test:
       </p>
       <div class="cta">
         <a class="button primary" href={`${base}/docs/getting-started`}>Get started</a>
-        <a class="button ghost" href={`${base}/docs/index`}>What is a Testfile?</a>
+        <a class="button ghost" href={`${base}/examples`}>Examples</a>
       </div>
     </div>
     <div class="hero-code">
@@ -157,6 +157,7 @@ test:
     </div>
     <p class="all-features-cta">
       <a class="button ghost" href={`${base}/docs/writing-tests`}>Read the docs</a>
+      <a class="button ghost" href={`${base}/examples`}>Browse examples</a>
     </p>
   </section>
 </Layout>
@@ -372,8 +373,10 @@ test:
     background: var(--accent-red);
   }
   .all-features-cta {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
     margin: 2rem 0 0;
-    text-align: center;
   }
 
   @media (max-width: 56rem) {

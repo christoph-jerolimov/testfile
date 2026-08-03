@@ -1,0 +1,11 @@
+order: 5
+title: Monorepo
+stack: Any
+summary: >-
+  Each package owns its Testfile; the root file only wires them together
+  with glob includes, so teams stay independent.
+highlights:
+  - "`include: packages/*` expands into one branch per package"
+  - Included files run in their own directory, with their own ports
+  - "`inputs` per package: untouched packages come from the cache"
+  - Filter to one package with `-n api`
