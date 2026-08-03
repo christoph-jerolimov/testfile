@@ -1,0 +1,83 @@
+import type { Command } from "commander";
+import { color, formatMs, pad } from "../util.js";
+import type { RunRecordSuiteNode } from "../runrecord.js";
+import { colorStatus, commandFailed, findRun, loadedHistory } from "./shared.js";
+
+export function registerRun(program: Command): void {
+program
+  .command("run")
+  .argument("<id>", "recorded run to show (a unique id prefix is enough)")
+  .argument("[path]", "directory containing a .testfile folder", ".")
+  .option("--log [test-path]", "print the run's merged log, or a single test's log")
+  .description("Show one recorded run")
+  .action((id: string, path: string, options: { log?: string | boolean }) => {
+    try {
+      const history = loadedHistory(path);
+      const run = findRun(history, id);
+
+      if (options.log !== undefined) {
+        const text =
+          typeof options.log === "string"
+            ? (() => {
+                const test = run.tests.find((t) => t.path === options.log);
+                return test ? history.readLog(run, test) : undefined;
+              })()
+            : history.readRunLog(run);
+        if (text === undefined) {
+          throw new Error(
+            `no log found${typeof options.log === "string" ? ` for test "${options.log}"` : ""} in run ${run.id}`
+          );
+        }
+        process.stdout.write(text);
+        return;
+      }
+
+      console.log(`${color(1, `run ${run.id}`)}`);
+      console.log(`started:   ${run.startedAt}`);
+      console.log(`duration:  ${formatMs(run.durationMs)}`);
+      console.log(`status:    ${colorStatus(run.status)} (exit code ${run.exitCode})`);
+      console.log(`cancelled: ${run.cancelled ? "yes" : "no"}`);
+      console.log(`selected:  ${run.selected.join(", ") || "-"}`);
+      const env = Object.entries(run.env).map(([k, v]) => `${k}=${v}`).join(" ");
+      if (env) console.log(`env:       ${env}`);
+      const ports = Object.entries(run.ports).map(([k, v]) => `${k}=${v}`).join(" ");
+      if (ports) console.log(`ports:     ${ports}`);
+      // Tags come from the recorded suite tree, including the ones a test
+      // inherits from its groups (older records simply have no tree).
+      const tagsByPath = new Map<string, string[]>();
+      const collectTags = (node: RunRecordSuiteNode, inherited: readonly string[]): void => {
+        const own = [...new Set([...inherited, ...(node.tags ?? [])])];
+        if (own.length > 0) tagsByPath.set(node.path, own);
+        for (const child of node.children ?? []) collectTags(child, own);
+      };
+      if (run.suite) collectTags(run.suite, []);
+
+      console.log("tests:");
+      for (const test of run.tests) {
+        const duration = test.durationMs !== undefined ? ` (${formatMs(test.durationMs)})` : "";
+        const log = test.log ? color(90, "  [log]") : "";
+        const artifacts = test.artifacts?.length
+          ? color(90, `  [${test.artifacts.length} artifact${test.artifacts.length === 1 ? "" : "s"}]`)
+          : "";
+        const cached = test.cached ? color(90, "  [cached]") : "";
+        const tags = tagsByPath.has(test.path)
+          ? color(90, `  [${tagsByPath.get(test.path)!.join(", ")}]`)
+          : "";
+        console.log(
+          `  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${tags}${log}${artifacts}${cached}`
+        );
+        if (test.reason) console.log(color(90, `          ${test.reason}`));
+      }
+      if (run.services?.length) {
+        console.log("services:");
+        for (const service of run.services) {
+          const log = service.log ? color(90, "  [log]") : "";
+          console.log(`  ${pad(service.status ?? "-", 7)} ${service.name}${log}`);
+        }
+      }
+      console.log(color(90, `\nlogs: testfile-viewer run ${run.id} --log [test-path]`));
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
+}
