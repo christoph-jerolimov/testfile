@@ -1,0 +1,24 @@
+version: 0
+forwardEnv: [CONFORMANCE_FLAG]
+env:
+  OS: ${{ env.TESTFILE_OS }}
+test:
+  name: root
+  sequence:
+    - name: and-true
+      if: ${{ env.OS }} == ${{ env.TESTFILE_OS }} && ${{ env.CONFORMANCE_FLAG }} == yes
+      command: "true"
+    - name: and-false
+      if: ${{ env.OS }} == ${{ env.TESTFILE_OS }} && ${{ env.CONFORMANCE_FLAG }} == no
+      command: "false"
+    - name: or-true
+      if: ${{ env.CONFORMANCE_FLAG }} == no || ${{ env.CONFORMANCE_FLAG }} == yes
+      command: "true"
+    - name: grouped-negation
+      # !(false || false) is true
+      if: "!(${{ env.MISSING }} || ${{ env.CONFORMANCE_FLAG }} == no)"
+      command: "true"
+    - name: precedence
+      # false && false || true  ->  true, because && binds tighter
+      if: ${{ env.MISSING }} && ${{ env.MISSING }} || ${{ env.CONFORMANCE_FLAG }}
+      command: "true"

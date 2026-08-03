@@ -48,3 +48,41 @@ test("negation applies to the whole expression", () => {
   assert.equal(evaluate("!${{ env.OS }} == linux"), false);
   assert.equal(evaluate("!!${{ env.CI }}"), true);
 });
+
+test("&& and || combine conditions, && binds tighter", () => {
+  const scopes: Scopes = {
+    env: { OS: "linux", CI: "", NAME: "my project" },
+    ports: {},
+    matrix: {},
+  };
+  const check = (expression: string) => evaluateCondition(expression, scopes, "test");
+
+  assert.equal(check("${{ env.OS }} == linux && !${{ env.CI }}"), true);
+  assert.equal(check("${{ env.OS }} == darwin && !${{ env.CI }}"), false);
+  assert.equal(check("${{ env.OS }} == darwin || ${{ env.OS }} == linux"), true);
+  assert.equal(check("${{ env.OS }} == darwin || ${{ env.OS }} == windows"), false);
+
+  // && binds tighter: false && false || true  ->  (false && false) || true
+  assert.equal(check("${{ env.CI }} && ${{ env.CI }} || ${{ env.OS }}"), true);
+  // ... and parentheses override that
+  assert.equal(check("${{ env.CI }} && (${{ env.CI }} || ${{ env.OS }})"), false);
+  assert.equal(check("!(${{ env.OS }} == darwin || ${{ env.CI }})"), true);
+
+  // operands keep their spaces
+  assert.equal(check("${{ env.NAME }} == my project"), true);
+  assert.equal(check("${{ env.NAME }} == my project && ${{ env.OS }} == linux"), true);
+  // quoted values may contain the operators
+  assert.equal(check('${{ env.NAME }} == "my project"'), true);
+  assert.equal(check("'a && b' == 'a && b'"), true);
+});
+
+test("chained operators and empty operands behave", () => {
+  const scopes: Scopes = { env: { A: "1", B: "", C: "yes" }, ports: {}, matrix: {} };
+  const check = (expression: string) => evaluateCondition(expression, scopes, "test");
+  assert.equal(check("${{ env.A }} && ${{ env.C }} && ${{ env.A }}"), true);
+  assert.equal(check("${{ env.A }} && ${{ env.B }} && ${{ env.C }}"), false);
+  assert.equal(check("${{ env.B }} || ${{ env.B }} || ${{ env.C }}"), true);
+  // an unset variable on the left of != still compares
+  assert.equal(check("${{ env.B }} != something"), true);
+  assert.equal(check("${{ env.MISSING }} != ''"), false);
+});

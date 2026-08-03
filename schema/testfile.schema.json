@@ -169,7 +169,7 @@
           "type": "string"
         },
         "if": {
-          "description": "Condition deciding whether this test (and its nested tests) runs. Supports templates, truthiness (\"\", \"false\", \"0\", \"no\", \"off\" are false), \"a == b\" / \"a != b\" string comparison, and a leading \"!\" negating the whole expression. Unknown template references resolve to \"\". A false condition marks the test as skipped without failing the parent. Example: \"${{ env.CI }}\" or \"${{ env.TESTFILE_OS }} == linux\".",
+          "description": "Condition deciding whether this test (and its nested tests) runs. Supports templates, truthiness (\"\", \"false\", \"0\", \"no\", \"off\" are false), \"a == b\" / \"a != b\" string comparison, negation with \"!\", the boolean operators \"&&\" and \"||\" (&& binds tighter) and parentheses for grouping. Unknown template references resolve to \"\". A false condition marks the test as skipped without failing the parent. Example: \"${{ env.TESTFILE_OS }} == linux && !${{ env.CI }}\".",
           "type": "string",
           "minLength": 1
         },
