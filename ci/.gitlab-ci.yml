@@ -1,0 +1,21 @@
+# Testfile on GitLab CI.
+#
+# Copy this into your project as .gitlab-ci.yml (or merge the job into an
+# existing pipeline). The job archives the recorded run, so
+# `testfile-viewer gitlab sync <group/project>` can pull it into a local
+# history afterwards.
+testfile:
+  image: node:22
+  # Container services the tests need can be declared in the Testfile
+  # itself; GitLab's own `services:` are not required.
+  script:
+    - npm ci --no-audit --no-fund
+    - npx --yes @testfile/runner run --reporter junit --output junit.xml
+  artifacts:
+    when: always
+    paths:
+      # the whole recorded run: run.yaml, per-test logs, artifacts, junit
+      - .testfile/runs/
+    reports:
+      junit: junit.xml
+    expire_in: 2 weeks

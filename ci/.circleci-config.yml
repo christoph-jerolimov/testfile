@@ -1,0 +1,33 @@
+# Testfile on CircleCI.
+#
+# Copy this into your project as .circleci/config.yml. The recorded run is
+# stored as an artifact, so it can be downloaded and imported with
+# `testfile-viewer archive import <run.zip>`.
+version: 2.1
+
+jobs:
+  testfile:
+    docker:
+      - image: cimg/node:22.11
+    # Container services declared in the Testfile need a real docker
+    # daemon; drop this line for suites that only start processes.
+    resource_class: medium
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Install
+          command: npm ci --no-audit --no-fund
+      - run:
+          name: Testfile
+          command: npx --yes @testfile/runner run --reporter junit --output junit.xml
+      - store_test_results:
+          path: junit.xml
+      - store_artifacts:
+          path: .testfile/runs
+          destination: testfile-runs
+
+workflows:
+  test:
+    jobs:
+      - testfile

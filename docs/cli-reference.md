@@ -1,6 +1,6 @@
 ---
 title: CLI reference
-order: 9
+order: 10
 description: Every command and argument of the testfile runner and the testfile-viewer.
 ---
 
@@ -234,3 +234,26 @@ Download the run artifacts of recent workflow runs and import them
 
 List the run artifacts available in recent workflow runs — workflow run
 id, workflow name, creation time and size — without downloading anything.
+
+### `testfile-viewer gitlab` subcommands
+
+Bring the run artifacts of GitLab CI jobs into the local history (see
+[other CI systems](./ci-systems)). Both subcommands need `GITLAB_TOKEN`
+(or `CI_JOB_TOKEN` inside a pipeline) and take the same options:
+
+| Option | Description |
+| ------ | ----------- |
+| `--latest <n>` | Number of recent pipelines to consider (default: `5`). |
+| `--job <name>` | Job whose artifacts hold the run (default: `testfile`). |
+| `--ref <ref>` | Only pipelines for this branch or tag. |
+| `--host <url>` | Self-hosted instance (default: `https://gitlab.com`). |
+
+#### `gitlab sync <project> [path]`
+
+Download the run artifacts of recent pipelines and import them. `project`
+is a path like `group/project` or a numeric id.
+
+#### `gitlab list <project>`
+
+List the run artifacts available in recent pipelines — pipeline, job, name
+and creation time — without downloading anything.

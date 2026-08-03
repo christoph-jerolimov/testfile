@@ -1,0 +1,16 @@
+# Testfile on Buildkite.
+#
+# Copy this into your project as .buildkite/pipeline.yml. The recorded run
+# is uploaded as a build artifact; `testfile-viewer archive import` brings
+# a downloaded one into a local history.
+steps:
+  - label: ":test_tube: Testfile"
+    command:
+      - npm ci --no-audit --no-fund
+      - npx --yes @testfile/runner run --reporter junit --output junit.xml
+    plugins:
+      - docker#v5.11.0:
+          image: node:22
+    artifact_paths:
+      - ".testfile/runs/**/*"
+      - "junit.xml"
