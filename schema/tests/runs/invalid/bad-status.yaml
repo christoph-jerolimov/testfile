@@ -1,0 +1,11 @@
+# "flaky" is not a run status, and durationMs must be an integer.
+id: 20260101-120000-aaaa
+startedAt: 2026-01-01T12:00:00.000Z
+durationMs: "42"
+status: flaky
+exitCode: 0
+cancelled: false
+env: {}
+ports: {}
+selected: []
+tests: []

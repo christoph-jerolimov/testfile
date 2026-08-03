@@ -1,0 +1,72 @@
+id: 20260803-231617-d643
+startedAt: 2026-08-03T23:16:17.064Z
+durationMs: 11
+status: passed
+exitCode: 0
+cancelled: false
+machine: vm
+env: {}
+ports: {}
+selected:
+  - root/unit
+suite:
+  name: root
+  path: root
+  kind: sequence
+  children:
+    - name: unit
+      path: root/unit
+      kind: command
+      tags:
+        - fast
+        - unit
+    - name: integration
+      path: root/integration
+      kind: sequence
+      tags:
+        - slow
+      children:
+        - name: api
+          path: root/integration/api
+          kind: command
+        - name: db ${{ matrix.db }}
+          path: root/integration/db ${{ matrix.db }}
+          kind: matrix
+          tags:
+            - db
+          children:
+            - name: db ${{ matrix.db }} (db=postgres)
+              path: root/integration/db ${{ matrix.db }}/db ${{ matrix.db }} (db=postgres)
+              kind: command
+              tags:
+                - db
+              matrix:
+                db: postgres
+            - name: db ${{ matrix.db }} (db=mysql)
+              path: root/integration/db ${{ matrix.db }}/db ${{ matrix.db }} (db=mysql)
+              kind: command
+              tags:
+                - db
+              matrix:
+                db: mysql
+    - name: no-tags
+      path: root/no-tags
+      kind: command
+    - name: other
+      path: root/other
+      kind: sequence
+      children:
+        - name: sub suite
+          path: root/other/sub suite
+          kind: command
+          tags:
+            - included
+            - slow
+tests:
+  - path: root
+    status: passed
+    durationMs: 10
+  - path: root/unit
+    status: passed
+    durationMs: 8
+junit: junit.xml

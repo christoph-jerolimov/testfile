@@ -95,6 +95,12 @@
           "testfile.yml"
         ],
         "url": "./schemas/testfile.schema.json"
+      },
+      {
+        "fileMatch": [
+          "**/.testfile/runs/*/run.yaml"
+        ],
+        "url": "./schemas/testrun.schema.json"
       }
     ],
     "configurationDefaults": {
