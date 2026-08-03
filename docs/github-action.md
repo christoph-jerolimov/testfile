@@ -105,6 +105,7 @@ runs:
 
 ```sh
 export GITHUB_TOKEN=...          # a token with actions:read (GH_TOKEN works too)
+export GITHUB_TOKEN=$(gh auth token)   # ... or reuse the gh CLI's login
 testfile-viewer github sync you/your-repo --latest 10
 testfile-viewer runs             # CI runs are now part of the history
 ```

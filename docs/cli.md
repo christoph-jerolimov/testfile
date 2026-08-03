@@ -339,6 +339,7 @@ the latest *n* workflow runs straight into the local history:
 ```sh
 export GITHUB_TOKEN=...                  # a token with actions:read
                                          # (GH_TOKEN works too)
+export GITHUB_TOKEN=$(gh auth token)     # ... or reuse the gh CLI's login
 testfile-viewer github list owner/repo          # available run artifacts
 testfile-viewer github sync owner/repo          # latest 5 workflow runs
 testfile-viewer github sync owner/repo --latest 20
