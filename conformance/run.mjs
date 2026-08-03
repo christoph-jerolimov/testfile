@@ -18,17 +18,28 @@ const runner =
   process.env.TESTFILE_RUNNER ?? `node "${join(here, "..", "runner-ts", "dist", "cli.js")}"`;
 const filter = process.argv[2];
 
+console.log(`runner under test: ${runner}`);
+
 let failures = 0;
 let ran = 0;
 
+// Announce each step before it runs so a live CI log shows what the suite
+// is currently doing, not just the per-case verdicts afterwards.
+function step(text) {
+  console.log(`          ${text}`);
+}
+
 // One runner invocation; returns { status, report } and appends problems.
 function invoke(work, resultFile, env, expected, problems, label) {
+  step(`${label || "run: "}invoking the runner`);
   rmSync(resultFile, { force: true });
+  const started = Date.now();
   const proc = spawnSync("sh", ["-c", `${runner} run "${work}" --reporter json --output "${resultFile}"`], {
     encoding: "utf8",
     env: { ...process.env, ...(env ?? {}) },
     timeout: 120_000,
   });
+  step(`${label || "run: "}runner exited with ${proc.status} after ${((Date.now() - started) / 1000).toFixed(1)}s`);
   if (proc.status !== expected.exitCode) {
     problems.push(`${label}exit code: expected ${expected.exitCode}, got ${proc.status}`);
   }
@@ -76,11 +87,15 @@ function checkReport(report, expected, problems, label) {
 for (const name of readdirSync(join(here, "cases")).sort()) {
   if (filter && !name.includes(filter)) continue;
   ran++;
+  console.log(`  case    ${name}`);
   const caseDir = join(here, "cases", name);
   const expected = parse(readFileSync(join(caseDir, "expected.yaml"), "utf8"));
 
   // Cases may require tools (e.g. a container engine); missing tools skip
   // the case instead of failing it, so the suite stays runnable everywhere.
+  if ((expected.requires ?? []).length > 0) {
+    step(`checking required tools: ${expected.requires.join(", ")}`);
+  }
   const missing = (expected.requires ?? []).filter(
     (tool) =>
       spawnSync("sh", ["-c", `command -v ${tool} >/dev/null 2>&1 && ${tool} info >/dev/null 2>&1`])
@@ -106,6 +121,7 @@ for (const name of readdirSync(join(here, "cases")).sort()) {
   (expected.reruns ?? []).forEach((rerun, index) => {
     const label = `rerun ${index + 1}: `;
     if (rerun.before) {
+      step(`${label}preparing with \`${rerun.before}\``);
       const prep = spawnSync("sh", ["-c", rerun.before], { cwd: work, encoding: "utf8" });
       if (prep.status !== 0) problems.push(`${label}before-command failed: ${prep.stderr}`);
     }
