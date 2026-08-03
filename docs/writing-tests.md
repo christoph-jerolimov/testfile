@@ -47,6 +47,54 @@ another interpreter — anything that accepts `-c`:
 With a custom shell the implicit `-e` for scripts does not apply — add it
 yourself as above.
 
+## Running a test in a container
+
+Tests run on the host by default. `container` runs a test's body inside an
+image instead — the same idea as a GitHub Actions job container — so
+contributors don't need the right compiler installed locally:
+
+```yaml
+- name: go tests
+  container:
+    image: docker.io/library/golang:1.23
+  command: go test ./...
+```
+
+The project directory is mounted at `/workspace` and becomes the working
+directory (a test with a `workdir` lands in the mounted equivalent of it),
+and the test's environment is passed in — minus host-specific variables
+like `PATH` and `HOME`, which the image provides itself.
+
+A `container` on a group applies to everything nested below it, so one
+declaration can give a whole branch its toolchain:
+
+```yaml
+- name: rust
+  container:
+    image: docker.io/library/rust:1.83
+  sequence:
+    - name: fmt
+      command: cargo fmt --check
+    - name: test
+      command: cargo test
+```
+
+| Field | Description |
+| ----- | ----------- |
+| `image` | Image to run in (required). |
+| `engine` | `auto` (default: podman if available, else docker), `podman`, `docker`. |
+| `workdir` | Mount point of the project inside the container, default `/workspace`. |
+| `env` | Extra variables, on top of the test's own environment. |
+| `volumes` | Additional mounts, e.g. a shared package cache. |
+| `pull` | `always`, `missing` or `never`. |
+| `network` | Container network; defaults to `host`. |
+| `options` | Extra engine flags, e.g. `--user 1000:1000`. |
+
+[Services](./services) keep running on the host, so the container joins the
+host network by default and a test reaches its database on
+`127.0.0.1:${{ ports.db }}` exactly as it would outside. Set `network` if
+you need something else — then publish the ports accordingly.
+
 ## Sequences
 
 ```yaml

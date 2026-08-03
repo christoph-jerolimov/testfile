@@ -42,6 +42,8 @@ export interface TestDef {
   command?: string;
   script?: string;
   shell?: string;
+  // Runs this test's body (and those of nested tests) inside a container.
+  container?: TestContainerDef;
   sequence?: TestDef[];
   parallel?: TestDef[];
   maxParallel?: number;
@@ -71,6 +73,21 @@ export interface ServiceDef {
   container?: ContainerDef;
   ready?: ReadyDef;
   stop?: StopDef;
+}
+
+// A container a test's own body runs in (services use ContainerDef).
+export interface TestContainerDef {
+  image: string;
+  engine?: "auto" | "podman" | "docker" | "kubernetes";
+  env?: EnvMap;
+  // Where the project is mounted (default /workspace).
+  workdir?: string;
+  volumes?: string[];
+  pull?: "always" | "missing" | "never";
+  // Container network; defaults to "host" so services stay reachable.
+  network?: string;
+  // Extra engine flags, e.g. "--user 1000:1000".
+  options?: string[];
 }
 
 export interface ContainerDef {
