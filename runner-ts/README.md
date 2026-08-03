@@ -19,11 +19,9 @@ Beyond that core, the same binary covers the special cases:
 - **Filters** (`-f`, `-n`, `-t`, `-m`, `--failed`, `--changed`) to run a
   subset of the suite,
 - **machine-readable reports** for CI (`--reporter junit|json`),
-- **run history** under `.testfile/` (`testfile history`, `--diff`,
-  `--flaky`),
-- **sharing runs** between machines and CI
-  (`testfile runs pack|import|push|pull|sync`),
-- a **local web viewer** over recorded runs (`testfile serve`),
+- **run history** under `.testfile/`, browsed with the read-only
+  [`viewer-ts`](../viewer-ts/) sibling (`testfile-viewer runs`, `run`,
+  `diff`, `--flaky`, `serve`, `runs pack|import|push|pull|sync`),
 - **shell completions** (`testfile completion bash|zsh|fish`).
 
 Full documentation:

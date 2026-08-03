@@ -2,7 +2,7 @@
 // The read-only companion of the `testfile` runner: everything here works
 // on the recorded runs in .testfile/ and never touches the Testfile or
 // starts processes.
-import { existsSync, statSync } from "node:fs";
+import { existsSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
 import { detectFlaky, diffRuns, HISTORY_DIR, RunHistory, type RunRecord } from "./runrecord.js";
@@ -48,107 +48,38 @@ function summarizeTests(run: RunRecord): string {
   );
 }
 
+function loadedHistory(path: string): RunHistory {
+  const history = new RunHistory(resolveHistoryBase(path));
+  if (history.runs.length === 0) throw new Error(`no recorded runs in ${HISTORY_DIR}/`);
+  return history;
+}
+
+function findRun(history: RunHistory, idOrPrefix: string): RunRecord {
+  const run = history.find(idOrPrefix);
+  if (!run) throw new Error(`no recorded run matches "${idOrPrefix}"`);
+  return run;
+}
+
+function writeJson(data: unknown, target: string | true): void {
+  const json = `${JSON.stringify(data, null, 2)}\n`;
+  if (typeof target === "string") {
+    writeFileSync(target, json);
+    console.log(color(90, `written to ${target}`));
+  } else {
+    process.stdout.write(json);
+  }
+}
+
 program
-  .command("history", { isDefault: true })
+  .command("run")
+  .argument("<id>", "recorded run to show (a unique id prefix is enough)")
   .argument("[path]", "directory containing a .testfile folder", ".")
-  .option("--run <id>", "show one recorded run (a unique id prefix is enough)")
-  .option("--log [test-path]", "with --run: print the run's merged log, or a single test's log")
-  .option("--diff <ids...>", "compare two recorded runs (older id first)")
-  .option("--flaky", "find tests that both passed and failed across recorded runs", false)
-  .option("--last <n>", "with --flaky: only consider the most recent n runs", (v: string) =>
-    Number.parseInt(v, 10)
-  )
-  .description("List, show or compare recorded test runs")
-  .action(
-    (
-      path: string,
-      options: { run?: string; log?: string | boolean; diff?: string[]; flaky: boolean; last?: number }
-    ) => {
-      const history = new RunHistory(resolveHistoryBase(path));
-      if (history.runs.length === 0) {
-        console.error(`no recorded runs in ${HISTORY_DIR}/`);
-        process.exitCode = 1;
-        return;
-      }
-
-      if (options.flaky) {
-        const considered =
-          options.last !== undefined ? Math.min(options.last, history.runs.length) : history.runs.length;
-        const reports = detectFlaky(history.runs, options.last);
-        if (reports.length === 0) {
-          console.log(`no flaky tests detected across ${considered} run${considered === 1 ? "" : "s"}`);
-          return;
-        }
-        console.log(color(1, `flaky tests across ${considered} run${considered === 1 ? "" : "s"}:`));
-        for (const report of reports) {
-          const rate = `${report.fails}/${report.occurrences} failed`;
-          const flips = `${report.flips} flip${report.flips === 1 ? "" : "s"}`;
-          const last = `last ${colorStatus(report.lastStatus)}`;
-          console.log(`  ${pad(color(33, report.path), 40)} ${rate}, ${flips}, ${last}`);
-        }
-        console.log(color(90, '\nconsider tagging these tests [flaky] and adding "retry"'));
-        return;
-      }
-
-      if (options.diff) {
-        if (options.diff.length !== 2) {
-          console.error(`${color(31, "✘")} --diff needs exactly two run ids`);
-          process.exitCode = 1;
-          return;
-        }
-        const [base, compare] = options.diff.map((id) => history.find(id));
-        const missing = options.diff.filter((_, i) => (i === 0 ? !base : !compare));
-        if (!base || !compare) {
-          console.error(`${color(31, "✘")} no recorded run matches "${missing[0]}"`);
-          process.exitCode = 1;
-          return;
-        }
-        const diff = diffRuns(base, compare);
-        console.log(color(1, `${base.id} -> ${compare.id}`));
-        const section = (label: string, code: number, paths: string[]): void => {
-          for (const p of paths) console.log(`  ${pad(color(code, label), 13)} ${p}`);
-        };
-        section("newly failed", 31, diff.newlyFailed);
-        section("fixed", 32, diff.fixed);
-        section("still failing", 33, diff.stillFailing);
-        section("added", 36, diff.added);
-        section("removed", 90, diff.removed);
-        for (const d of diff.durations) {
-          const arrow = d.toMs > d.fromMs ? color(33, "slower") : color(32, "faster");
-          console.log(`  ${pad(arrow, 13)} ${d.path} (${formatMs(d.fromMs)} -> ${formatMs(d.toMs)})`);
-        }
-        const total =
-          diff.newlyFailed.length + diff.fixed.length + diff.stillFailing.length +
-          diff.added.length + diff.removed.length + diff.durations.length;
-        if (total === 0) console.log(color(90, "  no differences"));
-        return;
-      }
-
-      if (!options.run) {
-        const rows = history.runs.map((run) => [
-          run.id,
-          run.startedAt.replace("T", " ").slice(0, 19),
-          run.status,
-          formatMs(run.durationMs),
-          String(run.exitCode),
-          summarizeTests(run),
-        ]);
-        const header = ["ID", "STARTED", "STATUS", "DURATION", "EXIT", "TESTS"];
-        const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => pad(r[i], 0).length)));
-        console.log(color(1, header.map((h, i) => pad(h, widths[i])).join("  ")));
-        for (const row of rows) {
-          row[2] = colorStatus(row[2]);
-          console.log(row.map((cell, i) => pad(cell, widths[i])).join("  "));
-        }
-        return;
-      }
-
-      const run = history.find(options.run);
-      if (!run) {
-        console.error(`${color(31, "✘")} no recorded run matches "${options.run}"`);
-        process.exitCode = 1;
-        return;
-      }
+  .option("--log [test-path]", "print the run's merged log, or a single test's log")
+  .description("Show one recorded run")
+  .action((id: string, path: string, options: { log?: string | boolean }) => {
+    try {
+      const history = loadedHistory(path);
+      const run = findRun(history, id);
 
       if (options.log !== undefined) {
         const text =
@@ -159,11 +90,9 @@ program
               })()
             : history.readRunLog(run);
         if (text === undefined) {
-          console.error(
-            `${color(31, "✘")} no log found${typeof options.log === "string" ? ` for test "${options.log}"` : ""} in run ${run.id}`
+          throw new Error(
+            `no log found${typeof options.log === "string" ? ` for test "${options.log}"` : ""} in run ${run.id}`
           );
-          process.exitCode = 1;
-          return;
         }
         process.stdout.write(text);
         return;
@@ -197,9 +126,45 @@ program
           console.log(`  ${pad(service.status ?? "-", 7)} ${service.name}${log}`);
         }
       }
-      console.log(color(90, `\nlogs: testfile-viewer history --run ${run.id} --log [test-path]`));
+      console.log(color(90, `\nlogs: testfile-viewer run ${run.id} --log [test-path]`));
+    } catch (err) {
+      commandFailed(err);
     }
-  );
+  });
+
+program
+  .command("diff")
+  .argument("<older>", "run id to compare from (a unique prefix is enough)")
+  .argument("<newer>", "run id to compare to")
+  .argument("[path]", "directory containing a .testfile folder", ".")
+  .description("Compare two recorded runs")
+  .action((older: string, newer: string, path: string) => {
+    try {
+      const history = loadedHistory(path);
+      const base = findRun(history, older);
+      const compare = findRun(history, newer);
+      const diff = diffRuns(base, compare);
+      console.log(color(1, `${base.id} -> ${compare.id}`));
+      const section = (label: string, code: number, paths: string[]): void => {
+        for (const p of paths) console.log(`  ${pad(color(code, label), 13)} ${p}`);
+      };
+      section("newly failed", 31, diff.newlyFailed);
+      section("fixed", 32, diff.fixed);
+      section("still failing", 33, diff.stillFailing);
+      section("added", 36, diff.added);
+      section("removed", 90, diff.removed);
+      for (const d of diff.durations) {
+        const arrow = d.toMs > d.fromMs ? color(33, "slower") : color(32, "faster");
+        console.log(`  ${pad(arrow, 13)} ${d.path} (${formatMs(d.fromMs)} -> ${formatMs(d.toMs)})`);
+      }
+      const total =
+        diff.newlyFailed.length + diff.fixed.length + diff.stillFailing.length +
+        diff.added.length + diff.removed.length + diff.durations.length;
+      if (total === 0) console.log(color(90, "  no differences"));
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
 
 program
   .command("tui")
@@ -210,7 +175,7 @@ program
   .action(async (path: string, options: { view: string; name?: string }) => {
     try {
       if (!process.stdout.isTTY) {
-        throw new Error("the TUI needs an interactive terminal (use: testfile-viewer history)");
+        throw new Error("the TUI needs an interactive terminal (use: testfile-viewer runs)");
       }
       if (options.view !== "runs" && options.view !== "results") {
         throw new Error(`unknown --view "${options.view}", expected runs or results`);
@@ -266,11 +231,70 @@ program
     }
   });
 
-// --- testfile-viewer runs: pack, share and sync recorded runs -------------
+// --- testfile-viewer runs: list recorded runs (default command), plus the
+// pack/share/sync subcommands ----------------------------------------------
 
 const runsCommand = program
-  .command("runs")
-  .description("Pack, share and sync recorded runs (inspect them with: history)");
+  .command("runs", { isDefault: true })
+  .argument("[path]", "directory containing a .testfile folder", ".")
+  .option("--json [file]", "write the runs as JSON, to a file or (without a value) stdout")
+  .option("--flaky", "find tests that both passed and failed across recorded runs", false)
+  .option("--last <n>", "with --flaky: only consider the most recent n runs", (v: string) =>
+    Number.parseInt(v, 10)
+  )
+  .description("List recorded runs (the default command); subcommands pack, share and sync them")
+  .action((path: string, options: { json?: string | boolean; flaky: boolean; last?: number }) => {
+    try {
+      const history = loadedHistory(path);
+
+      if (options.flaky) {
+        const considered =
+          options.last !== undefined ? Math.min(options.last, history.runs.length) : history.runs.length;
+        const reports = detectFlaky(history.runs, options.last);
+        if (options.json !== undefined && options.json !== false) {
+          writeJson({ considered, flaky: reports }, options.json);
+          return;
+        }
+        if (reports.length === 0) {
+          console.log(`no flaky tests detected across ${considered} run${considered === 1 ? "" : "s"}`);
+          return;
+        }
+        console.log(color(1, `flaky tests across ${considered} run${considered === 1 ? "" : "s"}:`));
+        for (const report of reports) {
+          const rate = `${report.fails}/${report.occurrences} failed`;
+          const flips = `${report.flips} flip${report.flips === 1 ? "" : "s"}`;
+          const last = `last ${colorStatus(report.lastStatus)}`;
+          console.log(`  ${pad(color(33, report.path), 40)} ${rate}, ${flips}, ${last}`);
+        }
+        console.log(color(90, '\nconsider tagging these tests [flaky] and adding "retry"'));
+        return;
+      }
+
+      if (options.json !== undefined && options.json !== false) {
+        writeJson({ runs: history.runs }, options.json);
+        return;
+      }
+
+      const rows = history.runs.map((run) => [
+        run.id,
+        run.startedAt.replace("T", " ").slice(0, 19),
+        run.status,
+        formatMs(run.durationMs),
+        String(run.exitCode),
+        summarizeTests(run),
+      ]);
+      const header = ["ID", "STARTED", "STATUS", "DURATION", "EXIT", "TESTS"];
+      const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => pad(r[i], 0).length)));
+      console.log(color(1, header.map((h, i) => pad(h, widths[i])).join("  ")));
+      for (const row of rows) {
+        row[2] = colorStatus(row[2]);
+        console.log(row.map((cell, i) => pad(cell, widths[i])).join("  "));
+      }
+      console.log(color(90, `\ndetails: testfile-viewer run <id>`));
+    } catch (err) {
+      commandFailed(err);
+    }
+  });
 
 // The run to operate on: an id prefix when given, the latest run otherwise.
 function pickRun(base: string, idOrPrefix: string | undefined): RunRecord {

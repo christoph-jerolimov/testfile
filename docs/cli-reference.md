@@ -112,19 +112,32 @@ testfile-viewer [command] [options] [path]
 ```
 
 Read-only over the [run history](./cli#run-history) in `.testfile/`;
-running without a command is the same as `testfile-viewer history`.
+running without a command is the same as `testfile-viewer runs`.
 
-### `testfile-viewer history [path]`
+### `testfile-viewer runs [path]`
 
-List, show or compare recorded test runs (the default command).
+List the recorded runs as a table, newest first (the default command).
+Sharing subcommands are listed [below](#testfile-viewer-runs-subcommands).
 
 | Option | Description |
 | ------ | ----------- |
-| `--run <id>` | Show one recorded run — a unique id prefix is enough. |
-| `--log [test-path]` | With `--run`: print the run's merged log, or a single test's log. |
-| `--diff <ids...>` | Compare two recorded runs (older id first). |
-| `--flaky` | Find tests that both passed and failed across recorded runs. |
+| `--json [file]` | Write the full run records as JSON, to a file or (without a value) stdout. Combines with `--flaky` for a JSON flakiness report. |
+| `--flaky` | Instead of the table: find tests that both passed and failed across recorded runs. |
 | `--last <n>` | With `--flaky`: only consider the most recent `n` runs. |
+
+### `testfile-viewer run <id> [path]`
+
+Show one recorded run in detail — a unique id prefix is enough.
+
+| Option | Description |
+| ------ | ----------- |
+| `--log [test-path]` | Print the run's merged log, or a single test's log. |
+
+### `testfile-viewer diff <older> <newer> [path]`
+
+Compare two recorded runs (older id first, unique prefixes are enough):
+newly failed, fixed, still failing, added/removed tests and significant
+duration changes. No options.
 
 ### `testfile-viewer tui [path]`
 
@@ -146,7 +159,7 @@ the recorded runs.
 | `--port <n>` | Port to listen on, always bound to `127.0.0.1` only (default: `7357`). |
 | `--name <name>` | Display name shown in the web viewer. |
 
-### `testfile-viewer runs …`
+### `testfile-viewer runs` subcommands
 
 Pack, [share and sync](./cli#sharing-runs) recorded runs.
 

@@ -35,7 +35,9 @@ testfile list [path]       # print the expanded suite, incl. matrix instances
 testfile completion bash   # shell completions (bash, zsh, fish)
 
 # the viewer (read-only over .testfile/)
-testfile-viewer history        # list or show recorded runs (default command)
+testfile-viewer runs           # table of recorded runs (default command)
+testfile-viewer run <id>       # one run in detail
+testfile-viewer diff <a> <b>   # compare two runs
 testfile-viewer tui            # terminal UI: runs + results, watching
 testfile-viewer serve          # localhost REST API + web viewer
 testfile-viewer runs <cmd>     # pack/import/push/pull/sync recorded runs
@@ -265,11 +267,12 @@ use.)
 Browse the history from the command line:
 
 ```sh
-testfile-viewer history                   # table of recent runs, newest first
+testfile-viewer runs                      # table of recent runs, newest first
+testfile-viewer runs --json               # ... as JSON (or --json runs.json)
 testfile-viewer tui                       # browse runs in the TUI
-testfile-viewer history --run 20260801-1046      # one run in detail (id prefix is ok)
-testfile-viewer history --run <id> --log         # merged stdout+stderr of the run
-testfile-viewer history --run <id> --log all/e2e # ... of a single test
+testfile-viewer run 20260801-1046         # one run in detail (id prefix is ok)
+testfile-viewer run <id> --log            # merged stdout+stderr of the run
+testfile-viewer run <id> --log all/e2e    # ... of a single test
 ```
 
 The detail view lists every recorded test with status, duration and whether
@@ -279,7 +282,7 @@ works when the Testfile itself has moved or changed.
 Compare two runs (older id first, unique prefixes are enough):
 
 ```sh
-testfile-viewer history --diff 20260801-1040 20260801-1146
+testfile-viewer diff 20260801-1040 20260801-1146
 ```
 
 The diff lists newly failed, fixed and still-failing tests, tests added to
@@ -289,8 +292,8 @@ and more than 20%) of tests that passed in both runs.
 Hunt down flaky tests:
 
 ```sh
-testfile-viewer history --flaky            # across all recorded runs
-testfile-viewer history --flaky --last 10  # only the 10 most recent runs
+testfile-viewer runs --flaky               # across all recorded runs
+testfile-viewer runs --flaky --last 10     # only the 10 most recent runs
 ```
 
 A test is flagged when it both passed and failed across the considered runs
@@ -303,7 +306,7 @@ candidates for a `flaky` tag and a [`retry`](./writing-tests#retries).
 
 Because every run is a self-contained `runs/<id>/` folder, runs can move
 between machines. `testfile-viewer runs` packs them as `.tgz` archives and brings
-them into the local history, where `history`, `--diff`, `--flaky` and the
+them into the local history, where `runs`, `run`, `diff`, `--flaky` and the
 TUI treat them like local runs:
 
 ```sh
