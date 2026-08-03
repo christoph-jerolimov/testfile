@@ -324,7 +324,7 @@ host (the user's shell, the CI job) do not leak in. The base environment
 consists of
 
 - a small allowlist of essentials from the host: `PATH`, `HOME`, `USER`,
-  `LOGNAME`, `SHELL`, `TMPDIR`/`TMP`/`TEMP`, `LANG`, `LC_*`, `TZ` (plus
+  `LOGNAME`, `SHELL`, `TMPDIR`/`TMP`/`TEMP`, `LANG`, `LC_*`, `TZ`, `XDG_RUNTIME_DIR` (plus
   their Windows equivalents), and
 - values the runner provides: `CI=1`, `FORCE_COLOR=1` and
   `CLICOLOR_FORCE=1` (so tools emit color even though their output is a

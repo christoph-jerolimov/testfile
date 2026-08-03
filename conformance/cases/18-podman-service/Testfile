@@ -1,0 +1,36 @@
+version: 0
+ports:
+  web: random
+services:
+  httpd:
+    container:
+      image: docker.io/library/busybox:1.36
+      engine: podman
+      ports:
+        - "${{ ports.web }}:8080"
+      command: ["httpd", "-f", "-p", "8080"]
+    ready:
+      tcp: ${{ ports.web }}
+      timeout: 90s
+test:
+  name: root
+  sequence:
+    # the published port is reachable from the test (the tcp readiness
+    # already gated on it once; this asserts it from inside a test)
+    - name: reach-service
+      shell: bash
+      env:
+        PORT: ${{ ports.web }}
+      command: 'exec 3<>"/dev/tcp/127.0.0.1/$PORT"'
+    # a test-scoped container dependency with a log readiness check
+    - name: scoped-container
+      services:
+        logger:
+          container:
+            image: docker.io/library/busybox:1.36
+            engine: podman
+            command: ["sh", "-c", "echo logger-ready; sleep 60"]
+          ready:
+            log: logger-ready
+            timeout: 90s
+      command: "true"

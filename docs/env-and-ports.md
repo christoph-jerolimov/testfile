@@ -14,7 +14,7 @@ environment — runs behave the same on every machine, and a stray
 base environment is:
 
 - **Essentials from the host**: `PATH`, `HOME`, `USER`, `LOGNAME`, `SHELL`,
-  `TMPDIR`/`TMP`/`TEMP`, `LANG`, `LC_*`, `TZ` (and their Windows
+  `TMPDIR`/`TMP`/`TEMP`, `LANG`, `LC_*`, `TZ`, `XDG_RUNTIME_DIR` (and their Windows
   equivalents) pass through, so commands just work.
 - **Runner-provided defaults**: `CI=1`, plus `FORCE_COLOR=1` and
   `CLICOLOR_FORCE=1` so tools keep their color output even though the

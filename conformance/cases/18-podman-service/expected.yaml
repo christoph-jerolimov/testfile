@@ -1,0 +1,10 @@
+# Container services via podman: a run-level service with a published
+# random port (tcp readiness + reachable from a test) and a test-scoped
+# container with a log readiness check. Skipped where podman is missing.
+requires: [podman]
+exitCode: 0
+status: passed
+tests:
+  - { path: root, status: passed }
+  - { path: root/reach-service, status: passed }
+  - { path: root/scoped-container, status: passed }
