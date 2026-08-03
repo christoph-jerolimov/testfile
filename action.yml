@@ -25,6 +25,14 @@ inputs:
     description: "key:value matrix filter (-m)"
     required: false
     default: ""
+  changed:
+    description: "Run only tests whose `inputs` match files changed against the base branch (testfile run --changed). Needs the base branch in the checkout, e.g. actions/checkout with fetch-depth: 0"
+    required: false
+    default: "false"
+  changed-since:
+    description: "Base branch/ref for `changed`. Defaults to the pull request's target branch when the workflow runs on a PR"
+    required: false
+    default: ${{ github.base_ref }}
   fail-fast:
     description: "Abort the whole run at the first failure"
     required: false
@@ -84,6 +92,8 @@ runs:
         INPUT_FILTER_NAME: ${{ inputs.filter-name }}
         INPUT_FILTER_TAGS: ${{ inputs.filter-tags }}
         INPUT_FILTER_MATRIX: ${{ inputs.filter-matrix }}
+        INPUT_CHANGED: ${{ inputs.changed }}
+        INPUT_CHANGED_SINCE: ${{ inputs.changed-since }}
         INPUT_FAIL_FAST: ${{ inputs.fail-fast }}
         INPUT_MAX_PARALLEL: ${{ inputs.max-parallel }}
         INPUT_REPORTER: ${{ inputs.reporter }}
@@ -94,6 +104,10 @@ runs:
         [ -n "$INPUT_FILTER_NAME" ] && ARGS+=(-n "$INPUT_FILTER_NAME")
         [ -n "$INPUT_FILTER_TAGS" ] && ARGS+=(-t "$INPUT_FILTER_TAGS")
         [ -n "$INPUT_FILTER_MATRIX" ] && ARGS+=(-m "$INPUT_FILTER_MATRIX")
+        if [ "$INPUT_CHANGED" = "true" ]; then
+          ARGS+=(--changed)
+          [ -n "$INPUT_CHANGED_SINCE" ] && ARGS+=(--changed-since "$INPUT_CHANGED_SINCE")
+        fi
         [ "$INPUT_FAIL_FAST" = "true" ] && ARGS+=(--fail-fast)
         [ -n "$INPUT_MAX_PARALLEL" ] && ARGS+=(--max-parallel "$INPUT_MAX_PARALLEL")
         [ -n "$INPUT_REPORTER" ] && ARGS+=(--reporter "$INPUT_REPORTER")

@@ -79,6 +79,7 @@ unreadable.
 | `log`        | string  | no       | Relative path of the test's merged stdout+stderr log; absent when the test produced no output. |
 | `artifacts`  | array   | no       | Relative paths of collected artifact files. |
 | `cached`     | boolean | no       | True when the result was served from the runner's result cache. |
+| `reason`     | string  | no       | Human-readable explanation of why a test with `inputs` ran or was reused — cache hit/miss detail (which pattern saw how many changed files) and/or the change-based selection that picked it. Free-form; consumers must not parse it. |
 
 ### `services[]`
 

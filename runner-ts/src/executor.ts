@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { resolve as resolvePath } from "node:path";
-import { ResultCache } from "./cache.js";
+import { explainInputsMiss, ResultCache, type InputsState } from "./cache.js";
 import { evaluateCondition } from "./condition.js";
 import { loadEnvFiles } from "./envfile.js";
 import { baseEnv as hostBaseEnv, forwardedEnv } from "./hostenv.js";
@@ -27,6 +27,9 @@ export interface RunnerOptions {
   // Additional host-env forward patterns (e.g. from --forward-env), applied
   // on top of the document's forwardEnv.
   forwardEnv?: string[];
+  // Per-test notes about why the selection picked a test (e.g. which
+  // --changed pattern matched); logged and recorded with the test.
+  selectionNotes?: Map<number, string>;
 }
 
 // A started service as seen by one test: releasing it stops the service, or
@@ -50,6 +53,7 @@ export class Runner extends EventEmitter {
   private readonly abort = new AbortController();
   private readonly failFast: boolean;
   private readonly cache?: ResultCache;
+  private readonly selectionNotes?: Map<number, string>;
   private readonly forwardEnv: string[];
   private readonly globalSlots?: Semaphore;
   // Running shared services, keyed by name + resolved configuration.
@@ -73,6 +77,7 @@ export class Runner extends EventEmitter {
     this.active = options.active;
     this.failFast = options.failFast ?? false;
     this.cache = options.cache;
+    this.selectionNotes = options.selectionNotes;
     this.forwardEnv = options.forwardEnv ?? [];
     if (options.maxParallel !== undefined) this.globalSlots = new Semaphore(options.maxParallel);
   }
@@ -161,7 +166,7 @@ export class Runner extends EventEmitter {
     // Assigned once the test's scopes exist; runs in finally so teardown
     // happens on success, failure and abort, before services stop.
     let teardown: (() => Promise<void>) | undefined;
-    let nodeCache: { key: string; hash: string } | undefined;
+    let nodeCache: { key: string; state: InputsState } | undefined;
     try {
       if (test.isMatrixWrapper) {
         // The wrapper only fans out; env/services/workdir apply per instance.
@@ -225,18 +230,31 @@ export class Runner extends EventEmitter {
             resolveEnvMap(test.def.env, withMatrix, where),
             test.matrix
           );
-          const hash = ResultCache.inputsHash(nodeCwd, test.def.inputs);
+          const state = ResultCache.inputsState(nodeCwd, test.def.inputs);
           const entry = this.cache.get(key);
-          if (entry && entry.hash === hash) {
+          const note = this.selectionNotes?.get(test.id);
+          if (entry && entry.hash === state.hash) {
             test.status = "passed";
             test.cached = true;
-            test.output.system(`cached: inputs unchanged (last passed ${entry.savedAt})`);
+            test.reason = withNote(note, `cache hit: inputs unchanged (last passed ${entry.savedAt})`);
+            test.output.system(test.reason);
             test.endedAt = Date.now();
             this.emit("test-end", test);
             this.emitUpdate();
             return;
           }
-          nodeCache = { key, hash };
+          // Every test with `inputs` records why it actually ran, both in
+          // its log and in the run record.
+          test.reason = withNote(
+            note,
+            !this.cache.enabled
+              ? "cache disabled (--no-cache)"
+              : entry
+                ? `cache miss: ${explainInputsMiss(entry, state, test.def.inputs)}`
+                : "cache miss: no stored passing result for this configuration"
+          );
+          test.output.system(test.reason);
+          nodeCache = { key, state };
         }
 
         if (test.def.teardown) {
@@ -295,7 +313,7 @@ export class Runner extends EventEmitter {
       // (assertion: the body methods assign the final status out of
       // TypeScript's narrowing sight)
       const finalStatus = test.status as Status;
-      if (finalStatus === "passed") this.cache.put(nodeCache.key, nodeCache.hash);
+      if (finalStatus === "passed") this.cache.put(nodeCache.key, nodeCache.state);
       else this.cache.invalidate(nodeCache.key);
     }
 
@@ -685,6 +703,10 @@ class Semaphore {
     if (next) next();
     else this.available++;
   }
+}
+
+function withNote(note: string | undefined, reason: string): string {
+  return note ? `${note}; ${reason}` : reason;
 }
 
 function signalGroup(pid: number | undefined, signal: NodeJS.Signals): void {

@@ -125,9 +125,15 @@ testfile run -t slow -m db:postgres -m node:22
   unaffected.
 
 `--changed` runs only tests whose [inputs](./writing-tests#result-caching)
-changed — predicted cache misses. Tests without `inputs` always count as
-changed; it composes with the other filters, works on `list` for preview,
-and errors when every selected test would come from the cache.
+match a file changed against the base branch — the committed diff since the
+fork point plus everything changed locally (staged, unstaged, untracked).
+It needs a git checkout, not a warm cache, so it works on fresh CI clones;
+see [change-based selection](./writing-tests#change-based-selection). Tests
+without `inputs` always count as changed; it composes with the other
+filters, works on `list` for preview, and errors when nothing is selected.
+`--changed-since <ref>` picks the base branch (default: the remote's
+default branch) and implies `--changed`. Selected tests log which pattern
+matched how many changed files, and record it as `reason` in `run.yaml`.
 
 `--failed` re-runs what broke last time: it keeps only tests that failed (or
 were aborted) in the most recent recorded run, and combines with the other
@@ -137,6 +143,40 @@ integration tests.
 Different filter kinds are ANDed. Filters that match nothing are an error.
 `testfile list` shows each test's tags, so it's an easy way to preview what
 a filter will run.
+
+## Changes
+
+`testfile changes` shows exactly what `--changed` selects tests from: the
+base branch, the current commit, and an alphabetical table of every file
+changed in the git diff (base → HEAD, from the fork point) or locally:
+
+```sh
+$ testfile changes
+base:  origin/main (0cc2875ab)
+head:  6d5dd5a91
+root:  /work/project
+
+file                       source  status
+runner/src/cli.ts          diff    modified
+runner/src/gitchanges.ts   diff    added
+package.json               local   modified
+
+3 changed files
+```
+
+`source` says where a change was found: `diff` (committed since the base
+branch) or `local` (dirty in the working copy — a file that is both appears
+once, as `local`). Options:
+
+```sh
+testfile changes --changed-since origin/release-2.0   # pick the base
+testfile changes --files                              # just the paths
+testfile changes --json changes.json                  # export as JSON
+testfile changes --json                               # ... to stdout
+```
+
+To debug why a specific test would (not) run, combine the file list with
+`testfile list --changed` or `testfile run --changed --dry-run`.
 
 ## Plain output
 

@@ -20,6 +20,9 @@ export interface RunRecordTest {
   artifacts?: string[];
   // True when the result was reused from the cache (inputs unchanged).
   cached?: boolean;
+  // For tests with `inputs`: why the test ran or was served from the cache
+  // (cache hit/miss detail, --changed selection).
+  reason?: string;
 }
 
 export interface RunRecordService {
@@ -70,6 +73,7 @@ export interface RunLogInput {
   // Files to copy into the run's artifacts folder.
   artifacts?: { absolute: string; relative: string }[];
   cached?: boolean;
+  reason?: string;
 }
 
 export class RunHistory {
@@ -229,6 +233,7 @@ export class RunHistory {
       const entry: RunRecordTest = { path: test.path, status: test.status };
       if (test.durationMs !== undefined) entry.durationMs = test.durationMs;
       if (test.cached) entry.cached = true;
+      if (test.reason !== undefined) entry.reason = test.reason;
       if (test.lines.length > 0) {
         entry.log = join("tests", `${slugify(test.path)}.log`);
         writeFileSync(join(runDir, entry.log), renderLines(test.lines));

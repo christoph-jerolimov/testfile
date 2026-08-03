@@ -144,8 +144,8 @@ test("predictCacheHits marks unchanged tests without running them", async () => 
   assert.equal((await predictCacheHits(forced, forced.activeSetFor([forced.suite.id]))).size, 0);
 });
 
-test("changedTestIds selects predicted cache misses plus tests without inputs", async () => {
-  const { changedTestIds } = await import("./cache-predict.js");
+test("gitChangedSelection picks tests whose inputs match changed files", async () => {
+  const { gitChangedSelection } = await import("./cache-predict.js");
   const dir = tempDir();
   writeFileSync(join(dir, "input.txt"), "good");
   const doc: TestfileDoc = {
@@ -158,21 +158,52 @@ test("changedTestIds selects predicted cache misses plus tests without inputs", 
       ],
     },
   };
-  await new Session(doc, dir).runAll();
-
   const session = new Session(doc, dir);
   const active = session.activeSetFor([session.suite.id]);
-  const changed = await changedTestIds(session, active);
+  const base = { gitRoot: dir, baseRef: "origin/main", baseCommit: "abc", headCommit: "def" };
+
+  const miss = await gitChangedSelection(session, active, {
+    ...base,
+    files: [{ path: "other.txt", source: "diff" as const, status: "modified" as const }],
+  });
   assert.deepEqual(
-    changed.map((id) => session.byId.get(id)!.name),
+    miss.ids.map((id) => session.byId.get(id)!.name),
     ["plain"],
-    "unchanged cachable is dropped, inputs-less tests always run"
+    "no matching input: only inputs-less tests count as changed"
   );
 
-  writeFileSync(join(dir, "input.txt"), "good v2");
-  const afterEdit = await changedTestIds(session, active);
+  const hit = await gitChangedSelection(session, active, {
+    ...base,
+    files: [{ path: "input.txt", source: "local" as const, status: "modified" as const }],
+  });
   assert.deepEqual(
-    afterEdit.map((id) => session.byId.get(id)!.name).sort(),
+    hit.ids.map((id) => session.byId.get(id)!.name).sort(),
     ["cachable", "plain"]
   );
+  const cachableId = hit.ids.find((id) => session.byId.get(id)!.name === "cachable")!;
+  const note = hit.notes.get(cachableId)!;
+  assert.match(note, /selected by --changed against origin\/main/);
+  assert.match(note, /input\.txt: 1 changed file \(input\.txt\)/);
+  assert.equal(hit.notes.has(hit.ids.find((id) => session.byId.get(id)!.name === "plain")!), false);
+});
+
+test("a cache miss and its cause are recorded as the test's reason", async () => {
+  const dir = tempDir();
+  writeFileSync(join(dir, "input.txt"), "good v1");
+
+  const first = new Session(cachingDoc(), dir);
+  await first.runAll();
+  const firstReason = first.lastRecord!.tests.find((t) => t.path === "unit")!.reason!;
+  assert.match(firstReason, /cache miss: no stored passing result/);
+
+  const second = new Session(cachingDoc(), dir);
+  await second.runAll();
+  const hitReason = second.lastRecord!.tests.find((t) => t.path === "unit")!.reason!;
+  assert.match(hitReason, /cache hit: inputs unchanged/);
+
+  writeFileSync(join(dir, "input.txt"), "good v2");
+  const third = new Session(cachingDoc(), dir);
+  await third.runAll();
+  const missReason = third.lastRecord!.tests.find((t) => t.path === "unit")!.reason!;
+  assert.match(missReason, /cache miss: input\.txt: 1 changed file \(input\.txt\)/);
 });

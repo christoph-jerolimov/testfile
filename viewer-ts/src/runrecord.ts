@@ -16,6 +16,8 @@ export interface RunRecordTest {
   log?: string;
   artifacts?: string[];
   cached?: boolean;
+  // Why a test with `inputs` ran or was reused (free-form runner text).
+  reason?: string;
 }
 
 export interface RunRecordService {

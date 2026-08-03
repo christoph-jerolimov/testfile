@@ -188,6 +188,7 @@ program
           : "";
         const cached = test.cached ? color(90, "  [cached]") : "";
         console.log(`  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${log}${artifacts}${cached}`);
+        if (test.reason) console.log(color(90, `          ${test.reason}`));
       }
       if (run.services?.length) {
         console.log("services:");

@@ -47,7 +47,10 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
               key={test.path}
               className={choice.kind === "test" && choice.path === test.path ? "selected" : undefined}
             >
-              <td className="mono">{test.path}</td>
+              <td className="mono">
+                {test.path}
+                {test.reason ? <div className="muted small">{test.reason}</div> : null}
+              </td>
               <td>
                 <StatusCell status={test.status} cached={test.cached} />
               </td>

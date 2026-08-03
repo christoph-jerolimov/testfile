@@ -167,6 +167,14 @@ tr.selected td {
   margin-left: 0.4rem;
 }
 
+/* secondary line under a test path, e.g. the run/cache reason */
+.muted.small {
+  color: var(--dim);
+  font-size: 0.75rem;
+  font-family: inherit;
+  white-space: normal;
+}
+
 h2 {
   font-size: 0.8rem;
   text-transform: uppercase;
