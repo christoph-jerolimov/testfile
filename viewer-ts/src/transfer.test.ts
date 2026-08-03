@@ -170,7 +170,13 @@ test("githubRunArchives lists matching, unexpired artifacts of recent runs", asy
     "https://api.github.com/runs/11/artifacts": {
       json: {
         artifacts: [
-          { id: 1, name: "testfile-run", archive_download_url: "https://dl/1" },
+          {
+            id: 1,
+            name: "testfile-run",
+            archive_download_url: "https://dl/1",
+            created_at: "2026-01-02T09:01:00Z",
+            size_in_bytes: 15692,
+          },
           { id: 2, name: "test-results", archive_download_url: "https://dl/2" },
         ],
       },
@@ -190,7 +196,14 @@ test("githubRunArchives lists matching, unexpired artifacts of recent runs", asy
     fetchImpl,
   });
   assert.deepEqual(archives, [
-    { workflowRun: 11, workflowName: "CI", artifactId: 1, downloadUrl: "https://dl/1" },
+    {
+      workflowRun: 11,
+      workflowName: "CI",
+      artifactId: 1,
+      downloadUrl: "https://dl/1",
+      createdAt: "2026-01-02T09:01:00Z",
+      sizeBytes: 15692,
+    },
   ]);
   assert.ok(requests.every((request) => request.auth === "Bearer tok"), "every call authenticates");
 });

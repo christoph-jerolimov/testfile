@@ -21,7 +21,8 @@ Beyond that core, the same binary covers the special cases:
 - **machine-readable reports** for CI (`--reporter junit|json`),
 - **run history** under `.testfile/`, browsed with the read-only
   [`viewer-ts`](../viewer-ts/) sibling (`testfile-viewer runs`, `run`,
-  `diff`, `--flaky`, `serve`, `runs pack|import|push|pull|sync`),
+  `diff`, `--flaky`, `serve`, `archive pack|import`, `s3 push|pull|list`,
+  `github sync|list`),
 - **shell completions** (`testfile completion bash|zsh|fish`).
 
 Full documentation:

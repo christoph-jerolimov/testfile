@@ -202,6 +202,8 @@ export interface GithubArchive {
   workflowName: string;
   artifactId: number;
   downloadUrl: string;
+  createdAt?: string;
+  sizeBytes?: number;
 }
 
 export interface GithubOptions {
@@ -238,16 +240,26 @@ export async function githubRunArchives(options: GithubOptions): Promise<GithubA
   const archives: GithubArchive[] = [];
   for (const run of runs.workflow_runs ?? []) {
     const artifacts = (await githubApi(run.artifacts_url, options)) as {
-      artifacts?: { id: number; name: string; archive_download_url: string; expired?: boolean }[];
+      artifacts?: {
+        id: number;
+        name: string;
+        archive_download_url: string;
+        expired?: boolean;
+        created_at?: string;
+        size_in_bytes?: number;
+      }[];
     };
     for (const artifact of artifacts.artifacts ?? []) {
       if (artifact.name !== options.artifact || artifact.expired) continue;
-      archives.push({
+      const entry: GithubArchive = {
         workflowRun: run.id,
         workflowName: run.name ?? "",
         artifactId: artifact.id,
         downloadUrl: artifact.archive_download_url,
-      });
+      };
+      if (artifact.created_at !== undefined) entry.createdAt = artifact.created_at;
+      if (artifact.size_in_bytes !== undefined) entry.sizeBytes = artifact.size_in_bytes;
+      archives.push(entry);
     }
   }
   return archives;

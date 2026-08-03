@@ -40,7 +40,9 @@ testfile-viewer run <id>       # one run in detail
 testfile-viewer diff <a> <b>   # compare two runs
 testfile-viewer tui            # terminal UI: runs + results, watching
 testfile-viewer serve          # localhost REST API + web viewer
-testfile-viewer runs <cmd>     # pack/import/push/pull/sync recorded runs
+testfile-viewer archive <cmd>  # pack/import recorded runs as archives
+testfile-viewer s3 <cmd>       # push/pull/list runs in an S3 bucket
+testfile-viewer github <cmd>   # sync/list GitHub Actions run artifacts
 ```
 
 Tab completion for commands and flags:
@@ -305,15 +307,15 @@ candidates for a `flaky` tag and a [`retry`](./writing-tests#retries).
 ## Sharing runs
 
 Because every run is a self-contained `runs/<id>/` folder, runs can move
-between machines. `testfile-viewer runs` packs them as `.tgz` archives and brings
-them into the local history, where `runs`, `run`, `diff`, `--flaky` and the
-TUI treat them like local runs:
+between machines. `testfile-viewer archive` packs them as `.tgz` archives and
+brings them into the local history, where `runs`, `run`, `diff`, `--flaky`
+and the TUI treat them like local runs:
 
 ```sh
-testfile-viewer runs pack                       # latest run -> testfile-run-<id>.tgz
-testfile-viewer runs pack --run 20260801 -o ci.tgz
-testfile-viewer runs import ci.tgz              # import into ./.testfile/runs/
-testfile-viewer runs import testfile-run.zip    # a downloaded GitHub run artifact
+testfile-viewer archive pack                    # latest run -> testfile-run-<id>.tgz
+testfile-viewer archive pack --run 20260801 -o ci.tgz
+testfile-viewer archive import ci.tgz           # import into ./.testfile/runs/
+testfile-viewer archive import testfile-run.zip # a downloaded GitHub run artifact
 ```
 
 Importing skips runs that already exist locally (same id), so repeated
@@ -323,10 +325,11 @@ With the [aws CLI](https://aws.amazon.com/cli/) configured, runs can be
 shared through S3 — for example a CI job pushes, developers pull:
 
 ```sh
-testfile-viewer runs push s3://my-bucket/testfile-runs        # latest run
-testfile-viewer runs push s3://my-bucket/testfile-runs --run 20260801
-testfile-viewer runs pull s3://my-bucket/testfile-runs        # newest archive
-testfile-viewer runs pull s3://my-bucket/testfile-runs --run <full-id>
+testfile-viewer s3 push s3://my-bucket/testfile-runs          # latest run
+testfile-viewer s3 push s3://my-bucket/testfile-runs --run 20260801
+testfile-viewer s3 list s3://my-bucket/testfile-runs          # available archives
+testfile-viewer s3 pull s3://my-bucket/testfile-runs          # newest archive
+testfile-viewer s3 pull s3://my-bucket/testfile-runs --run <full-id>
 ```
 
 And when CI is the [GitHub Action](./github-action) (which uploads every
@@ -336,9 +339,10 @@ the latest *n* workflow runs straight into the local history:
 ```sh
 export GITHUB_TOKEN=...                  # a token with actions:read
                                          # (GH_TOKEN works too)
-testfile-viewer runs sync owner/repo            # latest 5 workflow runs
-testfile-viewer runs sync owner/repo --latest 20
-testfile-viewer runs sync owner/repo --artifact my-artifact-name
+testfile-viewer github list owner/repo          # available run artifacts
+testfile-viewer github sync owner/repo          # latest 5 workflow runs
+testfile-viewer github sync owner/repo --latest 20
+testfile-viewer github sync owner/repo --artifact my-artifact-name
 ```
 
 Already-imported runs are skipped, so `sync` is incremental — run it again
@@ -360,7 +364,7 @@ testfile-viewer serve --port 8080
 - **Results**: every recorded test with aggregated pass/fail counts and
   its executions across all runs.
 - The server watches `.testfile/runs/` and pushes changes to the browser,
-  so runs recorded elsewhere (another terminal, `testfile-viewer runs sync`)
+  so runs recorded elsewhere (another terminal, `testfile-viewer github sync`)
   appear live.
 
 The server binds to `127.0.0.1` **only** — it is never reachable from the

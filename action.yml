@@ -62,7 +62,7 @@ inputs:
     required: false
     default: "true"
   upload-run:
-    description: "Upload the recorded run (.testfile/runs/<id>) as a build artifact, importable with `testfile runs sync`"
+    description: "Upload the recorded run (.testfile/runs/<id>) as a build artifact, importable with `testfile-viewer github sync`"
     required: false
     default: "true"
   artifact-name:
