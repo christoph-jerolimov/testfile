@@ -1,0 +1,51 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+version: 0
+name: playwright-web
+
+ports:
+  web: random
+  api: random
+
+test:
+  name: e2e
+  sequence:
+    - name: install
+      command: npm ci --no-audit --no-fund
+      inputs: [package-lock.json]
+
+    - name: build
+      command: npm run build
+      inputs:
+        - src/**
+        - package-lock.json
+        - vite.config.ts
+
+    - name: browser tests
+      # both processes are dependencies of this test: the runner starts
+      # them, waits until they answer, and stops them afterwards
+      services:
+        api:
+          command: npm run start:api
+          env:
+            PORT: ${{ ports.api }}
+          ready:
+            http: http://127.0.0.1:${{ ports.api }}/healthz
+            timeout: 60s
+        web:
+          command: npm run preview -- --port ${{ ports.web }}
+          env:
+            API_URL: http://127.0.0.1:${{ ports.api }}
+          ready:
+            http: http://127.0.0.1:${{ ports.web }}
+            timeout: 60s
+      env:
+        BASE_URL: http://127.0.0.1:${{ ports.web }}
+      command: npx playwright test
+      # traces and screenshots are kept with the run, also when it fails
+      artifacts:
+        - playwright-report/**
+        - test-results/**/*.png
+        - test-results/**/trace.zip
+      retry:
+        count: 2
+        delay: 2s

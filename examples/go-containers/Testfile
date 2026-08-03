@@ -1,0 +1,62 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+version: 0
+name: go-containers
+
+# Testcontainers-style dependencies, but declared instead of started from
+# test code: the runner owns their lifecycle, so the same setup works in
+# `go test` locally and on CI.
+ports:
+  redis: random
+  kafka: random
+
+test:
+  name: go
+  sequence:
+    - name: vet
+      tags: [fast]
+      command: go vet ./...
+      inputs:
+        - "**/*.go"
+        - go.mod
+        - go.sum
+
+    - name: unit
+      tags: [fast]
+      command: go test ./... -short
+      inputs:
+        - "**/*.go"
+        - go.mod
+        - go.sum
+
+    - name: integration
+      tags: [slow]
+      services:
+        redis:
+          container:
+            image: docker.io/library/redis:7-alpine
+            ports:
+              - "${{ ports.redis }}:6379"
+          ready:
+            tcp: ${{ ports.redis }}
+            timeout: 30s
+        kafka:
+          container:
+            image: docker.io/apache/kafka:3.7.0
+            ports:
+              - "${{ ports.kafka }}:9092"
+            env:
+              KAFKA_NODE_ID: "1"
+              KAFKA_PROCESS_ROLES: broker,controller
+              KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+              KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+              KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          ready:
+            # the broker prints this once it is actually accepting traffic
+            log: Kafka Server started
+            timeout: 90s
+      env:
+        REDIS_ADDR: 127.0.0.1:${{ ports.redis }}
+        KAFKA_BROKER: 127.0.0.1:${{ ports.kafka }}
+      command: go test ./... -run Integration -count=1
+      artifacts:
+        - coverage.out

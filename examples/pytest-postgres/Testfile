@@ -1,0 +1,52 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+version: 0
+name: pytest-postgres
+
+ports:
+  # a free port is picked per run, so parallel runs never collide
+  db: random
+
+test:
+  name: python
+  sequence:
+    - name: install
+      command: pip install -r requirements-dev.txt
+      inputs: [requirements-dev.txt]
+
+    - name: lint
+      tags: [fast]
+      command: ruff check .
+
+    - name: checks
+      parallel:
+        - name: unit
+          tags: [fast]
+          # no database needed: pure unit tests stay fast
+          command: pytest tests/unit -q
+
+        - name: integration
+          tags: [db]
+          # the database is a dependency of this test only: it starts
+          # before the test and is stopped again afterwards
+          services:
+            postgres:
+              container:
+                image: docker.io/library/postgres:16-alpine
+                ports:
+                  - "${{ ports.db }}:5432"
+                env:
+                  POSTGRES_PASSWORD: testing
+                  POSTGRES_DB: app_test
+              ready:
+                # wait until the server really accepts connections, not
+                # just until the container started
+                exec: pg_isready -h 127.0.0.1 -p ${{ ports.db }} -U postgres
+                interval: 500ms
+                timeout: 60s
+          env:
+            DATABASE_URL: postgresql://postgres:testing@127.0.0.1:${{ ports.db }}/app_test
+          setup:
+            command: alembic upgrade head
+          command: pytest tests/integration -q
+          artifacts:
+            - reports/**

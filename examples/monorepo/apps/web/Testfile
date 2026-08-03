@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+version: 0
+name: web
+
+ports:
+  web: random
+
+test:
+  name: web
+  sequence:
+    - name: build
+      command: npm run build --workspace web
+      inputs:
+        - src/**
+        - package.json
+
+    - name: e2e
+      tags: [slow]
+      services:
+        preview:
+          command: npm run preview --workspace web -- --port ${{ ports.web }}
+          ready:
+            http: http://127.0.0.1:${{ ports.web }}
+            timeout: 60s
+      env:
+        BASE_URL: http://127.0.0.1:${{ ports.web }}
+      command: npx playwright test
+      artifacts:
+        - playwright-report/**

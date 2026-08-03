@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+version: 0
+name: monorepo
+
+# The root file only wires the packages together: every package owns its
+# own Testfile, so teams stay independent. `include` accepts globs, and
+# each included file runs in its own directory.
+test:
+  name: all
+  sequence:
+    - name: install
+      command: npm ci --no-audit --no-fund
+      inputs: [package-lock.json]
+
+    - name: packages
+      # packages/*/Testfile - one parallel branch per package
+      include: packages/*
+
+    - name: apps
+      include: apps/*

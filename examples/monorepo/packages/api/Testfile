@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+version: 0
+name: api
+
+ports:
+  db: random
+
+test:
+  name: checks
+  parallel:
+    - name: lint
+      tags: [fast]
+      command: npm run lint --workspace api
+      # unchanged sources are served from the cache on the next run
+      inputs:
+        - src/**
+        - package.json
+
+    - name: unit
+      tags: [fast]
+      command: npm test --workspace api
+      inputs:
+        - src/**
+        - test/**
+        - package.json
+
+    - name: db tests
+      tags: [slow]
+      services:
+        postgres:
+          container:
+            image: docker.io/library/postgres:16-alpine
+            ports:
+              - "${{ ports.db }}:5432"
+            env:
+              POSTGRES_PASSWORD: testing
+          ready:
+            tcp: ${{ ports.db }}
+            timeout: 60s
+      env:
+        DATABASE_URL: postgresql://postgres:testing@127.0.0.1:${{ ports.db }}/postgres
+      command: npm run test:db --workspace api

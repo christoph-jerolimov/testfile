@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+version: 0
+name: ui
+
+test:
+  name: checks
+  parallel:
+    - name: lint
+      tags: [fast]
+      command: npm run lint --workspace ui
+      inputs:
+        - src/**
+        - package.json
+
+    - name: unit
+      tags: [fast]
+      command: npm test --workspace ui
+      inputs:
+        - src/**
+        - package.json

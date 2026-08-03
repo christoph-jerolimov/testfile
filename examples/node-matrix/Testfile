@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+version: 0
+name: node-matrix
+
+ports:
+  db: random
+
+test:
+  name: matrix
+  sequence:
+    - name: install
+      command: npm ci --no-audit --no-fund
+      inputs: [package-lock.json]
+
+    # One test definition, five runs: every Node version against every
+    # PostgreSQL version. Run a single combination with:
+    #   testfile run -m node:22 -m postgres:17
+    - name: node ${{ matrix.node }} / postgres ${{ matrix.postgres }}
+      tags: [matrix]
+      matrix:
+        node: ["20", "22", "24"]
+        postgres: ["16", "17"]
+        # 20 is out of support for the newest server
+        exclude:
+          - node: "20"
+            postgres: "17"
+      services:
+        postgres:
+          container:
+            image: docker.io/library/postgres:${{ matrix.postgres }}-alpine
+            ports:
+              - "${{ ports.db }}:5432"
+            env:
+              POSTGRES_PASSWORD: testing
+              POSTGRES_DB: app_test
+          ready:
+            tcp: ${{ ports.db }}
+            timeout: 60s
+      env:
+        DATABASE_URL: postgresql://postgres:testing@127.0.0.1:${{ ports.db }}/app_test
+      command: npx --yes node@${{ matrix.node }} --run test

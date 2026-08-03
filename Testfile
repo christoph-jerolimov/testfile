@@ -36,6 +36,14 @@ test:
         - name: conformance
           needs: [build-runner]
           command: npm test --workspace conformance
+        # The examples gallery on the website renders these files, so they
+        # must stay valid.
+        - name: examples
+          needs: [build-runner]
+          script: |
+            for dir in examples/*/; do
+              node runner-ts/dist/cli.js validate "$dir"
+            done
         # The web viewer's Playwright suite, dogfooding the format: the
         # viewer-ts serve command runs as a service over the committed e2e
         # fixture, and the browser tests (incl. screenshot comparison) hit
