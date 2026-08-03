@@ -10,6 +10,11 @@ import type { Status } from "./runsuite.js";
 // merged stdout+stderr logs. The folder ignores itself via an own .gitignore.
 export const HISTORY_DIR = ".testfile";
 
+// Written as the first line of every run.yaml so editors validate and
+// complete a recorded run against the result schema. Parsers ignore it.
+const RUN_SCHEMA_MODELINE =
+  "# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testrun.schema.json";
+
 export interface RunRecordTest {
   path: string;
   status: Status;
@@ -305,7 +310,7 @@ export class RunHistory {
       })
     );
     record.junit = "junit.xml";
-    writeFileSync(join(runDir, "run.yaml"), stringify(record));
+    writeFileSync(join(runDir, "run.yaml"), `${RUN_SCHEMA_MODELINE}\n${stringify(record)}`);
 
     this.index.unshift(record);
     for (const pruned of this.index.splice(this.keep)) {

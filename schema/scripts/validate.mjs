@@ -10,12 +10,14 @@ import { parse } from "yaml";
 
 const schemaDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const schema = JSON.parse(readFileSync(join(schemaDir, "testfile.schema.json"), "utf8"));
+const runSchema = JSON.parse(readFileSync(join(schemaDir, "testrun.schema.json"), "utf8"));
 
 // strictRequired is off: the schema intentionally uses the idiomatic
 // oneOf/anyOf-with-required pattern to express "exactly/at least one of".
 const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true, strictRequired: false });
 addFormats(ajv);
 const validate = ajv.compile(schema);
+const validateRun = ajv.compile(runSchema);
 
 let failures = 0;
 
@@ -81,6 +83,46 @@ if (existsSync(examplesDir)) {
     console.error("  FAILED  no example Testfiles found");
   }
   for (const file of found) check(file, true, relative(join(schemaDir, ".."), file));
+}
+
+// The result format: every recorded run.yaml in tests/runs (and any run
+// this repository recorded locally) must match testrun.schema.json.
+function checkRun(file, expectValid, name) {
+  const doc = parse(readFileSync(file, "utf8"));
+  const valid = validateRun(doc);
+  if (valid === expectValid) {
+    console.log(`  ok      ${name}`);
+  } else {
+    failures++;
+    console.error(`  FAILED  ${name} — expected ${expectValid ? "valid" : "invalid"}`);
+    if (!valid) {
+      for (const err of validateRun.errors ?? []) {
+        console.error(`          ${err.instancePath || "/"} ${err.message}`);
+      }
+    }
+  }
+}
+
+console.log("Run records (testrun.schema.json):");
+const runsValid = join(schemaDir, "tests", "runs", "valid");
+const runsInvalid = join(schemaDir, "tests", "runs", "invalid");
+for (const [dir, expect] of [[runsValid, true], [runsInvalid, false]]) {
+  if (!existsSync(dir)) continue;
+  const files = readdirSync(dir).filter((f) => f.endsWith(".yaml")).sort();
+  if (files.length === 0) {
+    failures++;
+    console.error(`  FAILED  no run records in ${dir}`);
+  }
+  for (const f of files) checkRun(join(dir, f), expect, `runs/${expect ? "valid" : "invalid"}/${f}`);
+}
+
+// Runs this repository recorded itself, when present: the real thing.
+const localRuns = join(schemaDir, "..", ".testfile", "runs");
+if (existsSync(localRuns)) {
+  for (const id of readdirSync(localRuns).sort().slice(-3)) {
+    const file = join(localRuns, id, "run.yaml");
+    if (existsSync(file)) checkRun(file, true, `.testfile/runs/${id}/run.yaml`);
+  }
 }
 
 if (failures > 0) {

@@ -1,15 +1,17 @@
 {
   "name": "@testfile/schema",
   "version": "0.1.0",
-  "description": "JSON schema for Testfile / testfile.yaml",
+  "description": "JSON schemas for Testfile (testfile.yaml) and its run records (run.yaml)",
   "license": "Apache-2.0",
   "type": "module",
   "main": "testfile.schema.json",
   "exports": {
-    ".": "./testfile.schema.json"
+    ".": "./testfile.schema.json",
+    "./testrun": "./testrun.schema.json"
   },
   "files": [
-    "testfile.schema.json"
+    "testfile.schema.json",
+    "testrun.schema.json"
   ],
   "scripts": {
     "test": "node scripts/validate.mjs"

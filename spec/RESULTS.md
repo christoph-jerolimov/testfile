@@ -48,7 +48,10 @@ id as tie-breaker.
 
 ## run.yaml
 
-A YAML document with these fields:
+A YAML document with these fields. A JSON schema of this format ships as
+[`schema/testrun.schema.json`](../schema/testrun.schema.json); runners
+write a `# yaml-language-server: $schema=...` modeline as the first line
+of every record, so editors validate and complete it.
 
 | Field        | Type    | Required | Description |
 | ------------ | ------- | -------- | ----------- |
