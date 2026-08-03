@@ -5,10 +5,11 @@ import { explainInputsMiss, ResultCache, type InputsState } from "./cache.js";
 import { evaluateCondition } from "./condition.js";
 import { loadEnvFiles } from "./envfile.js";
 import { baseEnv as hostBaseEnv, forwardedEnv } from "./hostenv.js";
-import type { HookDef, ServiceDef, TestfileDoc } from "./model.js";
+import type { HookDef, ServiceDef, TestContainerDef, TestfileDoc } from "./model.js";
 import { resolvePorts } from "./ports.js";
 import { walk, type RunTest, type Status } from "./runsuite.js";
 import { ServiceInstance, sharedServiceKey } from "./services.js";
+import { buildTestContainerArgs } from "./testcontainer.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
 import { formatMs, parseDurationMs, sleep } from "./util.js";
 
@@ -84,6 +85,10 @@ export class Runner extends EventEmitter {
 
   isActive(test: RunTest): boolean {
     return !this.active || this.active.has(test.id);
+  }
+
+  private containerFor(test: RunTest): TestContainerDef | undefined {
+    return nearestContainer(test);
   }
 
   get finished(): boolean {
@@ -377,16 +382,40 @@ export class Runner extends EventEmitter {
     const shell = test.def.shell
       ? resolveTemplate(test.def.shell, scopes, where).split(/\s+/)
       : undefined;
-    const executable = shell ? shell[0] : "sh";
-    const args = shell
+    let executable = shell ? shell[0] : "sh";
+    let args = shell
       ? [...shell.slice(1), "-c", resolved]
       : test.kind === "script"
         ? ["-e", "-c", resolved]
         : ["-c", resolved];
+
+    // `container` on this test or an ancestor: the same shell invocation
+    // runs inside the image instead of on the host.
+    const containerDef = this.containerFor(test);
+    let spawnCwd = cwd;
+    let spawnEnv = scopes.env;
+    if (containerDef) {
+      const plan = buildTestContainerArgs(
+        containerDef,
+        cwd,
+        this.baseDir,
+        scopes.env,
+        scopes,
+        where,
+        [executable, ...args]
+      );
+      test.output.system(`${plan.engine} run ${containerDef.image} (workdir ${plan.workdir})`);
+      executable = plan.engine;
+      args = plan.args;
+      // the engine itself runs on the host, with the host's own PATH
+      spawnCwd = this.baseDir;
+      spawnEnv = process.env as Record<string, string>;
+    }
+
     return new Promise((resolve, reject) => {
       const child = spawn(executable, args, {
-        cwd,
-        env: scopes.env,
+        cwd: spawnCwd,
+        env: spawnEnv,
         detached: true,
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -728,6 +757,15 @@ class Semaphore {
     if (next) next();
     else this.available++;
   }
+}
+
+// A test runs in the nearest `container` declared on itself or an
+// ancestor, so a group can give a whole branch one toolchain.
+function nearestContainer(test: RunTest): TestContainerDef | undefined {
+  for (let node: RunTest | undefined = test; node; node = node.parent) {
+    if (node.def.container) return node.def.container;
+  }
+  return undefined;
 }
 
 function withNote(note: string | undefined, reason: string): string {

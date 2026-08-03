@@ -1,0 +1,10 @@
+requires: [podman]
+exitCode: 0
+status: passed
+tests:
+  - path: root/in-container
+    status: passed
+  - path: root/group/nested
+    status: passed
+  - path: root/on-host
+    status: passed

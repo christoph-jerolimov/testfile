@@ -11,7 +11,7 @@ export type ServiceStatus = "pending" | "starting" | "ready" | "stopping" | "sto
 
 let cachedEngine: string | undefined;
 
-function detectEngine(): string {
+export function detectEngine(): string {
   if (!cachedEngine) {
     for (const candidate of ["podman", "docker"]) {
       const result = spawnSync(candidate, ["--version"], { stdio: "ignore" });

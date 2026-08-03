@@ -283,6 +283,9 @@
           "type": "string",
           "minLength": 1
         },
+        "container": {
+          "$ref": "#/$defs/testContainer"
+        },
         "sequence": {
           "description": "Child tests that run one after another. The sequence stops at the first failure unless that child sets continueOnError.",
           "type": "array",
@@ -757,6 +760,68 @@
           "description": "Run this shell command to stop the service instead of sending a signal.",
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "testContainer": {
+      "description": "Runs this test's body - and those of its nested tests - inside a container, like a GitHub Actions job container. The project directory is mounted and becomes the working directory; services keep running on the host and stay reachable through their published ports.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "image"
+      ],
+      "properties": {
+        "image": {
+          "description": "Image to run the test in, e.g. docker.io/library/golang:1.23.",
+          "type": "string",
+          "minLength": 1
+        },
+        "engine": {
+          "description": "Container engine: 'auto' (default: podman if available, else docker), 'podman', 'docker'. 'kubernetes' is reserved for a future version.",
+          "enum": [
+            "auto",
+            "podman",
+            "docker",
+            "kubernetes"
+          ]
+        },
+        "env": {
+          "description": "Extra environment variables for the container, on top of the test's own environment.",
+          "$ref": "#/$defs/envMap"
+        },
+        "workdir": {
+          "description": "Where the project is mounted inside the container (default /workspace). The test runs in the mounted equivalent of its own working directory.",
+          "type": "string",
+          "minLength": 1
+        },
+        "volumes": {
+          "description": "Additional volume mounts, e.g. a shared package cache.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pull": {
+          "description": "Image pull policy.",
+          "enum": [
+            "always",
+            "missing",
+            "never"
+          ]
+        },
+        "network": {
+          "description": "Container network (default 'host', so services on published ports stay reachable at 127.0.0.1).",
+          "type": "string",
+          "minLength": 1
+        },
+        "options": {
+          "description": "Extra engine flags, e.g. \"--user 1000:1000\".",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         }
       }
     }
