@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import { buildContainerRunArgs, ServiceInstance } from "./services.js";
+import { Session } from "./session.js";
 import type { Scopes } from "./template.js";
 
 function processEnv(): Record<string, string> {
@@ -99,4 +103,65 @@ test("a single-part entrypoint is passed plainly", () => {
     "t"
   );
   assert.deepEqual(args.slice(-3), ["--entrypoint", "/entry", "img"]);
+});
+
+test("a service with needs starts only after its dependency is ready", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-svc-needs-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const session = new Session(
+    {
+      version: 0,
+      services: {
+        db: {
+          // "ready" only after a moment, so a racing app would win
+          script: 'sleep 0.4; echo db-ready; echo db >> "$ORDER"; sleep 30',
+          ready: { log: "db-ready", timeout: "10s" },
+        },
+        app: {
+          needs: ["db"],
+          script: 'echo app-ready; echo app >> "$ORDER"; sleep 30',
+          ready: { log: "app-ready", timeout: "10s" },
+        },
+      },
+      env: { ORDER: join(dir, "order.txt") },
+      test: { name: "root", command: "true" },
+    },
+    dir
+  );
+  assert.equal(await session.runAll(), "passed");
+  assert.deepEqual(
+    readFileSync(join(dir, "order.txt"), "utf8").trim().split("\n"),
+    ["db", "app"],
+    "app waited for the database to report ready"
+  );
+});
+
+test("service needs are validated: unknown names and cycles", () => {
+  assert.throws(
+    () =>
+      new Session(
+        {
+          version: 0,
+          services: { app: { needs: ["nope"], command: "true", ready: { log: "x" } } },
+          test: { name: "root", command: "true" },
+        },
+        "."
+      ),
+    /needs unknown service "nope"/
+  );
+  assert.throws(
+    () =>
+      new Session(
+        {
+          version: 0,
+          services: {
+            a: { needs: ["b"], command: "true", ready: { log: "x" } },
+            b: { needs: ["a"], command: "true", ready: { log: "x" } },
+          },
+          test: { name: "root", command: "true" },
+        },
+        "."
+      ),
+    /cyclic service needs/
+  );
 });

@@ -597,18 +597,43 @@ export class Runner extends EventEmitter {
   ): Promise<void> {
     const entries = Object.entries(defs ?? {});
     if (entries.length === 0) return;
-    const waits: Promise<void>[] = [];
-    for (const [name, def] of entries) {
-      if (def.shared) {
-        waits.push(this.acquireShared(name, def, scopes, cwd, sink, controller, owner));
-      } else {
+    const byName = new Map(entries);
+    // Services without `needs` all start at once; a service that needs
+    // others starts only once those are *ready* (their start resolves
+    // after the readiness check), so an app can rely on its database.
+    const startPromises = new Map<string, Promise<void>>();
+    const startService = (name: string, def: ServiceDef): Promise<void> => {
+      const running = startPromises.get(name);
+      if (running) return running;
+      const promise = (async () => {
+        const deps = def.needs ?? [];
+        if (deps.length > 0) {
+          await Promise.all(
+            deps.map((dep) => {
+              const depDef = byName.get(dep);
+              // unknown names are rejected by validation; ignore defensively
+              return depDef ? startService(dep, depDef) : Promise.resolve();
+            })
+          );
+          // a dependency that failed aborts the whole group before we start
+          if (controller.signal.aborted) return;
+        }
+        if (def.shared) {
+          await this.acquireShared(name, def, scopes, cwd, sink, controller, owner);
+          return;
+        }
         const instance = this.registerInstance(name, def, owner);
         // A service dying while its tests run aborts the dependent tests.
         instance.onUnexpectedExit = () => controller.abort();
         sink.push({ instance, release: () => instance.stop().catch(() => {}) });
-        waits.push(instance.start(scopes, cwd, controller.signal));
-      }
-    }
+        this.emitUpdate();
+        await instance.start(scopes, cwd, controller.signal);
+      })();
+      startPromises.set(name, promise);
+      return promise;
+    };
+
+    const waits = entries.map(([name, def]) => startService(name, def));
     this.emitUpdate();
     await Promise.all(waits);
   }

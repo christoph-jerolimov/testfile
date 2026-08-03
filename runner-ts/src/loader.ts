@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import { parse } from "yaml";
-import type { TestDef, TestfileDoc } from "./model.js";
+import type { ServiceDef, TestDef, TestfileDoc } from "./model.js";
 import { defaultName } from "./runsuite.js";
 
 const require = createRequire(import.meta.url);
@@ -45,7 +45,44 @@ export function validateDoc(doc: unknown): asserts doc is TestfileDoc {
 export function validateSemantics(doc: TestfileDoc): void {
   const errors: string[] = [];
 
+  // `needs` between services in one map: names must exist in that map and
+  // must not form a cycle (nothing would ever start).
+  const checkServiceNeeds = (
+    services: Record<string, ServiceDef> | undefined,
+    where: string
+  ): void => {
+    const entries = Object.entries(services ?? {});
+    if (entries.length === 0) return;
+    const byName = new Map(entries);
+    for (const [name, def] of entries) {
+      for (const needed of def.needs ?? []) {
+        if (needed === name) {
+          errors.push(`${where}: service "${name}" cannot need itself`);
+        } else if (!byName.has(needed)) {
+          errors.push(`${where}: service "${name}" needs unknown service "${needed}"`);
+        }
+      }
+    }
+    const state = new Map<string, "visiting" | "done">();
+    const dfs = (name: string, trail: string[]): void => {
+      const status = state.get(name);
+      if (status === "done") return;
+      if (status === "visiting") {
+        errors.push(`${where}: cyclic service needs (${[...trail, name].join(" -> ")})`);
+        return;
+      }
+      state.set(name, "visiting");
+      for (const needed of byName.get(name)?.needs ?? []) {
+        if (byName.has(needed) && needed !== name) dfs(needed, [...trail, name]);
+      }
+      state.set(name, "done");
+    };
+    for (const [name] of entries) dfs(name, []);
+  };
+  checkServiceNeeds(doc.services, "Testfile services");
+
   const visit = (def: TestDef, path: string, inParallel: boolean): void => {
+    checkServiceNeeds(def.services, `${path} services`);
     if (def.include !== undefined) {
       errors.push(`${path}: unresolved include - includes are expanded when loading a Testfile from disk`);
     }
