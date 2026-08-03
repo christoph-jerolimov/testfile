@@ -6,6 +6,8 @@ version: 0
 name: testfile-monorepo
 env:
   CI: true
+ports:
+  e2e: random
 test:
   name: ci
   sequence:
@@ -34,6 +36,32 @@ test:
         - name: conformance
           needs: [build-runner]
           command: npm test --workspace conformance
+        # The web viewer's Playwright suite, dogfooding the format: the
+        # viewer-ts serve command runs as a service over the committed e2e
+        # fixture, and the browser tests (incl. screenshot comparison) hit
+        # it. Locally the pre-installed Playwright browsers are used; on CI
+        # the pinned chromium build is downloaded, so rendering matches the
+        # committed screenshots everywhere.
+        - name: viewer-e2e
+          needs: [viewer-ts, viewer-web]
+          workdir: viewer-web
+          services:
+            viewer:
+              command: node ../viewer-ts/dist/cli.js serve e2e/fixture --port ${{ ports.e2e }} --name "E2E Fixture"
+              ready:
+                tcp: ${{ ports.e2e }}
+                timeout: 30s
+          env:
+            TESTFILE_E2E_URL: http://127.0.0.1:${{ ports.e2e }}
+          script: |
+            if [ -d /opt/pw-browsers ]; then
+              export PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+            else
+              npx playwright install --with-deps chromium
+            fi
+            npx playwright test
+          artifacts:
+            - test-results/**
         # What the dedicated action self-test job used to check: running the
         # smoke Testfile produces a passing JUnit report.
         - name: action-smoke

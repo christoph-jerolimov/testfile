@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "skipLibCheck": true,
+    "outDir": "out",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"]
+  },
+  "files": [
+    "src/types.ts",
+    "src/format.ts",
+    "src/api.ts",
+    "src/format.test.ts",
+    "src/api.test.ts"
+  ]
+}

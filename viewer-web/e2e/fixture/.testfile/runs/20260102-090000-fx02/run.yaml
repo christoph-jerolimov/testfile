@@ -1,0 +1,34 @@
+id: 20260102-090000-fx02
+name: e2e-fixture
+startedAt: 2026-01-02T09:00:00.000Z
+durationMs: 3210
+status: failed
+exitCode: 1
+cancelled: false
+env:
+  CI: "1"
+ports:
+  db: 5432
+selected:
+  - ci
+tests:
+  - path: ci
+    status: failed
+    durationMs: 3150
+  - path: ci/build
+    status: passed
+    durationMs: 40
+    cached: true
+    reason: "cache hit: inputs unchanged (last passed 2026-01-01T12:00:02.000Z)"
+  - path: ci/unit
+    status: failed
+    durationMs: 2900
+    reason: "cache miss: src/**: 1 changed file (src/math.ts)"
+    log: tests/ci-unit.log
+    artifacts:
+      - artifacts/ci-unit/report.txt
+services:
+  - name: db
+    status: stopped
+    log: services/db.log
+junit: junit.xml

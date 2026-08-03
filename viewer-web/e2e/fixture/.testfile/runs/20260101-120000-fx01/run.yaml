@@ -1,0 +1,25 @@
+id: 20260101-120000-fx01
+name: e2e-fixture
+startedAt: 2026-01-01T12:00:00.000Z
+durationMs: 4100
+status: passed
+exitCode: 0
+cancelled: false
+env:
+  CI: "1"
+ports: {}
+selected:
+  - ci
+tests:
+  - path: ci
+    status: passed
+    durationMs: 4050
+  - path: ci/build
+    status: passed
+    durationMs: 2200
+    reason: "cache miss: no stored passing result for this configuration"
+    log: tests/ci-build.log
+  - path: ci/unit
+    status: passed
+    durationMs: 1800
+    log: tests/ci-unit.log
