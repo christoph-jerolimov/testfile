@@ -99,13 +99,14 @@ artifact — GitHub wraps it in a zip, so the artifact is a single zip with
 `run.yaml` and the logs at its root. A manually downloaded artifact
 imports with `testfile-viewer runs import testfile-run.zip`. `testfile-viewer runs sync` downloads the artifacts of the latest
 workflow runs and imports them into your local
-[run history](./cli#run-history), where `testfile-viewer history`, `--diff`,
-`--flaky` and the TUI's runs/results views treat them like local runs:
+[run history](./cli#run-history), where `testfile-viewer runs`, `run`,
+`diff`, `--flaky` and the TUI's runs/results views treat them like local
+runs:
 
 ```sh
 export GITHUB_TOKEN=...          # a token with actions:read (GH_TOKEN works too)
 testfile-viewer runs sync you/your-repo --latest 10
-testfile-viewer history          # CI runs are now part of the history
+testfile-viewer runs             # CI runs are now part of the history
 ```
 
 See [sharing runs](./cli#sharing-runs) for the underlying `pack`/`import`

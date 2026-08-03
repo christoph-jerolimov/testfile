@@ -3,7 +3,7 @@
 // local history, push/pull them to and from S3 (via the aws CLI) and sync
 // the run artifacts of recent GitHub Actions workflow runs (via the GitHub
 // API). Everything lands in the same per-run layout the runner writes, so
-// imported runs show up in `testfile history` and the TUI like local ones.
+// imported runs show up in `testfile-viewer runs` and the TUI like local ones.
 import { spawnSync } from "node:child_process";
 import {
   cpSync,
