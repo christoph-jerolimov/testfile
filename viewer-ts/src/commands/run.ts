@@ -37,6 +37,7 @@ program
       console.log(`duration:  ${formatMs(run.durationMs)}`);
       console.log(`status:    ${colorStatus(run.status)} (exit code ${run.exitCode})`);
       console.log(`cancelled: ${run.cancelled ? "yes" : "no"}`);
+      if (run.machine) console.log(`machine:   ${run.machine}`);
       console.log(`selected:  ${run.selected.join(", ") || "-"}`);
       const env = Object.entries(run.env).map(([k, v]) => `${k}=${v}`).join(" ");
       if (env) console.log(`env:       ${env}`);

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { ResultCache } from "./cache.js";
 import { maskSecrets } from "./envfile.js";
 import { Runner } from "./executor.js";
+import { detectMachine } from "./machine.js";
 import type { OutputLine } from "./output.js";
 import {
   RunHistory,
@@ -157,6 +158,7 @@ export class Session extends EventEmitter {
         status: ok ? "passed" : runner.interrupted ? "aborted" : "failed",
         exitCode: runner.interrupted ? 130 : ok ? 0 : 1,
         cancelled: runner.interrupted,
+        machine: detectMachine(),
         env: Object.fromEntries(
           Object.entries(runner.docEnv).map(([key, value]) => [key, maskSecrets(value, secrets)])
         ),
