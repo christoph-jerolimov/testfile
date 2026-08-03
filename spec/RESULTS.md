@@ -81,6 +81,30 @@ unreadable.
 | `cached`     | boolean | no       | True when the result was served from the runner's result cache. |
 | `reason`     | string  | no       | Human-readable explanation of why a test with `inputs` ran or was reused — cache hit/miss detail (which pattern saw how many changed files) and/or the change-based selection that picked it. Free-form; consumers must not parse it. |
 
+### `suite`
+
+The shape of the Testfile the run came from, so a `run.yaml` explains
+itself without the Testfile next to it: the tree, what kind each node is,
+which tags it carries and which matrix combination an expanded instance
+belongs to. It describes the **whole** file, including tests that filters
+excluded from this run — `tests[]` says what actually executed.
+
+`suite` is a single root node; every node has these fields:
+
+| Field      | Type   | Required | Description |
+| ---------- | ------ | -------- | ----------- |
+| `name`     | string | yes      | The test's own name. |
+| `path`     | string | yes      | Names joined with `/` from the root — the key `tests[].path` uses. |
+| `kind`     | string | yes      | `command`, `script`, `sequence`, `parallel` or `matrix` (the wrapper a matrix expands from). |
+| `tags`     | array  | no       | Tags declared on this test. Tags of ancestors apply to it as well; the tree makes that inheritance visible. |
+| `matrix`   | map    | no       | The combination of an expanded matrix instance, e.g. `{node: "22"}`. |
+| `services` | array  | no       | Names of the services this test declares. |
+| `children` | array  | no       | Nested nodes, in document order; absent on leaves. |
+
+Producers **should** record `suite`; consumers must tolerate its absence
+(records written by earlier runners have none) and fall back to deriving
+nesting from the `path` values.
+
 ### `services[]`
 
 | Field    | Type   | Required | Description |

@@ -5,7 +5,14 @@
 import { existsSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { Command } from "commander";
-import { detectFlaky, diffRuns, HISTORY_DIR, RunHistory, type RunRecord } from "./runrecord.js";
+import {
+  detectFlaky,
+  diffRuns,
+  HISTORY_DIR,
+  RunHistory,
+  type RunRecord,
+  type RunRecordSuiteNode,
+} from "./runrecord.js";
 import { findViewerDir, ViewerServer } from "./serve.js";
 import {
   githubRunArchives,
@@ -116,6 +123,16 @@ program
       if (env) console.log(`env:       ${env}`);
       const ports = Object.entries(run.ports).map(([k, v]) => `${k}=${v}`).join(" ");
       if (ports) console.log(`ports:     ${ports}`);
+      // Tags come from the recorded suite tree, including the ones a test
+      // inherits from its groups (older records simply have no tree).
+      const tagsByPath = new Map<string, string[]>();
+      const collectTags = (node: RunRecordSuiteNode, inherited: readonly string[]): void => {
+        const own = [...new Set([...inherited, ...(node.tags ?? [])])];
+        if (own.length > 0) tagsByPath.set(node.path, own);
+        for (const child of node.children ?? []) collectTags(child, own);
+      };
+      if (run.suite) collectTags(run.suite, []);
+
       console.log("tests:");
       for (const test of run.tests) {
         const duration = test.durationMs !== undefined ? ` (${formatMs(test.durationMs)})` : "";
@@ -124,7 +141,12 @@ program
           ? color(90, `  [${test.artifacts.length} artifact${test.artifacts.length === 1 ? "" : "s"}]`)
           : "";
         const cached = test.cached ? color(90, "  [cached]") : "";
-        console.log(`  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${log}${artifacts}${cached}`);
+        const tags = tagsByPath.has(test.path)
+          ? color(90, `  [${tagsByPath.get(test.path)!.join(", ")}]`)
+          : "";
+        console.log(
+          `  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${tags}${log}${artifacts}${cached}`
+        );
         if (test.reason) console.log(color(90, `          ${test.reason}`));
       }
       if (run.services?.length) {

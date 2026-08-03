@@ -20,6 +20,17 @@ export interface RunRecordTest {
   reason?: string;
 }
 
+// The Testfile's tree as recorded with the run (absent in older records).
+export interface RunRecordSuiteNode {
+  name: string;
+  path: string;
+  kind: "command" | "script" | "sequence" | "parallel" | "matrix";
+  tags?: string[];
+  matrix?: Record<string, string>;
+  services?: string[];
+  children?: RunRecordSuiteNode[];
+}
+
 export interface RunRecordService {
   name: string;
   status?: string;
@@ -36,6 +47,8 @@ export interface RunRecord {
   env: Record<string, string>;
   ports: Record<string, number>;
   selected: string[];
+  // The Testfile's test tree, including tests the run did not execute.
+  suite?: RunRecordSuiteNode;
   tests: RunRecordTest[];
   services?: RunRecordService[];
   junit?: string;
