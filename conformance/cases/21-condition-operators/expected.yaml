@@ -1,0 +1,15 @@
+env:
+  CONFORMANCE_FLAG: yes
+exitCode: 0
+status: passed
+tests:
+  - path: root/and-true
+    status: passed
+  - path: root/and-false
+    status: skipped
+  - path: root/or-true
+    status: passed
+  - path: root/grouped-negation
+    status: passed
+  - path: root/precedence
+    status: passed

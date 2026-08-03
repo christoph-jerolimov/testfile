@@ -301,14 +301,29 @@ it *skipped* without failing anything:
 - name: not in ci
   if: "!${{ env.CI }}"
   command: npm run test:local
+- name: locally on linux only
+  if: ${{ env.TESTFILE_OS }} == linux && !${{ env.CI }}
+  command: npm run test:sandbox
 ```
 
 Bare values are truthiness checks (`""`, `false`, `0`, `no`, `off` are
-false), `==`/`!=` compare strings, and a leading `!` negates the whole
-expression. Unknown references like an unset `env.CI` resolve to `""`
-instead of erroring. The runner provides `TESTFILE_OS` and `TESTFILE_ARCH`
-for platform conditions, and matrix values work too:
-`if: ${{ matrix.db }} == postgres`.
+false), `==`/`!=` compare strings, and `!` negates. Unknown references
+like an unset `env.CI` resolve to `""` instead of erroring. The runner
+provides `TESTFILE_OS` and `TESTFILE_ARCH` for platform conditions, and
+matrix values work too: `if: ${{ matrix.db }} == postgres`.
+
+Conditions combine with `&&` and `||`, where `&&` binds tighter, and
+`(...)` groups them:
+
+```yaml
+- name: nightly integration
+  if: ${{ env.CI }} && (${{ env.SCHEDULE }} == nightly || ${{ env.FORCE }})
+  command: npm run test:integration
+```
+
+Operands keep their spaces (`${{ env.NAME }} == my project` compares the
+whole value), so a value that contains a literal `&&`, `||` or a
+parenthesis has to be quoted: `if: "'a && b' == ${{ env.LABEL }}"`.
 
 ## Retries
 

@@ -129,8 +129,12 @@ Common fields available on every test:
   `"off"` (case-insensitive) are false, everything else is true.
 - `left == right` / `left != right` compare as strings; surrounding quotes
   are stripped from the operands.
-- A leading `!` negates the whole expression (quote it in YAML:
+- A leading `!` negates the expression that follows (quote it in YAML:
   `if: "!${{ env.CI }}"`).
+- `&&` and `||` combine expressions, `&&` binding tighter than `||`, and
+  `(...)` groups them: `if: ${{ env.TESTFILE_OS }} == linux && !${{ env.CI }}`.
+  Operands keep their spaces, so a value containing a literal `&&`, `||`
+  or parenthesis has to be quoted.
 
 The runner injects `TESTFILE_OS` (`linux`, `darwin`, `win32`) and
 `TESTFILE_ARCH` into the environment, so platform conditions are written as
