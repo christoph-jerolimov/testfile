@@ -21,7 +21,14 @@ The harness (`run.mjs`) runs every case against the runner under test:
    from `expected.yaml` added to the environment.
 3. The runner's **exit code**, the report's **run status** and the
    **per-test statuses** (matched by test path) are compared against
-   `expected.yaml`.
+   `expected.yaml`. A test expectation may additionally pin `cached`
+   (whether the result came from the runner's result cache) and
+   `artifacts` (the number of collected artifact files).
+4. When `expected.yaml` contains a `reruns` list, the runner is invoked
+   again in the **same working copy** for each entry — this pins
+   cross-run semantics like result caching. An entry's optional `before`
+   shell command mutates the copy first (e.g. touching an input file);
+   each entry carries its own `exitCode`/`status`/`tests` expectations.
 
 ## The contract for runners
 
@@ -39,7 +46,8 @@ and write a JSON report containing at least:
   "status": "passed | failed | aborted",
   "exitCode": 0,
   "tests": [
-    { "path": "root/child", "status": "passed | failed | skipped | aborted" }
+    { "path": "root/child", "status": "passed | failed | skipped | aborted",
+      "cached": false, "artifacts": ["..."] }
   ]
 }
 ```

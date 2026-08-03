@@ -1,0 +1,7 @@
+# Declared artifact globs are collected into the run record - also when the
+# test fails.
+exitCode: 0
+status: passed
+tests:
+  - { path: root/produce, status: passed, artifacts: 3 }
+  - { path: root/failing-still-collects, status: failed, artifacts: 1 }

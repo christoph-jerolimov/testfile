@@ -1,0 +1,19 @@
+version: 0
+test:
+  name: root
+  sequence:
+    - name: produce
+      artifacts:
+        - out/report.txt
+        - out/shots/*.png
+      script: |
+        mkdir -p out/shots
+        echo hello > out/report.txt
+        echo fake-png-1 > out/shots/one.png
+        echo fake-png-2 > out/shots/two.png
+    - name: failing-still-collects
+      continueOnError: true
+      artifacts: [crash.log]
+      script: |
+        echo boom > crash.log
+        false

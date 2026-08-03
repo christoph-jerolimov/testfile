@@ -1,0 +1,27 @@
+version: 0
+services:
+  logready:
+    # the marker file exists BEFORE the ready line is printed, so a runner
+    # that starts tests before readiness fails the log-check test
+    script: |
+      touch logready-started
+      echo "svc-is-ready"
+      sleep 60
+    ready:
+      log: svc-is-ready
+test:
+  name: root
+  sequence:
+    - name: log-check
+      command: test -f logready-started
+    - name: exec-check
+      services:
+        execready:
+          script: |
+            sleep 0.2
+            touch exec-started
+            sleep 60
+          ready:
+            exec: test -f exec-started
+            interval: 100ms
+      command: test -f exec-started

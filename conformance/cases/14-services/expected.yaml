@@ -1,0 +1,9 @@
+# Services must be ready (log pattern / exec check) before dependent tests
+# run, and must not keep the run alive afterwards (they sleep 60 but the
+# runner stops them).
+exitCode: 0
+status: passed
+tests:
+  - { path: root, status: passed }
+  - { path: root/log-check, status: passed }
+  - { path: root/exec-check, status: passed }

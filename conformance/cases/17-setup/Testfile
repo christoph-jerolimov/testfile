@@ -1,0 +1,19 @@
+version: 0
+test:
+  name: root
+  sequence:
+    - name: ok
+      setup:
+        command: touch setup-ran
+      command: test -f setup-ran
+    - name: bad-setup
+      continueOnError: true
+      setup:
+        command: "false"
+      teardown:
+        command: touch teardown-ran
+      command: touch body-ran
+    - name: after
+      script: |
+        test -f teardown-ran
+        test ! -f body-ran
