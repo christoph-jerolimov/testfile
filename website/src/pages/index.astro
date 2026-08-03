@@ -34,8 +34,9 @@ test:
       </h1>
       <p class="lead">
         A YAML file that describes the whole test setup, with the services
-        your tests depend on started and health-checked for you. Every run
-        is recorded — and even CI runs can be inspected locally.
+        your tests depend on — which makes runs reproducible, on your
+        machine and on CI. Every run is recorded, and even CI runs can be
+        inspected locally.
       </p>
       <div class="cta">
         <a class="button primary" href={`${base}/docs/getting-started`}>Get started</a>
@@ -70,8 +71,8 @@ test:
       <h3><span class="marker red"></span>Scales with requirements</h3>
       <p>
         Grow from one command to sequences, parallel groups and
-        <a href={`${base}/docs/matrix`}>matrix tests</a> — with filters,
-        retries, conditions and
+        <a href={`${base}/docs/matrix`}>matrix tests</a> — with retries,
+        conditions and
         <a href={`${base}/docs/writing-tests#result-caching`}>result caching</a>
         when the suite gets big. The same file runs locally, in watch mode
         and on CI.
@@ -80,11 +81,12 @@ test:
     <div class="feature">
       <h3><span class="marker blue"></span>Manages your services</h3>
       <p>
-        The app under test and databases as containers are just
-        <a href={`${base}/docs/services`}>dependencies of a test</a>: started
-        on demand, health-checked before anything runs, gracefully stopped
-        afterwards — with <a href={`${base}/docs/env-and-ports`}>random ports</a>
-        wired in for parallel-safe runs.
+        A database — or any other
+        <a href={`${base}/docs/services`}>service your tests need</a> — is
+        declared once and started on demand, as a container or a plain
+        process: health-checked before the first test runs, reachable
+        through <a href={`${base}/docs/env-and-ports`}>random ports</a>,
+        logged with the run and gracefully stopped afterwards.
       </p>
     </div>
   </section>
@@ -95,9 +97,9 @@ test:
       Browse recorded runs in the terminal (<code>testfile-viewer tui</code>)
       or in the browser (<code>testfile-viewer serve</code>): statuses,
       durations, per-test logs, service logs — and <em>why</em> a test ran
-      or came from the cache. <code>testfile-viewer github sync</code>
-      brings <a href={`${base}/docs/github-action`}>GitHub Actions runs</a>
-      into the same history.
+      or came from the cache. A simple way to sync runs between machines,
+      including <a href={`${base}/docs/github-action`}>CI runs</a> on your
+      computer, like GitHub Actions.
     </p>
     <div class="shot">
       <img
