@@ -84,9 +84,8 @@ test:
         A database — or any other
         <a href={`${base}/docs/services`}>service your tests need</a> — is
         declared once and started on demand, as a container or a plain
-        process: health-checked before the first test runs, reachable
-        through <a href={`${base}/docs/env-and-ports`}>random ports</a>,
-        logged with the run and gracefully stopped afterwards.
+        process: health-checked before the first test runs and reachable
+        through <a href={`${base}/docs/env-and-ports`}>random ports</a>.
       </p>
     </div>
   </section>
@@ -110,6 +109,54 @@ test:
         loading="lazy"
       />
     </div>
+  </section>
+
+  <section class="all-features">
+    <h2>Everything in the box</h2>
+    <div class="feature-groups">
+      <div class="group">
+        <h3>The format</h3>
+        <ul>
+          <li>Nested tests: <a href={`${base}/docs/writing-tests#sequences`}>sequences</a> and <a href={`${base}/docs/writing-tests#parallel-groups`}>parallel groups</a></li>
+          <li><a href={`${base}/docs/matrix`}>Matrix expansion</a> across versions and variants</li>
+          <li><a href={`${base}/docs/writing-tests#conditional-tests`}>Conditions</a>, <a href={`${base}/docs/writing-tests#tags`}>tags</a> and per-test <a href={`${base}/docs/writing-tests#timeouts-env-workdir`}>timeouts</a></li>
+          <li><a href={`${base}/docs/writing-tests#retries`}>Retries</a> and tolerated failures</li>
+          <li><a href={`${base}/docs/writing-tests#setup-and-teardown`}>Setup &amp; teardown</a> hooks, DAG ordering with <code>needs</code></li>
+          <li><a href={`${base}/docs/writing-tests#composing-testfiles`}>Includes</a> for monorepos</li>
+          <li><a href={`${base}/docs/env-and-ports#templates`}>Template expressions</a> with defaults</li>
+          <li><a href="https://github.com/christoph-jerolimov/testfile/blob/main/schema/testfile.schema.json">JSON schema</a> validation &amp; editor autocompletion</li>
+        </ul>
+      </div>
+      <div class="group">
+        <h3>Services &amp; environment</h3>
+        <ul>
+          <li>Processes or containers (podman/docker) as <a href={`${base}/docs/services`}>services</a></li>
+          <li>Readiness by HTTP, TCP, log line or command</li>
+          <li><a href={`${base}/docs/env-and-ports`}>Random ports</a> for parallel-safe runs</li>
+          <li>Services shared across matrix instances</li>
+          <li><a href={`${base}/docs/env-and-ports#an-isolated-environment`}>Isolated environment</a> with explicit <code>forwardEnv</code></li>
+          <li><a href={`${base}/docs/env-and-ports#env-files-and-secrets`}>Env files</a> with secret masking</li>
+          <li>Graceful teardown, also on Ctrl+C</li>
+        </ul>
+      </div>
+      <div class="group">
+        <h3>Running &amp; CI</h3>
+        <ul>
+          <li><a href={`${base}/docs/cli#filtering`}>Filters</a> by name, tag or matrix value</li>
+          <li>Re-run what broke (<code>--failed</code>) or what <a href={`${base}/docs/writing-tests#change-based-selection`}>changed</a></li>
+          <li><a href={`${base}/docs/writing-tests#result-caching`}>Result caching</a> with <code>inputs</code></li>
+          <li><a href={`${base}/docs/cli#watch-mode`}>Watch mode</a> and cache-aware <code>--dry-run</code></li>
+          <li><a href={`${base}/docs/cli#machine-readable-reports`}>JUnit &amp; JSON reports</a>, collected <a href={`${base}/docs/writing-tests#artifacts`}>artifacts</a></li>
+          <li><a href={`${base}/docs/github-action`}>GitHub Action</a> with PR annotations &amp; job summary</li>
+          <li><a href={`${base}/docs/cli#the-tui`}>TUI</a>, <a href={`${base}/docs/cli#the-web-viewer`}>web viewer</a> and <a href={`${base}/docs/cli#tags`}>tag inventory</a></li>
+          <li>Flaky-test detection, run diffs, <a href={`${base}/docs/cli#sharing-runs`}>run sharing</a> via S3 or GitHub</li>
+          <li>VS Code extension and shell completions</li>
+        </ul>
+      </div>
+    </div>
+    <p class="all-features-cta">
+      <a class="button ghost" href={`${base}/docs/writing-tests`}>Read the docs</a>
+    </p>
   </section>
 </Layout>
 
@@ -276,13 +323,66 @@ test:
     height: auto;
   }
 
+  .all-features {
+    padding: 3rem 0 1rem;
+  }
+  .all-features h2 {
+    margin: 0 0 1.5rem;
+    text-align: center;
+    font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+  }
+  .feature-groups {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem 2rem;
+  }
+  .group h3 {
+    margin: 0 0 0.6rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.93rem;
+  }
+  .group li {
+    position: relative;
+    padding-left: 1.1rem;
+    margin: 0.4rem 0;
+    color: var(--muted);
+  }
+  .group li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.55em;
+    width: 0.4em;
+    height: 0.4em;
+    border-radius: 1px;
+    background: var(--accent);
+  }
+  .group:nth-child(2) li::before {
+    background: var(--accent-red);
+  }
+  .all-features-cta {
+    margin: 2rem 0 0;
+    text-align: center;
+  }
+
   @media (max-width: 56rem) {
     .hero {
       grid-template-columns: minmax(0, 1fr);
       gap: 2rem;
       padding-top: 1.5rem;
     }
-    .features {
+    .features,
+    .feature-groups {
       grid-template-columns: minmax(0, 1fr);
     }
   }
