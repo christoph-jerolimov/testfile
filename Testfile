@@ -29,6 +29,8 @@ test:
           inputs:
             - website/**
             - docs/**
+            # the specification pages are rendered from these files
+            - spec/**
             - examples/**
             - package-lock.json
         - name: viewer-web

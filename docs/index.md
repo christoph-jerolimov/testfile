@@ -62,8 +62,8 @@ testfile-viewer tui   # browse recorded runs (read-only terminal UI)
 ```
 
 Continue with [Getting started](./getting-started), or read the
-[full specification](https://github.com/christoph-jerolimov/testfile/blob/main/spec/README.md)
-and its [versioning policy](https://github.com/christoph-jerolimov/testfile/blob/main/spec/VERSIONING.md)
+[full specification](../spec/README.md)
+and its [versioning policy](../spec/VERSIONING.md)
 — once version 1 ships, the format will evolve additively within it, and a
 [conformance suite](https://github.com/christoph-jerolimov/testfile/blob/main/conformance/README.md)
 pins its semantics for alternative runner implementations.

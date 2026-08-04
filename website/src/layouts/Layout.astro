@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content";
+import { specPages } from "../spec";
 
 interface Props {
   title: string;
@@ -52,23 +53,18 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
                   );
                 })}
               </ul>
-              <p class="nav-title">Project</p>
+              <p class="nav-title">Specification</p>
               <ul>
-                <li>
-                  <a href="https://github.com/christoph-jerolimov/testfile/blob/main/spec/README.md">
-                    Specification
-                  </a>
-                </li>
-                <li>
-                  <a href="https://github.com/christoph-jerolimov/testfile/blob/main/spec/VERSIONING.md">
-                    Versioning policy
-                  </a>
-                </li>
-                <li>
-                  <a href="https://github.com/christoph-jerolimov/testfile/blob/main/schema/testfile.schema.json">
-                    JSON schema
-                  </a>
-                </li>
+                {specPages.map((page) => {
+                  const href = `${base}/spec/${page.slug}`;
+                  return (
+                    <li>
+                      <a href={href} aria-current={currentPath === href ? "page" : undefined}>
+                        {page.label}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </nav>
           </aside>
