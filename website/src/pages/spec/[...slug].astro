@@ -1,0 +1,32 @@
+---
+import { getEntry, render } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+import { repoBlobUrl, specPages } from "../../spec";
+
+export function getStaticPaths() {
+  return specPages.map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
+const entry = await getEntry("spec", page.id);
+if (!entry) throw new Error(`spec/${page.id}.md is missing`);
+const { Content } = await render(entry);
+---
+
+<Layout title={page.title} description={page.description}>
+  <p class="spec-source">
+    A copy of <a href={`${repoBlobUrl}/${page.source}`}><code>{page.source}</code></a>, rendered
+    from the file in the repository.
+  </p>
+  <Content />
+</Layout>
+
+<style is:global>
+  .spec-source {
+    font-size: 0.85rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+</style>

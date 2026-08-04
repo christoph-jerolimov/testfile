@@ -12,4 +12,15 @@ const docs = defineCollection({
   }),
 });
 
-export const collections = { docs };
+// ... and the normative documents from spec/, published verbatim. They have
+// no frontmatter, so the id stays the file name (README, RESULTS,
+// VERSIONING) and the titles live in src/spec.ts.
+const spec = defineCollection({
+  loader: glob({
+    pattern: "*.md",
+    base: "../spec",
+    generateId: ({ entry }) => entry.replace(/\.md$/, ""),
+  }),
+});
+
+export const collections = { docs, spec };
