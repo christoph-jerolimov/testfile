@@ -245,6 +245,11 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
         text-align: left;
       }
       @media (max-width: 48rem) {
+        /* phones: the header only has room for the brand and the two
+           content links, so the outbound GitHub link steps aside */
+        nav.top.right {
+          display: none;
+        }
         .wrap {
           flex-direction: column;
         }
