@@ -117,6 +117,16 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
         gap: 1.75rem;
         padding: 0.75rem 1.5rem;
         border-bottom: 1px solid var(--border);
+        /* stays in place while the page scrolls */
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--bg);
+      }
+      /* so an anchor target does not end up hidden behind the header */
+      :target,
+      main :is(h1, h2, h3, h4) {
+        scroll-margin-top: 4rem;
       }
       .brand {
         font-weight: 700;
