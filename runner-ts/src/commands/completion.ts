@@ -1,0 +1,32 @@
+import type { Command } from "commander";
+import { generateCompletion, type CompletionModel } from "../completion.js";
+import { color } from "../util.js";
+
+export function registerCompletion(program: Command): void {
+program
+  .command("completion")
+  .argument("<shell>", "bash, zsh or fish")
+  .description("Print a shell completion script")
+  .action((shell: string) => {
+    try {
+      const model: CompletionModel = {
+        program: "testfile",
+        commands: program.commands
+          .filter((command) => command.name() !== "completion")
+          .map((command) => ({
+            name: command.name(),
+            description: command.description(),
+            flags: command.options.flatMap((option) =>
+              option.flags
+                .split(/[,\s]+/)
+                .filter((part) => part.startsWith("-"))
+            ),
+          })),
+      };
+      process.stdout.write(generateCompletion(model, shell));
+    } catch (err) {
+      console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
+      process.exitCode = 1;
+    }
+  });
+}
