@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { variantLabel } from "../merge.js";
 import { color, formatMs, pad } from "../util.js";
 import type { RunRecordSuiteNode } from "../runrecord.js";
 import { colorStatus, commandFailed, findRun, loadedHistory } from "./shared.js";
@@ -38,6 +39,22 @@ program
       console.log(`status:    ${colorStatus(run.status)} (exit code ${run.exitCode})`);
       console.log(`cancelled: ${run.cancelled ? "yes" : "no"}`);
       if (run.machine) console.log(`machine:   ${run.machine}`);
+      const variants = variantLabel(run.variants);
+      if (variants) console.log(`variants:  ${variants}`);
+      if (run.merged) {
+        const all = Object.entries(run.merged.variants ?? {})
+          .map(([key, values]) => `${key}=${values.join("|")}`)
+          .join(", ");
+        console.log(`merged:    ${run.merged.runs.length} runs${all ? ` (${all})` : ""}`);
+        for (const source of run.merged.runs) {
+          const where = variantLabel(source.variants);
+          console.log(
+            `  ${pad(colorStatus(source.status), 7)} ${source.id}` +
+              (where ? color(90, `  [${where}]`) : "") +
+              (source.machine ? color(90, `  ${source.machine}`) : "")
+          );
+        }
+      }
       console.log(`selected:  ${run.selected.join(", ") || "-"}`);
       const env = Object.entries(run.env).map(([k, v]) => `${k}=${v}`).join(" ");
       if (env) console.log(`env:       ${env}`);
@@ -61,11 +78,13 @@ program
           ? color(90, `  [${test.artifacts.length} artifact${test.artifacts.length === 1 ? "" : "s"}]`)
           : "";
         const cached = test.cached ? color(90, "  [cached]") : "";
+        const where = variantLabel(test.variants);
+        const variant = where ? color(36, `  [${where}]`) : "";
         const tags = tagsByPath.has(test.path)
           ? color(90, `  [${tagsByPath.get(test.path)!.join(", ")}]`)
           : "";
         console.log(
-          `  ${pad(colorStatus(test.status), 7)} ${test.path}${duration}${tags}${log}${artifacts}${cached}`
+          `  ${pad(colorStatus(test.status), 7)} ${test.path}${variant}${duration}${tags}${log}${artifacts}${cached}`
         );
         if (test.reason) console.log(color(90, `          ${test.reason}`));
       }

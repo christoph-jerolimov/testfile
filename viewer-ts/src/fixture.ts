@@ -17,7 +17,11 @@ export function writeRun(
   id: string,
   startedAt: string,
   tests: FixtureTest[],
-  options: { status?: RunRecord["status"]; services?: { name: string; status?: string; log?: string }[] } = {}
+  options: {
+    status?: RunRecord["status"];
+    services?: { name: string; status?: string; log?: string }[];
+    variants?: Record<string, string>;
+  } = {}
 ): RunRecord {
   const runDir = join(baseDir, ".testfile", "runs", id);
   mkdirSync(join(runDir, "tests"), { recursive: true });
@@ -28,6 +32,7 @@ export function writeRun(
     status: options.status ?? "passed",
     exitCode: options.status === "failed" ? 1 : 0,
     cancelled: false,
+    ...(options.variants ? { variants: options.variants } : {}),
     env: {},
     ports: {},
     selected: [],
@@ -37,7 +42,7 @@ export function writeRun(
     const entry: RunRecord["tests"][number] = { path: test.path, status: test.status };
     if (test.durationMs !== undefined) entry.durationMs = test.durationMs;
     if (test.log !== undefined) {
-      entry.log = join("tests", `${index}.log`);
+      entry.log = `tests/${index}.log`;
       writeFileSync(join(runDir, entry.log), test.log);
     }
     record.tests.push(entry);
@@ -46,7 +51,7 @@ export function writeRun(
     const entry: NonNullable<RunRecord["services"]>[number] = { name: service.name };
     if (service.status) entry.status = service.status;
     if (service.log !== undefined) {
-      entry.log = join("services", `${index}.log`);
+      entry.log = `services/${index}.log`;
       mkdirSync(join(runDir, "services"), { recursive: true });
       writeFileSync(join(runDir, entry.log), service.log);
     }

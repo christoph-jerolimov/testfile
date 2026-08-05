@@ -1,3 +1,4 @@
+import { variantLabel } from "../merge.js";
 import type { RunHistory, RunRecord, Status } from "../runrecord.js";
 import { formatMs } from "../util.js";
 
@@ -19,6 +20,13 @@ function pad(text: string, width: number): string {
   return text + " ".repeat(Math.max(0, width - text.length));
 }
 
+// "platform=linux|macos" - the values a merged run combined, per key.
+function mergedVariantLabel(variants: Record<string, string[]> | undefined): string {
+  return Object.entries(variants ?? {})
+    .map(([key, values]) => `${key}=${values.join("|")}`)
+    .join(", ");
+}
+
 // A recorded run rendered as pane lines: metadata, then one line per test
 // (failures on the stderr stream so they stand out).
 export function describeRun(run: RunRecord): OutputLine[] {
@@ -28,6 +36,23 @@ export function describeRun(run: RunRecord): OutputLine[] {
     { text: `status:    ${run.status} (exit code ${run.exitCode})`, stream: "system" },
   ];
   if (run.cancelled) lines.push({ text: "cancelled: yes", stream: "system" });
+  const variants = variantLabel(run.variants);
+  if (variants) lines.push({ text: `variants:  ${variants}`, stream: "system" });
+  if (run.merged) {
+    lines.push({
+      text: `merged:    ${run.merged.runs.length} runs${
+        run.merged.variants ? ` (${mergedVariantLabel(run.merged.variants)})` : ""
+      }`,
+      stream: "system",
+    });
+    for (const source of run.merged.runs) {
+      const where = variantLabel(source.variants);
+      lines.push({
+        text: `  ${source.status.padEnd(8)} ${source.id}${where ? `  [${where}]` : ""}`,
+        stream: source.status === "passed" ? "system" : "stderr",
+      });
+    }
+  }
   if (run.selected.length > 0) {
     lines.push({ text: `selected:  ${run.selected.join(", ")}`, stream: "system" });
   }
@@ -43,8 +68,9 @@ export function describeRun(run: RunRecord): OutputLine[] {
   for (const test of run.tests) {
     const duration = test.durationMs !== undefined ? ` (${formatMs(test.durationMs)})` : "";
     const artifacts = test.artifacts?.length ? `  [${test.artifacts.length} artifacts]` : "";
+    const where = variantLabel(test.variants);
     lines.push({
-      text: `${test.status.padEnd(8)} ${test.path}${duration}${artifacts}`,
+      text: `${test.status.padEnd(8)} ${test.path}${where ? `  [${where}]` : ""}${duration}${artifacts}`,
       stream: test.status === "failed" || test.status === "aborted" ? "stderr" : "stdout",
     });
   }
@@ -67,13 +93,20 @@ function testSummary(run: RunRecord): string {
 
 // The runs view as a table: a header line plus one aligned row per run.
 export function runsTable(runs: readonly RunRecord[]): { header: string; rows: string[] } {
-  const header = `${pad("STARTED", 19)}  ${pad("STATUS", 7)}  ${pad("DURATION", 8)}  TESTS`;
+  // The variants column is only worth its width when some run has one.
+  const label = (run: RunRecord): string =>
+    run.merged
+      ? mergedVariantLabel(run.merged.variants) || `merged (${run.merged.runs.length})`
+      : variantLabel(run.variants);
+  const width = Math.max(0, ...runs.map((run) => label(run).length));
+  const column = width > 0 ? `${pad("VARIANTS", width)}  ` : "";
+  const header = `${pad("STARTED", 19)}  ${pad("STATUS", 7)}  ${pad("DURATION", 8)}  ${column}TESTS`;
   const rows = runs.map(
     (run) =>
       `${pad(run.startedAt.replace("T", " ").slice(0, 19), 19)}  ${pad(run.status, 7)}  ${pad(
         formatMs(run.durationMs),
         8
-      )}  ${testSummary(run)}`
+      )}  ${width > 0 ? `${pad(label(run), width)}  ` : ""}${testSummary(run)}`
   );
   return { header, rows };
 }

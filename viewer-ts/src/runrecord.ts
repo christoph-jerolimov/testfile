@@ -18,6 +18,10 @@ export interface RunRecordTest {
   cached?: boolean;
   // Why a test with `inputs` ran or was reused (free-form runner text).
   reason?: string;
+  // Merged runs only: the variants of the run this result came from, and
+  // that run's id.
+  variants?: Record<string, string>;
+  origin?: string;
 }
 
 // The Testfile's tree as recorded with the run (absent in older records).
@@ -35,6 +39,23 @@ export interface RunRecordService {
   name: string;
   status?: string;
   log?: string;
+  // Merged runs only, like the test fields above.
+  variants?: Record<string, string>;
+  origin?: string;
+}
+
+// What `testfile-viewer merge` combined into this run.
+export interface RunRecordMerged {
+  runs: {
+    id: string;
+    variants?: Record<string, string>;
+    machine?: string;
+    status: "passed" | "failed" | "aborted";
+    startedAt: string;
+    durationMs: number;
+  }[];
+  // Every variant value the merged runs used, per key.
+  variants?: Record<string, string[]>;
 }
 
 export interface RunRecord {
@@ -46,6 +67,10 @@ export interface RunRecord {
   cancelled: boolean;
   // Who ran it (CI actor, gh login or hostname); absent in older records.
   machine?: string;
+  // What distinguishes this run from a sibling run of the same suite.
+  variants?: Record<string, string>;
+  // Present when this run was produced by merging others.
+  merged?: RunRecordMerged;
   env: Record<string, string>;
   ports: Record<string, number>;
   selected: string[];

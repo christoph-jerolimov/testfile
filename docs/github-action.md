@@ -37,6 +37,7 @@ against your repository's Testfile. The job fails when tests fail.
 | `summary` | `true` | Write a job-summary table of the run's results (status, duration and notes per test). |
 | `upload-run` | `true` | Upload the recorded run (`.testfile/runs/<id>` as a `.tgz`) as a build artifact. |
 | `artifact-name` | `testfile-run` | Name of the uploaded run artifact. |
+| `variants` | – | What tells this run apart from the other legs of a matrix, as `key=value` pairs separated by commas or newlines (e.g. `platform=ubuntu-latest`). Recorded in `run.yaml`; [merging](./cli#merging-runs) needs it. |
 
 ## Examples
 
@@ -134,9 +135,18 @@ jobs:
       - uses: actions/checkout@v7
       - uses: christoph-jerolimov/testfile@main
         with:
+          # what tells the legs apart when their runs are merged
+          variants: platform=${{ matrix.os }}
           # artifact names are unique per workflow run
           artifact-name: testfile-run-${{ matrix.os }}
 ```
+
+Three platforms means three recorded runs. A follow-up job combines them
+into a single run — one verdict, one duration, every test tagged with the
+platform it ran on — with
+[`testfile-viewer merge`](./cli-reference#testfile-viewer-merge). The
+[three-platform guided tour](./three-platforms) walks through the whole
+workflow, merge job included.
 
 Two things to know before you do:
 

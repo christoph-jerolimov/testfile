@@ -1,0 +1,57 @@
+# A run produced by `testfile-viewer merge`: one job per platform, combined
+# into a single run. The tests keep the variants and the run they came from.
+id: 20260805-100000-merged
+startedAt: 2026-08-05T10:00:00.000Z
+durationMs: 42000
+status: failed
+exitCode: 1
+cancelled: false
+variants:
+  node: "22"
+merged:
+  runs:
+    - id: 20260805-100000-a1c3
+      variants:
+        platform: linux
+        node: "22"
+      machine: ci-runner-1
+      status: passed
+      startedAt: 2026-08-05T10:00:00.000Z
+      durationMs: 12000
+    - id: 20260805-100004-b2d4
+      variants:
+        platform: windows
+        node: "22"
+      status: failed
+      startedAt: 2026-08-05T10:00:04.000Z
+      durationMs: 30000
+  variants:
+    node: ["22"]
+    platform: [linux, windows]
+env: {}
+ports: {}
+selected: [ci]
+tests:
+  - path: ci/unit
+    status: passed
+    durationMs: 900
+    log: tests/20260805-100000-a1c3/ci-unit.log
+    variants:
+      platform: linux
+      node: "22"
+    origin: 20260805-100000-a1c3
+  - path: ci/unit
+    status: failed
+    durationMs: 1500
+    log: tests/20260805-100004-b2d4/ci-unit.log
+    variants:
+      platform: windows
+      node: "22"
+    origin: 20260805-100004-b2d4
+services:
+  - name: db
+    status: stopped
+    log: services/20260805-100000-a1c3/db.log
+    variants:
+      platform: linux
+    origin: 20260805-100000-a1c3

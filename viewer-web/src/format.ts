@@ -11,6 +11,22 @@ export function startedLabel(iso: string): string {
   return iso.replace("T", " ").slice(0, 19);
 }
 
+// "platform=linux, node=22", sorted by key so it never jumps around.
+export function variantLabel(variants?: Record<string, string>): string {
+  return Object.entries(variants ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `${key}=${value}`)
+    .join(", ");
+}
+
+// "platform=linux|macos" - what a merged run combined, per key.
+export function mergedVariantLabel(variants?: Record<string, string[]>): string {
+  return Object.entries(variants ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, values]) => `${key}=${values.join("|")}`)
+    .join(", ");
+}
+
 export function countSummary(run: RunRecord): string {
   const counts = new Map<string, number>();
   for (const test of run.tests) counts.set(test.status, (counts.get(test.status) ?? 0) + 1);

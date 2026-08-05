@@ -73,6 +73,10 @@ export interface RunRecord {
   cancelled: boolean;
   // Who ran it: a GitHub login when known, else the hostname. Optional.
   machine?: string;
+  // What distinguishes this run from a sibling run of the same suite -
+  // e.g. { platform: linux } for one leg of a matrix. Set with --variant,
+  // and what `testfile-viewer merge` needs to keep the legs apart.
+  variants?: Record<string, string>;
   // Env provided by the Testfile (top level, resolved) and the resolved ports.
   env: Record<string, string>;
   ports: Record<string, number>;
@@ -96,6 +100,7 @@ export interface RunMeta {
   exitCode: number;
   cancelled: boolean;
   machine?: string;
+  variants?: Record<string, string>;
   env: Record<string, string>;
   ports: Record<string, number>;
   selected: string[];
@@ -261,6 +266,9 @@ export class RunHistory {
       exitCode: meta.exitCode,
       cancelled: meta.cancelled,
       ...(meta.machine ? { machine: meta.machine } : {}),
+      ...(meta.variants && Object.keys(meta.variants).length > 0
+        ? { variants: meta.variants }
+        : {}),
       env: meta.env,
       ports: meta.ports,
       selected: meta.selected,

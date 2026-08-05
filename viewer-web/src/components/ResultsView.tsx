@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { aggregate, formatMs, startedLabel } from "../format.js";
+import { aggregate, formatMs, startedLabel, variantLabel } from "../format.js";
 import type { RunRecord, RunTest } from "../types.js";
 import { StatusCell } from "./StatusCell.js";
 
@@ -8,9 +8,11 @@ export function ResultsView({ runs }: { runs: RunRecord[] }): React.ReactElement
   const [selected, setSelected] = useState<string | undefined>();
   const current = tests.find((t) => t.path === selected) ?? tests[0];
   if (!current) return <div className="empty">no recorded runs yet — run some tests first</div>;
-  const executions = runs
-    .map((run) => ({ run, test: run.tests.find((t) => t.path === current.path) }))
-    .filter((entry): entry is { run: RunRecord; test: RunTest } => entry.test !== undefined);
+  // A merged run holds one result per leg, so a run can contribute more
+  // than one execution of the same test.
+  const executions: { run: RunRecord; test: RunTest }[] = runs.flatMap((run) =>
+    run.tests.filter((t) => t.path === current.path).map((test) => ({ run, test }))
+  );
   return (
     <main>
       <div className="list">
@@ -59,8 +61,13 @@ export function ResultsView({ runs }: { runs: RunRecord[] }): React.ReactElement
           </thead>
           <tbody>
             {executions.map(({ run, test }) => (
-              <tr key={run.id}>
-                <td className="mono">{run.id}</td>
+              <tr key={`${run.id} ${test.origin ?? ""}`}>
+                <td className="mono">
+                  {run.id}
+                  {variantLabel(test.variants) ? (
+                    <span className="variant">{variantLabel(test.variants)}</span>
+                  ) : null}
+                </td>
                 <td className="mono">{startedLabel(run.startedAt)}</td>
                 <td>
                   <StatusCell status={test.status} cached={test.cached} />

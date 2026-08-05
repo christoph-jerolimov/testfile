@@ -41,6 +41,10 @@ inputs:
     description: "Global cap on concurrently running tests"
     required: false
     default: ""
+  variants:
+    description: "What distinguishes this run from the other legs of a matrix, as key=value pairs separated by commas or newlines (for example platform=ubuntu-latest). Recorded with the run; `testfile-viewer merge` needs it to combine the legs."
+    required: false
+    default: ""
   reporter:
     description: "Write machine-readable results: junit or json"
     required: false
@@ -96,6 +100,7 @@ runs:
         INPUT_CHANGED_SINCE: ${{ inputs.changed-since }}
         INPUT_FAIL_FAST: ${{ inputs.fail-fast }}
         INPUT_MAX_PARALLEL: ${{ inputs.max-parallel }}
+        INPUT_VARIANTS: ${{ inputs.variants }}
         INPUT_REPORTER: ${{ inputs.reporter }}
         INPUT_OUTPUT: ${{ inputs.output }}
       run: |
@@ -110,6 +115,10 @@ runs:
         fi
         [ "$INPUT_FAIL_FAST" = "true" ] && ARGS+=(--fail-fast)
         [ -n "$INPUT_MAX_PARALLEL" ] && ARGS+=(--max-parallel "$INPUT_MAX_PARALLEL")
+        while IFS= read -r variant; do
+          variant=$(printf '%s' "$variant" | tr -d '[:space:]')
+          if [ -n "$variant" ]; then ARGS+=(--variant "$variant"); fi
+        done <<< "$(printf '%s' "$INPUT_VARIANTS" | tr ',' '\n')"
         [ -n "$INPUT_REPORTER" ] && ARGS+=(--reporter "$INPUT_REPORTER")
         [ -n "$INPUT_OUTPUT" ] && ARGS+=(--output "$INPUT_OUTPUT")
         node "${{ github.action_path }}/runner-ts/dist/cli.js" "${ARGS[@]}"

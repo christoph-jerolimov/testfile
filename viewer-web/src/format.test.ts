@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aggregate, countSummary, formatMs, startedLabel } from "./format.js";
+import { aggregate, countSummary, formatMs, mergedVariantLabel, startedLabel, variantLabel } from "./format.js";
 import type { RunRecord } from "./types.js";
 
 function run(id: string, startedAt: string, tests: RunRecord["tests"]): RunRecord {
@@ -68,4 +68,18 @@ test("aggregate folds runs per test path, newest run first", () => {
 
 test("aggregate of no runs is empty", () => {
   assert.deepEqual(aggregate([]), []);
+});
+
+test("variantLabel is sorted by key and empty without variants", () => {
+  assert.equal(variantLabel({ platform: "linux", node: "22" }), "node=22, platform=linux");
+  assert.equal(variantLabel({}), "");
+  assert.equal(variantLabel(undefined), "");
+});
+
+test("mergedVariantLabel lists every value a merged run combined", () => {
+  assert.equal(
+    mergedVariantLabel({ platform: ["linux", "macos", "windows"], node: ["22"] }),
+    "node=22, platform=linux|macos|windows"
+  );
+  assert.equal(mergedVariantLabel(undefined), "");
 });

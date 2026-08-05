@@ -30,6 +30,7 @@ testfile run --max-parallel 4   # global cap on concurrently running tests
 testfile run --dry-run     # print what would run, without running
 testfile run --watch       # re-run on file changes
 testfile run --reporter junit --output results.xml   # report for CI
+testfile run --variant platform=linux   # tag the run (for merging later)
 testfile validate [path]   # validate against the JSON schema
 testfile list [path]       # print the expanded suite, incl. matrix instances
 testfile completion bash   # shell completions (bash, zsh, fish)
@@ -38,6 +39,7 @@ testfile completion bash   # shell completions (bash, zsh, fish)
 testfile-viewer runs           # table of recorded runs (default command)
 testfile-viewer run <id>       # one run in detail
 testfile-viewer diff <a> <b>   # compare two runs
+testfile-viewer merge <run...> # combine shards / platform runs into one
 testfile-viewer tui            # terminal UI: runs + results, watching
 testfile-viewer serve          # localhost REST API + web viewer
 testfile-viewer archive <cmd>  # pack/import recorded runs as archives
@@ -206,9 +208,58 @@ dealt round-robin in suite order. To get balancing there, restore
 ([`archive import`](#sharing-runs), [`github sync`](./github-action#bringing-ci-runs-home)).
 
 Sharding composes with the filters: `-t slow --shard 2/3` shards only the
-slow tests. Each shard records its own run, so publish them under distinct
-artifact names and merge locally by importing all of them — the viewer
-shows them as separate runs of the same suite.
+slow tests. Each shard records its own run — combine them into a single
+result with [`merge`](#merging-runs).
+
+## Merging runs
+
+Sharding and a matrix of CI jobs both leave you with several run folders
+for what is conceptually one run. `testfile-viewer merge` combines them:
+
+```sh
+# shards: each ran a different part of the suite
+testfile-viewer merge shard-1 shard-2 shard-3
+
+# CI artifacts, each unpacked into its own folder
+testfile-viewer merge downloaded/testfile-run-*
+```
+
+The result is an ordinary run — one verdict, one duration, the union of
+the tests — that every viewer shows like any other:
+
+```
+merged run 20260805-101500-merged
+  passed  20260805-101500-a1c3  [platform=ubuntu-latest]  1m12s
+  failed  20260805-101501-c3e5  [platform=windows-latest] 1m45s
+failed (exit code 1), 24 tests, 2m57s
+```
+
+Nothing is hidden: the merged run records which runs went into it, and
+every test says which one it came from.
+
+### Variants
+
+Shards merge as they are, because no test appears twice — the group nodes
+around them are folded into one entry rather than reported as a clash. Jobs that run the
+**same** suite in different places do not — the merge would not know which
+`ci/unit` came from where. Tell the runs apart with `--variant`:
+
+```sh
+testfile run --variant platform=linux        # on the Linux job
+testfile run --variant platform=windows      # on the Windows job
+```
+
+Variants are free-form `key=value` pairs, recorded in `run.yaml` and shown
+by the CLI, the TUI and the web viewer. Merging requires `path` +
+`variants` to be unique and refuses the merge otherwise:
+
+```
+✘ runs 20260805-101500-a1c3 and 20260805-101501-c3e5 both recorded "ci/unit"
+  - give the runs distinct --variant values (e.g. --variant platform=linux)
+```
+
+The [three-platform guided tour](./three-platforms) walks through the
+whole setup in GitHub Actions.
 
 ## Changes
 
