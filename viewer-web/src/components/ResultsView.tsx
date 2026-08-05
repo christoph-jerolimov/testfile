@@ -1,7 +1,17 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
+import {
+  filterTests,
+  isDefaultTestFilter,
+  tagOptions,
+  tagsByPath,
+  testFilterDefaults,
+  testStatusOptions,
+  type TestFilter,
+} from "../filters.js";
 import { aggregate, formatMs, startedLabel, variantLabel } from "../format.js";
 import { navigate } from "../router.js";
 import type { RunRecord, RunTest } from "../types.js";
+import { FilterBar, MultiSelect, SearchInput } from "./FilterBar.js";
 import { StatusCell } from "./StatusCell.js";
 
 export function ResultsView({
@@ -12,8 +22,12 @@ export function ResultsView({
   // The test path from the URL; the first test stands in until one is picked.
   selected?: string;
 }): React.ReactElement {
+  const [filter, setFilter] = useState<TestFilter>(testFilterDefaults);
   const tests = useMemo(() => aggregate(runs), [runs]);
-  const current = tests.find((t) => t.path === selected) ?? tests[0];
+  const tags = useMemo(() => tagsByPath(runs), [runs]);
+  const shown = useMemo(() => filterTests(tests, filter, tags), [tests, filter, tags]);
+  // as on the runs tab, a linked test stays visible even when filtered out
+  const current = tests.find((t) => t.path === selected) ?? shown[0] ?? tests[0];
   if (!current) return <div className="empty">no recorded runs yet — run some tests first</div>;
   // A merged run holds one result per leg, so a run can contribute more
   // than one execution of the same test.
@@ -23,6 +37,30 @@ export function ResultsView({
   return (
     <main>
       <div className="list">
+        <FilterBar
+          shown={shown.length}
+          total={tests.length}
+          noun="tests"
+          onClear={isDefaultTestFilter(filter) ? undefined : () => setFilter(testFilterDefaults)}
+        >
+          <MultiSelect
+            label="Status"
+            options={testStatusOptions(tests)}
+            selected={filter.statuses}
+            onChange={(statuses) => setFilter({ ...filter, statuses })}
+          />
+          <MultiSelect
+            label="Tags"
+            options={tagOptions(runs)}
+            selected={filter.tags}
+            onChange={(values) => setFilter({ ...filter, tags: values })}
+          />
+          <SearchInput
+            value={filter.text}
+            placeholder="test path or tag"
+            onChange={(text) => setFilter({ ...filter, text })}
+          />
+        </FilterBar>
         <table>
           <thead>
             <tr>
@@ -34,7 +72,7 @@ export function ResultsView({
             </tr>
           </thead>
           <tbody>
-            {tests.map((t) => (
+            {shown.map((t) => (
               <tr
                 key={t.path}
                 className={`row ${t.path === current.path ? "selected" : ""}`}
@@ -49,12 +87,24 @@ export function ResultsView({
                 <td>{t.occurrences}</td>
               </tr>
             ))}
+            {shown.length === 0 ? (
+              <tr>
+                <td className="empty-row" colSpan={5}>
+                  no test matches the filters
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>
       <div className="detail">
         <h2>
           executions of <span className="mono">{current.path}</span>
+          {(tags.get(current.path) ?? []).map((tag) => (
+            <span key={tag} className="badge">
+              {tag}
+            </span>
+          ))}
         </h2>
         <table>
           <thead>

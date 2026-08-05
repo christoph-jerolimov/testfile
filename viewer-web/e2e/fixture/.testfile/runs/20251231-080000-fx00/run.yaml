@@ -32,6 +32,33 @@ env:
 ports: {}
 selected:
   - ci
+suite:
+  name: ci
+  path: ci
+  kind: sequence
+  tags:
+    - ci
+  children:
+    - name: build
+      path: ci/build
+      kind: command
+      tags:
+        - build
+        - fast
+    - name: unit
+      path: ci/unit
+      kind: command
+      tags:
+        - unit
+        - fast
+    - name: e2e
+      path: ci/e2e
+      kind: command
+      tags:
+        - e2e
+        - slow
+      services:
+        - db
 tests:
   - path: ci
     status: passed

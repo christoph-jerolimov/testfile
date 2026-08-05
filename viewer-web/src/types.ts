@@ -35,6 +35,18 @@ export interface RunMerged {
   variants?: Record<string, string[]>;
 }
 
+// The shape of the Testfile the run came from: the whole tree, including
+// tests a filter excluded from the run (spec/RESULTS.md).
+export interface SuiteNode {
+  name: string;
+  path: string;
+  kind: string;
+  tags?: string[];
+  matrix?: Record<string, string>;
+  services?: string[];
+  children?: SuiteNode[];
+}
+
 export interface RunRecord {
   id: string;
   startedAt: string;
@@ -49,6 +61,7 @@ export interface RunRecord {
   env: Record<string, string>;
   ports: Record<string, number>;
   selected: string[];
+  suite?: SuiteNode;
   tests: RunTest[];
   services?: RunService[];
   junit?: string;

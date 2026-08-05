@@ -254,3 +254,78 @@ button.link {
   margin-left: 0;
   white-space: normal;
 }
+
+/* Filters above each table: chips for the multi-selects, one text box. An
+   untouched bar selects nothing, which shows everything. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.9rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  color: var(--dim);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 0.1rem;
+}
+
+.chip {
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--accent);
+}
+
+.chip.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.filter-text {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  min-width: 12rem;
+}
+
+.filter-count {
+  margin-left: auto;
+  color: var(--dim);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.filter-count .link {
+  margin-left: 0.5rem;
+}
+
+.empty-row {
+  color: var(--dim);
+  padding: 0.8rem 0.4rem;
+}
