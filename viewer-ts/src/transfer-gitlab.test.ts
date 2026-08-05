@@ -33,9 +33,9 @@ function fakeAws(
   onCall: (command: string, args: string[]) => { status: number; stdout: string } | undefined
 ): { exec: Exec; calls: string[][] } {
   const calls: string[][] = [];
-  const exec: Exec = (command, args) => {
+  const exec: Exec = (command, args, options) => {
     if (command === "tar" || command === "unzip") {
-      const result = spawnSync(command, args, { encoding: "utf8" });
+      const result = spawnSync(command, args, { encoding: "utf8", cwd: options?.cwd });
       return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
     }
     calls.push([command, ...args]);

@@ -22,11 +22,12 @@ import { HISTORY_DIR } from "../runrecord.js";
 // Shell-out abstraction, injectable for tests.
 export type Exec = (
   command: string,
-  args: string[]
+  args: string[],
+  options?: { cwd?: string }
 ) => { status: number | null; stdout: string; stderr: string };
 
-export const defaultExec: Exec = (command, args) => {
-  const result = spawnSync(command, args, { encoding: "utf8" });
+export const defaultExec: Exec = (command, args, options) => {
+  const result = spawnSync(command, args, { encoding: "utf8", cwd: options?.cwd });
   if (result.error) {
     const code = (result.error as NodeJS.ErrnoException).code;
     throw new Error(
@@ -42,10 +43,10 @@ function runsDir(baseDir: string): string {
   return join(baseDir, HISTORY_DIR, "runs");
 }
 
-// tar reads "C:\path" as host:path and tries to reach a machine called C,
-// so every absolute path on Windows needs this. GNU tar (the one Git for
-// Windows ships) understands it; on Linux and macOS it is not needed.
-const tarLocal = process.platform === "win32" ? ["--force-local"] : [];
+// tar is never handed an absolute path: the tar that Git for Windows ships
+// reads "C:\..." as host:path and tries to reach a machine called C. Every
+// call below runs with a cwd and names its files relative to it, which needs
+// no platform special-casing.
 
 // Packs one recorded run (the whole runs/<id>/ folder) into a .tgz whose
 // single top-level entry is the run id.
@@ -54,9 +55,17 @@ export function packRun(baseDir: string, runId: string, outFile: string, exec: E
   if (!existsSync(join(dir, "run.yaml"))) {
     throw new Error(`no recorded run "${runId}" in ${HISTORY_DIR}/runs/`);
   }
-  const result = exec("tar", [...tarLocal, "-czf", outFile, "-C", runsDir(baseDir), runId]);
-  if (result.status !== 0) {
-    throw new Error(`tar failed: ${(result.stderr || result.stdout).trim()}`);
+  // written next to the run folders first, then moved: that way tar only
+  // ever sees names relative to its cwd.
+  const staged = `.testfile-pack-${process.pid}.tgz`;
+  const result = exec("tar", ["-czf", staged, runId], { cwd: runsDir(baseDir) });
+  try {
+    if (result.status !== 0) {
+      throw new Error(`tar failed: ${(result.stderr || result.stdout).trim()}`);
+    }
+    cpSync(join(runsDir(baseDir), staged), outFile);
+  } finally {
+    rmSync(join(runsDir(baseDir), staged), { force: true });
   }
 }
 
@@ -123,9 +132,13 @@ export function importRunArchive(
 ): ImportResult {
   const tmp = mkdtempSync(join(tmpdir(), "testfile-import-"));
   try {
+    // the archive is copied in first, so both tools work inside tmp on a
+    // plain file name (see the tar note above; unzip has the same trouble)
+    const local = archive.endsWith(".zip") ? "archive.zip" : "archive.tgz";
+    cpSync(archive, join(tmp, local));
     const result = archive.endsWith(".zip")
-      ? exec("unzip", ["-o", "-q", archive, "-d", tmp])
-      : exec("tar", [...tarLocal, "-xzf", archive, "-C", tmp]);
+      ? exec("unzip", ["-o", "-q", local], { cwd: tmp })
+      : exec("tar", ["-xzf", local], { cwd: tmp });
     if (result.status !== 0) {
       throw new Error(`extracting ${archive} failed: ${(result.stderr || result.stdout).trim()}`);
     }
