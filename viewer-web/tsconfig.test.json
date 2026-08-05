@@ -13,13 +13,22 @@
     ],
     "types": [
       "node"
-    ]
+    ],
+    "jsx": "react-jsx"
   },
   "files": [
     "src/types.ts",
     "src/format.ts",
     "src/api.ts",
     "src/format.test.ts",
-    "src/api.test.ts"
+    "src/api.test.ts",
+    "src/router.ts",
+    "src/router.test.ts",
+    "src/components/StatusCell.tsx",
+    "src/components/Log.tsx",
+    "src/components/RunDetail.tsx",
+    "src/components/RunsView.tsx",
+    "src/components/ResultsView.tsx",
+    "src/components/views.test.tsx"
   ]
 }

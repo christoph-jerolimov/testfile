@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   countSummary,
   formatMs,
@@ -6,6 +6,7 @@ import {
   startedLabel,
   variantLabel,
 } from "../format.js";
+import { navigate } from "../router.js";
 import type { RunRecord } from "../types.js";
 import { RunDetail } from "./RunDetail.js";
 import { StatusCell } from "./StatusCell.js";
@@ -17,8 +18,14 @@ function runVariants(run: RunRecord): string {
     : variantLabel(run.variants);
 }
 
-export function RunsView({ runs }: { runs: RunRecord[] }): React.ReactElement {
-  const [selected, setSelected] = useState<string | undefined>();
+export function RunsView({
+  runs,
+  selected,
+}: {
+  runs: RunRecord[];
+  // The run id from the URL; the newest run stands in until one is picked.
+  selected?: string;
+}): React.ReactElement {
   const run = runs.find((r) => r.id === selected) ?? runs[0];
   if (!run) return <div className="empty">no recorded runs yet — run some tests first</div>;
   // the column only earns its width when some run has variants
@@ -41,7 +48,7 @@ export function RunsView({ runs }: { runs: RunRecord[] }): React.ReactElement {
               <tr
                 key={r.id}
                 className={`row ${r.id === run.id ? "selected" : ""}`}
-                onClick={() => setSelected(r.id)}
+                onClick={() => navigate({ view: "runs", runId: r.id })}
               >
                 <td className="mono">{startedLabel(r.startedAt)}</td>
                 <td>

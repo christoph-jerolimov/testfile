@@ -1,11 +1,24 @@
 import React, { useEffect, useState } from "react";
 import { fetchRuns, fetchSummary, subscribeRunsChanged } from "../api.js";
+import { navigate, parseRoute, type Route } from "../router.js";
 import type { RunRecord, Summary } from "../types.js";
 import { ResultsView } from "./ResultsView.js";
 import { RunsView } from "./RunsView.js";
 
+// The route is the only navigation state, so the back button, a reload and a
+// shared link all land in the same place.
+function useRoute(): Route {
+  const [route, setRoute] = useState<Route>(() => parseRoute(window.location.pathname));
+  useEffect(() => {
+    const onPop = (): void => setRoute(parseRoute(window.location.pathname));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  return route;
+}
+
 export function App(): React.ReactElement {
-  const [view, setView] = useState<"runs" | "results">("runs");
+  const route = useRoute();
   const [summary, setSummary] = useState<Summary | undefined>();
   const [runs, setRuns] = useState<RunRecord[]>([]);
   const [live, setLive] = useState(false);
@@ -32,10 +45,16 @@ export function App(): React.ReactElement {
           <span>Testfile</span> {summary?.name ?? ""}
         </h1>
         <nav>
-          <button className={view === "runs" ? "active" : ""} onClick={() => setView("runs")}>
+          <button
+            className={route.view === "runs" ? "active" : ""}
+            onClick={() => navigate({ view: "runs" })}
+          >
             Runs
           </button>
-          <button className={view === "results" ? "active" : ""} onClick={() => setView("results")}>
+          <button
+            className={route.view === "results" ? "active" : ""}
+            onClick={() => navigate({ view: "results" })}
+          >
             Results
           </button>
         </nav>
@@ -43,7 +62,11 @@ export function App(): React.ReactElement {
           {runs.length} runs {live ? <span className="dot">● live</span> : "○ offline"}
         </div>
       </header>
-      {view === "runs" ? <RunsView runs={runs} /> : <ResultsView runs={runs} />}
+      {route.view === "runs" ? (
+        <RunsView runs={runs} selected={route.runId} />
+      ) : (
+        <ResultsView runs={runs} selected={route.testPath} />
+      )}
     </div>
   );
 }

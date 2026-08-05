@@ -526,6 +526,19 @@ testfile-viewer serve --port 8080
   so runs recorded elsewhere (another terminal, `testfile-viewer github sync`)
   appear live.
 
+Every selection is in the URL, so a view can be linked, bookmarked and
+reloaded — and the browser's back button walks through it:
+
+| Path | Shows |
+| ---- | ----- |
+| `/` or `/runs` | the runs table with the newest run |
+| `/runs/<id>` | that run's detail |
+| `/results` | the results table |
+| `/results/<test/path>` | that test's executions — the test path keeps its slashes, so the URL reads like the test does |
+
+An id or test path that no longer exists falls back to the newest run
+(respectively the first test) instead of an error page.
+
 The server binds to `127.0.0.1` **only** — it is never reachable from the
 network. It exposes a read-only REST API for other tooling:
 `/api/summary`, `/api/runs`, `/api/runs/<id>`, `/api/runs/<id>/log`

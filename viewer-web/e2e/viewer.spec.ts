@@ -56,6 +56,8 @@ test("older runs can be selected", async ({ page }) => {
   await page.locator(".list tbody tr").nth(1).click();
   const detail = page.locator(".detail");
   await expect(detail).toContainText("20260101-120000-fx01");
+  // the selection is in the URL, not only in the component
+  await expect(page).toHaveURL("/runs/20260101-120000-fx01");
   await expect(detail).toContainText("cache miss: no stored passing result");
   await expect(detail.locator(".log")).toContainText("build finished");
 });
@@ -96,4 +98,35 @@ test("results view aggregates tests across runs", async ({ page }) => {
   await expect(detail.locator("tbody tr")).toHaveCount(4);
 
   await expect(page).toHaveScreenshot("results.png");
+});
+
+test("every selection is a link that can be shared and reloaded", async ({ page }) => {
+  // a run deep link opens that run, not the newest one
+  await page.goto("/runs/20260101-120000-fx01");
+  await expect(page.locator(".detail")).toContainText("20260101-120000-fx01");
+
+  // a test path keeps its slashes, so the URL reads like the test does
+  await page.goto("/results/ci/unit");
+  await expect(page.getByRole("button", { name: "Results" })).toHaveClass(/active/);
+  const detail = page.locator(".detail");
+  await expect(detail).toContainText("executions of");
+  await expect(detail).toContainText("ci/unit");
+
+  // switching tabs and picking rows writes the URL ...
+  await page.getByRole("button", { name: "Runs" }).click();
+  await expect(page).toHaveURL("/runs");
+  await page.locator(".list tbody tr").nth(2).click();
+  await expect(page).toHaveURL("/runs/20251231-080000-fx00");
+
+  // ... and the back button walks it back
+  await page.goBack();
+  await expect(page).toHaveURL("/runs");
+  await page.goBack();
+  await expect(page).toHaveURL("/results/ci/unit");
+  await expect(page.locator(".detail")).toContainText("executions of");
+});
+
+test("an unknown run id falls back to the newest run", async ({ page }) => {
+  await page.goto("/runs/does-not-exist");
+  await expect(page.locator(".detail")).toContainText("20260102-090000-fx02");
 });
