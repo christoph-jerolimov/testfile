@@ -22,6 +22,9 @@ export function App(): React.ReactElement {
   const [summary, setSummary] = useState<Summary | undefined>();
   const [runs, setRuns] = useState<RunRecord[]>([]);
   const [live, setLive] = useState(false);
+  // Bumped on every server ping. Views that read something the API does not
+  // hand out with the runs - a log - use it to re-read.
+  const [revision, setRevision] = useState(0);
 
   const refresh = (): void => {
     void fetchSummary()
@@ -30,6 +33,7 @@ export function App(): React.ReactElement {
     void fetchRuns()
       .then(setRuns)
       .catch(() => undefined);
+    setRevision((current) => current + 1);
   };
 
   useEffect(() => {
@@ -63,7 +67,7 @@ export function App(): React.ReactElement {
         </div>
       </header>
       {route.view === "runs" ? (
-        <RunsView runs={runs} selected={route.runId} />
+        <RunsView runs={runs} selected={route.runId} revision={revision} />
       ) : (
         <ResultsView runs={runs} selected={route.testPath} />
       )}

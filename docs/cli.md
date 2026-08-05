@@ -523,6 +523,12 @@ testfile-viewer serve --port 8080
   test).
 - **Results**: every recorded test with aggregated pass/fail counts and
   its executions across all runs.
+- **Logs** read like logs: the colour a tool wrote (the runner asks for it —
+  see [an isolated environment](./env-and-ports#an-isolated-environment)) is
+  rendered rather than printed as escape sequences, and every log has a
+  `find in log` box with `‹ ›` to walk the hits, a `wrap` toggle (on by
+  default) and a `follow` toggle that pins the view to the end while a run
+  is still being written.
 - The server watches `.testfile/runs/` and pushes changes to the browser,
   so runs recorded elsewhere (another terminal, `testfile-viewer github sync`)
   appear live.

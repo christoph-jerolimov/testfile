@@ -1,4 +1,4 @@
-# cache miss: src/**: 1 changed file (src/math.ts)
-41 tests passed
-boom: expected 4 to equal 5
-    at math.test.ts:12
+[2m# cache miss: src/**: 1 changed file (src/math.ts)[0m
+[32m41 tests passed[39m
+[1;31mboom: expected 4 to equal 5[0m
+[2m    at math.test.ts:12[0m
