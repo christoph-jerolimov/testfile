@@ -37,21 +37,6 @@ test:
       command: npm run test:e2e
 ```
 
-## Status: version 0 — under review
-
-The Testfile format is currently at **`version: 0`**: it is under review and
-may still change based on feedback. **Version 1 is targeted for Q4 2026.**
-Until then, breaking changes are possible between releases (they will be
-called out in release notes), and the [versioning
-policy](spec/VERSIONING.md) describes the stability guarantees version 1
-will bring.
-
-This is exactly the right time to influence the format: please **try it on
-your project and tell us how it goes**. Bug reports, missing features,
-confusing docs, naming nitpicks — everything is useful. Open a [GitHub
-issue](https://github.com/christoph-jerolimov/testfile/issues) with your
-feedback, or a pull request if you want to contribute directly.
-
 ## Repository layout
 
 | Folder | Contents |
