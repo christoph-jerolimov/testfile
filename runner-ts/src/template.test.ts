@@ -10,8 +10,12 @@ const scopes: Scopes = {
 
 test("resolves all scopes", () => {
   assert.equal(
-    resolveTemplate("http://localhost:${{ ports.web }}/${{ env.NAME }}-${{ matrix.node }}", scopes, "t"),
-    "http://localhost:8080/world-22"
+    resolveTemplate(
+      "http://localhost:${{ ports.web }}/${{ env.NAME }}-${{ matrix.node }}",
+      scopes,
+      "t",
+    ),
+    "http://localhost:8080/world-22",
   );
 });
 
@@ -21,7 +25,10 @@ test("leaves plain strings alone", () => {
 
 test("throws on unknown scope and unknown name", () => {
   assert.throws(() => resolveTemplate("${{ nope.x }}", scopes, "t"), /unknown template scope/);
-  assert.throws(() => resolveTemplate("${{ ports.db }}", scopes, "t"), /"ports\.db" is not defined/);
+  assert.throws(
+    () => resolveTemplate("${{ ports.db }}", scopes, "t"),
+    /"ports\.db" is not defined/,
+  );
 });
 
 test("|| supplies a default for undefined or empty references", () => {
@@ -33,7 +40,7 @@ test("|| supplies a default for undefined or empty references", () => {
   assert.equal(resolveTemplate("${{ ports.web || 5432 }}", withEmpty, "t"), "8080");
   assert.equal(
     resolveTemplate("${{ env.MISSING || 'quoted value' }}", withEmpty, "t"),
-    "quoted value"
+    "quoted value",
   );
   assert.equal(resolveTemplate("x=${{ env.MISSING || }}", withEmpty, "t"), "x=");
   // without a default, undefined references still error

@@ -13,13 +13,12 @@ import {
 } from "./shared.js";
 
 export function registerList(program: Command): void {
-addFilterOptions(
-  program
-    .command("list")
-    .argument("[path]", "Testfile or directory containing one", ".")
-    .description("Print the expanded test suite (including matrix instances)")
-)
-  .action(async (path: string, flags: FilterFlags) => {
+  addFilterOptions(
+    program
+      .command("list")
+      .argument("[path]", "Testfile or directory containing one", ".")
+      .description("Print the expanded test suite (including matrix instances)"),
+  ).action(async (path: string, flags: FilterFlags) => {
     try {
       const { path: file, doc } = loadTestfile(path);
       const session = new Session(doc, dirname(file));

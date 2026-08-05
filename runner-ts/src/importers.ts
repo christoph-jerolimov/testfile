@@ -37,9 +37,7 @@ interface ComposeService {
   profiles?: string[];
 }
 
-function envMap(
-  environment: ComposeService["environment"]
-): Record<string, string> | undefined {
+function envMap(environment: ComposeService["environment"]): Record<string, string> | undefined {
   if (!environment) return undefined;
   const out: Record<string, string> = {};
   if (Array.isArray(environment)) {
@@ -83,7 +81,7 @@ export function fromDockerCompose(text: string): Imported {
       out.notes.push(
         service.build !== undefined
           ? `service "${name}" builds an image (build:) - add the built image or a command yourself`
-          : `service "${name}" has no image - skipped`
+          : `service "${name}" has no image - skipped`,
       );
       if (!service.build) continue;
     }
@@ -123,7 +121,9 @@ export function fromDockerCompose(text: string): Imported {
       out.notes.push(`service "${name}" has no healthcheck and no ports - add a "ready" check`);
     }
     if (service.profiles?.length) {
-      out.notes.push(`service "${name}" is behind compose profiles (${service.profiles.join(", ")})`);
+      out.notes.push(
+        `service "${name}" is behind compose profiles (${service.profiles.join(", ")})`,
+      );
     }
     out.services[name] = def;
   }
@@ -156,7 +156,9 @@ export function fromGithubWorkflow(text: string): Imported {
     const steps = (job?.steps ?? []).filter((step) => typeof step.run === "string");
     const skipped = (job?.steps ?? []).filter((step) => step.uses).map((step) => step.uses!);
     if (skipped.length > 0) {
-      out.notes.push(`job "${jobId}": dropped ${skipped.length} action step(s) (${skipped[0]}, ...)`);
+      out.notes.push(
+        `job "${jobId}": dropped ${skipped.length} action step(s) (${skipped[0]}, ...)`,
+      );
     }
     if (steps.length === 0) continue;
     if (job?.strategy?.matrix) {
@@ -169,7 +171,7 @@ export function fromGithubWorkflow(text: string): Imported {
     out.tests.push(
       tests.length === 1
         ? { ...tests[0], name: job?.name ?? jobId }
-        : { name: job?.name ?? jobId, sequence: tests }
+        : { name: job?.name ?? jobId, sequence: tests },
     );
   }
   return out;
@@ -184,13 +186,15 @@ export function fromMakefile(text: string): Imported {
   const out = emptyImport();
   const targets: string[] = [];
   for (const line of text.split("\n")) {
-    const match = /^([A-Za-z0-9_.\-\/]+)\s*:(?!=)/.exec(line);
+    const match = /^([A-Za-z0-9_.\-/]+)\s*:(?!=)/.exec(line);
     if (!match) continue;
     const target = match[1];
     if (MAKE_INTERNAL.test(target) || targets.includes(target)) continue;
     targets.push(target);
   }
-  const interesting = targets.filter((target) => /test|lint|check|verify|e2e|vet|fmt/i.test(target));
+  const interesting = targets.filter((target) =>
+    /test|lint|check|verify|e2e|vet|fmt/i.test(target),
+  );
   for (const target of interesting) {
     out.tests.push({ name: target, command: `make ${target}` });
   }

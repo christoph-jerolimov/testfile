@@ -72,7 +72,7 @@ export class Runner extends EventEmitter {
     readonly doc: TestfileDoc,
     readonly root: RunTest,
     readonly baseDir: string,
-    options: RunnerOptions = {}
+    options: RunnerOptions = {},
   ) {
     super();
     this.active = options.active;
@@ -121,7 +121,13 @@ export class Runner extends EventEmitter {
     try {
       this.ports = await resolvePorts(this.doc.ports);
       const bootstrap: Scopes = { env: baseEnv, ports: this.ports, matrix: {} };
-      const fileEnv = loadEnvFiles(this.doc.envFile, this.baseDir, bootstrap, "Testfile", this.secrets);
+      const fileEnv = loadEnvFiles(
+        this.doc.envFile,
+        this.baseDir,
+        bootstrap,
+        "Testfile",
+        this.secrets,
+      );
       const withFiles = { ...baseEnv, ...fileEnv };
       // Secrets named at document level come from the host (that is how CI
       // secret stores hand them over) and are registered for masking.
@@ -146,7 +152,12 @@ export class Runner extends EventEmitter {
     return this.root.status;
   }
 
-  private async runTest(test: RunTest, scopes: Scopes, cwd: string, parentSignal: AbortSignal): Promise<void> {
+  private async runTest(
+    test: RunTest,
+    scopes: Scopes,
+    cwd: string,
+    parentSignal: AbortSignal,
+  ): Promise<void> {
     if (!this.isActive(test)) return;
     if (parentSignal.aborted) {
       this.markRemaining(test, this.interrupted ? "aborted" : "skipped");
@@ -218,7 +229,13 @@ export class Runner extends EventEmitter {
         test.resolvedCwd = nodeCwd;
 
         if (test.def.envFile !== undefined) {
-          const nodeFileEnv = loadEnvFiles(test.def.envFile, nodeCwd, nodeScopes, where, this.secrets);
+          const nodeFileEnv = loadEnvFiles(
+            test.def.envFile,
+            nodeCwd,
+            nodeScopes,
+            where,
+            this.secrets,
+          );
           // precedence: parent env < forwarded < env file(s) < own env
           const merged = {
             ...withMatrix.env,
@@ -232,17 +249,13 @@ export class Runner extends EventEmitter {
           nodeScopes = { ...withMatrix, env: merged };
         }
 
-        if (
-          this.cache &&
-          test.def.inputs &&
-          (test.kind === "command" || test.kind === "script")
-        ) {
+        if (this.cache && test.def.inputs && (test.kind === "command" || test.kind === "script")) {
           const source = resolveTemplate(test.def.script ?? test.def.command!, nodeScopes, where);
           const key = ResultCache.configKey(
             test.path,
             source,
             resolveEnvMap(test.def.env, withMatrix, where),
-            test.matrix
+            test.matrix,
           );
           const state = ResultCache.inputsState(nodeCwd, test.def.inputs);
           const entry = this.cache.get(key);
@@ -250,7 +263,10 @@ export class Runner extends EventEmitter {
           if (entry && entry.hash === state.hash) {
             test.status = "passed";
             test.cached = true;
-            test.reason = withNote(note, `cache hit: inputs unchanged (last passed ${entry.savedAt})`);
+            test.reason = withNote(
+              note,
+              `cache hit: inputs unchanged (last passed ${entry.savedAt})`,
+            );
             test.output.system(test.reason);
             test.endedAt = Date.now();
             this.emit("test-end", test);
@@ -265,7 +281,7 @@ export class Runner extends EventEmitter {
               ? "cache disabled (--no-cache)"
               : entry
                 ? `cache miss: ${explainInputsMiss(entry, state, test.def.inputs)}`
-                : "cache miss: no stored passing result for this configuration"
+                : "cache miss: no stored passing result for this configuration",
           );
           test.output.system(test.reason);
           nodeCache = { key, state };
@@ -283,11 +299,25 @@ export class Runner extends EventEmitter {
           };
         }
 
-        await this.startServices(test.def.services, nodeScopes, nodeCwd, started, controller, test.name);
+        await this.startServices(
+          test.def.services,
+          nodeScopes,
+          nodeCwd,
+          started,
+          controller,
+          test.name,
+        );
 
         if (
           test.def.setup &&
-          !(await this.runHook(test, test.def.setup, "setup", nodeScopes, nodeCwd, controller.signal))
+          !(await this.runHook(
+            test,
+            test.def.setup,
+            "setup",
+            nodeScopes,
+            nodeCwd,
+            controller.signal,
+          ))
         ) {
           for (const child of test.children) this.markRemaining(child, "skipped");
           test.status = this.interrupted ? "aborted" : "failed";
@@ -303,7 +333,13 @@ export class Runner extends EventEmitter {
               this.finishGroup(test, controller.signal);
               break;
             case "parallel":
-              await this.runChildrenParallel(test, nodeScopes, nodeCwd, controller.signal, test.def.maxParallel);
+              await this.runChildrenParallel(
+                test,
+                nodeScopes,
+                nodeCwd,
+                controller.signal,
+                test.def.maxParallel,
+              );
               this.finishGroup(test, controller.signal);
               break;
           }
@@ -348,7 +384,12 @@ export class Runner extends EventEmitter {
     }
   }
 
-  private async runShell(test: RunTest, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
+  private async runShell(
+    test: RunTest,
+    scopes: Scopes,
+    cwd: string,
+    signal: AbortSignal,
+  ): Promise<void> {
     if (this.globalSlots) {
       await this.globalSlots.acquire();
       try {
@@ -361,7 +402,12 @@ export class Runner extends EventEmitter {
     await this.runShellRetries(test, scopes, cwd, signal);
   }
 
-  private async runShellRetries(test: RunTest, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
+  private async runShellRetries(
+    test: RunTest,
+    scopes: Scopes,
+    cwd: string,
+    signal: AbortSignal,
+  ): Promise<void> {
     const retry = test.def.retry;
     const attempts = 1 + (typeof retry === "number" ? retry : (retry?.count ?? 0));
     const delayMs = typeof retry === "object" ? parseDurationMs(retry.delay, 0) : 0;
@@ -374,7 +420,7 @@ export class Runner extends EventEmitter {
         return;
       }
       test.output.system(
-        `attempt ${attempt}/${attempts} failed, retrying${delayMs > 0 ? ` in ${formatMs(delayMs)}` : ""}`
+        `attempt ${attempt}/${attempts} failed, retrying${delayMs > 0 ? ` in ${formatMs(delayMs)}` : ""}`,
       );
       test.status = "running";
       this.emitUpdate();
@@ -382,7 +428,12 @@ export class Runner extends EventEmitter {
     }
   }
 
-  private runShellAttempt(test: RunTest, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
+  private runShellAttempt(
+    test: RunTest,
+    scopes: Scopes,
+    cwd: string,
+    signal: AbortSignal,
+  ): Promise<void> {
     const where = `test "${test.name}"`;
     const source = test.kind === "script" ? test.def.script! : test.def.command!;
     const resolved = resolveTemplate(source, scopes, where);
@@ -411,7 +462,7 @@ export class Runner extends EventEmitter {
         scopes.env,
         scopes,
         where,
-        [executable, ...args]
+        [executable, ...args],
       );
       test.output.system(`${plan.engine} run ${containerDef.image} (workdir ${plan.workdir})`);
       executable = plan.engine;
@@ -472,7 +523,7 @@ export class Runner extends EventEmitter {
     label: "setup" | "teardown",
     scopes: Scopes,
     cwd: string,
-    signal: AbortSignal | undefined
+    signal: AbortSignal | undefined,
   ): Promise<boolean> {
     const where = `${label} of test "${test.name}"`;
     const env = { ...scopes.env, ...resolveEnvMap(hook.env, scopes, where) };
@@ -523,7 +574,7 @@ export class Runner extends EventEmitter {
         const ok = code === 0 && !timedOut && !signal?.aborted;
         if (!ok) {
           test.output.system(
-            `${label} failed (${timedOut ? "timeout" : (sig ?? `exit code ${code}`)})`
+            `${label} failed (${timedOut ? "timeout" : (sig ?? `exit code ${code}`)})`,
           );
         }
         resolve(ok);
@@ -531,7 +582,12 @@ export class Runner extends EventEmitter {
     });
   }
 
-  private async runSequence(test: RunTest, scopes: Scopes, cwd: string, signal: AbortSignal): Promise<void> {
+  private async runSequence(
+    test: RunTest,
+    scopes: Scopes,
+    cwd: string,
+    signal: AbortSignal,
+  ): Promise<void> {
     let failed = false;
     for (const child of test.children) {
       if (failed || signal.aborted) {
@@ -551,7 +607,7 @@ export class Runner extends EventEmitter {
     scopes: Scopes,
     cwd: string,
     signal: AbortSignal,
-    maxParallel: number | undefined
+    maxParallel: number | undefined,
   ): Promise<void> {
     const children = test.children;
     // Matrix instances share their test's def (including any needs meant for
@@ -588,8 +644,7 @@ export class Runner extends EventEmitter {
           // cascades down the chain.
           const blocker = needed.find(
             (n) =>
-              n.status !== "passed" &&
-              !(n.status === "skipped" && n.skipReason === "condition")
+              n.status !== "passed" && !(n.status === "skipped" && n.skipReason === "condition"),
           );
           if (blocker && !signal.aborted) {
             child.output.system(`skipped: needs "${blocker.name}" which ${blocker.status}`);
@@ -615,13 +670,14 @@ export class Runner extends EventEmitter {
   private finishGroup(test: RunTest, signal: AbortSignal): void {
     const failing = test.children.some(
       (child) =>
-        (child.status === "failed" || child.status === "aborted") && !child.def.continueOnError
+        (child.status === "failed" || child.status === "aborted") && !child.def.continueOnError,
     );
     const ran = test.children.filter((child) => this.isActive(child));
     if (test.timedOut) test.status = "failed";
     else if (signal.aborted && this.interrupted) test.status = "aborted";
     else if (failing) test.status = "failed";
-    else if (ran.length > 0 && ran.every((child) => child.status === "skipped")) test.status = "skipped";
+    else if (ran.length > 0 && ran.every((child) => child.status === "skipped"))
+      test.status = "skipped";
     else test.status = "passed";
   }
 
@@ -631,7 +687,7 @@ export class Runner extends EventEmitter {
     cwd: string,
     sink: ServiceHandle[],
     controller: AbortController,
-    owner = "Testfile"
+    owner = "Testfile",
   ): Promise<void> {
     const entries = Object.entries(defs ?? {});
     if (entries.length === 0) return;
@@ -651,7 +707,7 @@ export class Runner extends EventEmitter {
               const depDef = byName.get(dep);
               // unknown names are rejected by validation; ignore defensively
               return depDef ? startService(dep, depDef) : Promise.resolve();
-            })
+            }),
           );
           // a dependency that failed aborts the whole group before we start
           if (controller.signal.aborted) return;
@@ -685,7 +741,7 @@ export class Runner extends EventEmitter {
     cwd: string,
     sink: ServiceHandle[],
     controller: AbortController,
-    owner: string
+    owner: string,
   ): Promise<void> {
     const key = `${name} ${sharedServiceKey(def, scopes, cwd)}`;
     let entry = this.sharedPool.get(key);
@@ -783,7 +839,7 @@ function nearestContainer(test: RunTest): TestContainerDef | undefined {
 function collectSecrets(
   names: readonly string[] | undefined,
   inherited: Record<string, string>,
-  sink: Set<string>
+  sink: Set<string>,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const name of names ?? []) {
@@ -799,7 +855,7 @@ function collectSecrets(
 function registerSecretValues(
   names: readonly string[] | undefined,
   env: Record<string, string>,
-  sink: Set<string>
+  sink: Set<string>,
 ): void {
   for (const name of names ?? []) {
     const value = env[name];
@@ -823,4 +879,3 @@ function signalGroup(pid: number | undefined, signal: NodeJS.Signals): void {
     }
   }
 }
-

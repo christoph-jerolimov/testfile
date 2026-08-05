@@ -31,58 +31,61 @@ export function parseVariants(pairs: string[]): Record<string, string> {
 }
 
 export function registerRun(program: Command): void {
-interface RunFlags extends FilterFlags {
-  verbose: boolean;
-  failFast: boolean;
-  maxParallel?: number;
-  dryRun: boolean;
-  watch: boolean;
-  cache: boolean;
-  forwardEnv: string[];
-  reporter?: ReporterKind;
-  output: string;
-  variant: string[];
-}
+  interface RunFlags extends FilterFlags {
+    verbose: boolean;
+    failFast: boolean;
+    maxParallel?: number;
+    dryRun: boolean;
+    watch: boolean;
+    cache: boolean;
+    forwardEnv: string[];
+    reporter?: ReporterKind;
+    output: string;
+    variant: string[];
+  }
 
-addFilterOptions(
-  program
-    .command("run", { isDefault: true })
-    .argument("[path]", "Testfile or directory containing one", ".")
-    .option("-v, --verbose", "also stream service output", false)
-    .option("--fail-fast", "abort the whole run at the first test failure", false)
-    .option(
-      "--max-parallel <n>",
-      "global cap on concurrently running tests",
-      (value: string) => Number.parseInt(value, 10),
-      undefined
-    )
-    .option("--dry-run", "print what would run (with filters applied) without running", false)
-    .option("-w, --watch", "re-run the selection when files change", false)
-    .option("--no-cache", "ignore cached results (fresh results still refresh the cache)")
-    .option(
-      "--forward-env <pattern>",
-      'forward matching host env vars into the (isolated) test env, e.g. "GITHUB_*" or "*" (repeatable)',
-      collect,
-      []
-    )
-    .option(
-      "--variant <key=value>",
-      "record what distinguishes this run from a sibling run, e.g. platform=linux (repeatable)",
-      collect,
-      []
-    )
-    .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
-    .option("--output <file>", 'report target file, or "-" for stdout', "-")
-    .description("Run the test suite")
-)
-  .action(async (path: string, options: RunFlags) => {
+  addFilterOptions(
+    program
+      .command("run", { isDefault: true })
+      .argument("[path]", "Testfile or directory containing one", ".")
+      .option("-v, --verbose", "also stream service output", false)
+      .option("--fail-fast", "abort the whole run at the first test failure", false)
+      .option(
+        "--max-parallel <n>",
+        "global cap on concurrently running tests",
+        (value: string) => Number.parseInt(value, 10),
+        undefined,
+      )
+      .option("--dry-run", "print what would run (with filters applied) without running", false)
+      .option("-w, --watch", "re-run the selection when files change", false)
+      .option("--no-cache", "ignore cached results (fresh results still refresh the cache)")
+      .option(
+        "--forward-env <pattern>",
+        'forward matching host env vars into the (isolated) test env, e.g. "GITHUB_*" or "*" (repeatable)',
+        collect,
+        [],
+      )
+      .option(
+        "--variant <key=value>",
+        "record what distinguishes this run from a sibling run, e.g. platform=linux (repeatable)",
+        collect,
+        [],
+      )
+      .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
+      .option("--output <file>", 'report target file, or "-" for stdout', "-")
+      .description("Run the test suite"),
+  ).action(async (path: string, options: RunFlags) => {
     let session: Session;
     let filtered: ReturnType<typeof resolveFilters>;
     try {
       if (options.maxParallel !== undefined && !(options.maxParallel >= 1)) {
         throw new Error("--max-parallel must be a positive integer");
       }
-      if (options.reporter !== undefined && options.reporter !== "junit" && options.reporter !== "json") {
+      if (
+        options.reporter !== undefined &&
+        options.reporter !== "junit" &&
+        options.reporter !== "json"
+      ) {
         throw new Error(`unknown --reporter "${options.reporter}", expected junit or json`);
       }
       const { path: file, doc } = loadTestfile(path);
@@ -106,15 +109,15 @@ addFilterOptions(
     if (options.dryRun) {
       const hits = await predictCacheHits(session, filtered.active);
       printSuite(session, filtered.active, (test) =>
-        hits.has(test.id) ? ` ${color(90, "[cached]")}` : ""
+        hits.has(test.id) ? ` ${color(90, "[cached]")}` : "",
       );
       const fresh = filtered.testCount - hits.size;
       console.log(
         color(
           90,
           `\n${fresh} test${fresh === 1 ? "" : "s"} would run` +
-            (hits.size > 0 ? `, ${hits.size} served from the cache` : "")
-        )
+            (hits.size > 0 ? `, ${hits.size} served from the cache` : ""),
+        ),
       );
       return;
     }
@@ -172,10 +175,14 @@ addFilterOptions(
         }
         if (options.reporter) {
           writeReport(session, options.reporter, options.output);
-          if (options.output !== "-") console.log(color(90, `${options.reporter} report written to ${options.output}`));
+          if (options.output !== "-")
+            console.log(color(90, `${options.reporter} report written to ${options.output}`));
         }
-        process.exitCode =
-          session.runner!.interrupted ? 130 : status === "passed" || status === "skipped" ? 0 : 1;
+        process.exitCode = session.runner!.interrupted
+          ? 130
+          : status === "passed" || status === "skipped"
+            ? 0
+            : 1;
       };
       await runOnce();
       if (options.watch && !session.runner?.interrupted) {

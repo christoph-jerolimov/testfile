@@ -36,12 +36,18 @@ function invoke(work, resultFile, env, expected, problems, label) {
   const started = Date.now();
   // `args` lets a case exercise a flag that changes what is recorded.
   const args = expected.args ? ` ${expected.args}` : "";
-  const proc = spawnSync("sh", ["-c", `${runner} run "${work}"${args} --reporter json --output "${resultFile}"`], {
-    encoding: "utf8",
-    env: { ...process.env, ...(env ?? {}) },
-    timeout: 120_000,
-  });
-  step(`${label || "run: "}runner exited with ${proc.status} after ${((Date.now() - started) / 1000).toFixed(1)}s`);
+  const proc = spawnSync(
+    "sh",
+    ["-c", `${runner} run "${work}"${args} --reporter json --output "${resultFile}"`],
+    {
+      encoding: "utf8",
+      env: { ...process.env, ...env },
+      timeout: 120_000,
+    },
+  );
+  step(
+    `${label || "run: "}runner exited with ${proc.status} after ${((Date.now() - started) / 1000).toFixed(1)}s`,
+  );
   if (proc.status !== expected.exitCode) {
     problems.push(`${label}exit code: expected ${expected.exitCode}, got ${proc.status}`);
   }
@@ -62,7 +68,7 @@ function checkReport(report, expected, problems, label) {
   for (const [key, value] of Object.entries(expected.variants ?? {})) {
     if (report.variants?.[key] !== value) {
       problems.push(
-        `${label}variant "${key}": expected ${value}, got ${report.variants?.[key] ?? "(none)"}`
+        `${label}variant "${key}": expected ${value}, got ${report.variants?.[key] ?? "(none)"}`,
       );
     }
   }
@@ -77,12 +83,12 @@ function checkReport(report, expected, problems, label) {
     }
     if (want.cached !== undefined && Boolean(got.cached) !== want.cached) {
       problems.push(
-        `${label}test "${want.path}": expected cached=${want.cached}, got ${Boolean(got.cached)}`
+        `${label}test "${want.path}": expected cached=${want.cached}, got ${Boolean(got.cached)}`,
       );
     }
     if (want.artifacts !== undefined && (got.artifacts?.length ?? 0) !== want.artifacts) {
       problems.push(
-        `${label}test "${want.path}": expected ${want.artifacts} artifacts, got ${got.artifacts?.length ?? 0}`
+        `${label}test "${want.path}": expected ${want.artifacts} artifacts, got ${got.artifacts?.length ?? 0}`,
       );
     }
   }
@@ -108,7 +114,7 @@ for (const name of readdirSync(join(here, "cases")).sort()) {
   const missing = (expected.requires ?? []).filter(
     (tool) =>
       spawnSync("sh", ["-c", `command -v ${tool} >/dev/null 2>&1 && ${tool} info >/dev/null 2>&1`])
-        .status !== 0
+        .status !== 0,
   );
   if (missing.length > 0) {
     console.log(`  skip    ${name} (requires ${missing.join(", ")})`);
@@ -164,5 +170,7 @@ if (ran === 0) {
   console.error("no cases matched");
   process.exit(1);
 }
-console.log(failures === 0 ? `\nall ${ran} conformance cases passed` : `\n${failures}/${ran} cases FAILED`);
+console.log(
+  failures === 0 ? `\nall ${ran} conformance cases passed` : `\n${failures}/${ran} cases FAILED`,
+);
 process.exit(failures === 0 ? 0 : 1);

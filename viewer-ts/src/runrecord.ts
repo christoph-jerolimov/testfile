@@ -101,7 +101,7 @@ export class RunHistory {
         if (!entry.isDirectory()) continue;
         try {
           const record = parse(
-            readFileSync(join(this.dir, "runs", entry.name, "run.yaml"), "utf8")
+            readFileSync(join(this.dir, "runs", entry.name, "run.yaml"), "utf8"),
           ) as RunRecord | null;
           if (record && typeof record === "object" && Array.isArray(record.tests)) {
             const id = record.id ?? entry.name;
@@ -125,9 +125,7 @@ export class RunHistory {
     } catch {
       // no legacy index
     }
-    return runs.sort(
-      (a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id)
-    );
+    return runs.sort((a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id));
   }
 
   // Newest first.
@@ -292,5 +290,7 @@ export function detectFlaky(runs: readonly RunRecord[], lastN?: number): FlakyRe
       lastStatus: statuses[statuses.length - 1],
     });
   }
-  return reports.sort((a, b) => b.flips - a.flips || b.fails - a.fails || a.path.localeCompare(b.path));
+  return reports.sort(
+    (a, b) => b.flips - a.flips || b.fails - a.fails || a.path.localeCompare(b.path),
+  );
 }

@@ -30,7 +30,7 @@ export class ResultCache {
 
   constructor(
     baseDir: string,
-    readonly enabled = true
+    readonly enabled = true,
   ) {
     this.file = join(baseDir, HISTORY_DIR, "cache.json");
     try {
@@ -46,7 +46,7 @@ export class ResultCache {
     path: string,
     source: string,
     env: Record<string, string>,
-    matrix: Record<string, string>
+    matrix: Record<string, string>,
   ): string {
     const hash = createHash("sha256");
     hash.update(JSON.stringify([path, source, sorted(env), sorted(matrix)]));
@@ -119,7 +119,7 @@ function sorted(map: Record<string, string>): [string, string][] {
 export function explainInputsMiss(
   entry: CacheEntry,
   current: InputsState,
-  patterns: readonly string[]
+  patterns: readonly string[],
 ): string {
   if (!entry.files) return "inputs changed (no per-file detail in the stored entry)";
   const changed: string[] = [];

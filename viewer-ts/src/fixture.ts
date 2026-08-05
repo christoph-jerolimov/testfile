@@ -21,7 +21,7 @@ export function writeRun(
     status?: RunRecord["status"];
     services?: { name: string; status?: string; log?: string }[];
     variants?: Record<string, string>;
-  } = {}
+  } = {},
 ): RunRecord {
   const runDir = join(baseDir, ".testfile", "runs", id);
   mkdirSync(join(runDir, "tests"), { recursive: true });

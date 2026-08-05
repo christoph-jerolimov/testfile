@@ -39,7 +39,7 @@ export interface FilterFlags {
 export async function applyChanged(
   session: Session,
   filtered: ReturnType<typeof resolveFilters>,
-  flags: Pick<FilterFlags, "changed" | "changedSince">
+  flags: Pick<FilterFlags, "changed" | "changedSince">,
 ): Promise<ReturnType<typeof resolveFilters>> {
   if (!flags.changed && flags.changedSince === undefined) return filtered;
   const changes = collectGitChanges(session.baseDir, flags.changedSince);
@@ -48,7 +48,7 @@ export async function applyChanged(
     throw new Error(
       `nothing to run: no selected test has inputs matching the ` +
         `${changes.files.length} changed file${changes.files.length === 1 ? "" : "s"} ` +
-        `against ${changes.baseRef} (see: testfile changes)`
+        `against ${changes.baseRef} (see: testfile changes)`,
     );
   }
   session.selectionNotes = notes;
@@ -56,8 +56,8 @@ export async function applyChanged(
     color(
       90,
       `--changed: ${ids.length} of ${filtered.testCount} tests selected ` +
-        `(${changes.files.length} files changed against ${changes.baseRef})`
-    )
+        `(${changes.files.length} files changed against ${changes.baseRef})`,
+    ),
   );
   return {
     selection: ids,
@@ -73,7 +73,7 @@ export async function applyChanged(
 export function applyShard(
   session: Session,
   filtered: ReturnType<typeof resolveFilters>,
-  spec: string | undefined
+  spec: string | undefined,
 ): ReturnType<typeof resolveFilters> {
   if (spec === undefined) return filtered;
   const shard = parseShard(spec);
@@ -87,15 +87,15 @@ export function applyShard(
   const result = selectShard(leaves, shard, durations);
   if (result.ids.length === 0) {
     throw new Error(
-      `--shard ${shard.index}/${shard.total} selects no tests (only ${leaves.length} to distribute)`
+      `--shard ${shard.index}/${shard.total} selects no tests (only ${leaves.length} to distribute)`,
     );
   }
   console.log(
     color(
       90,
       `shard ${shard.index}/${shard.total}: ${result.ids.length} of ${leaves.length} tests` +
-        (result.balanced ? `, ~${formatMs(result.estimateMs ?? 0)} of recorded work` : "")
-    )
+        (result.balanced ? `, ~${formatMs(result.estimateMs ?? 0)} of recorded work` : ""),
+    ),
   );
   return {
     selection: result.ids,
@@ -109,7 +109,7 @@ export function applyShard(
 // plus the resulting active set for display.
 export function resolveFilters(
   session: Session,
-  flags: FilterFlags
+  flags: FilterFlags,
 ): { selection: number[]; active: Set<number>; testCount: number; filtered: boolean } {
   const generic = splitGenericFilters(flags.filter);
   const filters: TestFilters = {
@@ -132,11 +132,20 @@ export function resolveFilters(
     if (tests.length === 0) throw new Error("nothing failed in the last recorded run");
   }
   const selection = tests.map((test) => test.id);
-  return { selection, active: session.activeSetFor(selection), testCount: tests.length, filtered: true };
+  return {
+    selection,
+    active: session.activeSetFor(selection),
+    testCount: tests.length,
+    filtered: true,
+  };
 }
 
 // Shared by `list` and `run --dry-run`.
-export function printSuite(session: Session, active: Set<number>, annotate?: (test: RunTest) => string): void {
+export function printSuite(
+  session: Session,
+  active: Set<number>,
+  annotate?: (test: RunTest) => string,
+): void {
   for (const [name] of Object.entries(session.doc.services ?? {})) {
     console.log(`${color(36, "◆")} service ${name}`);
   }
@@ -149,7 +158,9 @@ export function printSuite(session: Session, active: Set<number>, annotate?: (te
         ? color(90, `[${test.def.tags.join(", ")}]`)
         : "";
     const extra = annotate?.(test) ?? "";
-    console.log(`${"  ".repeat(test.depth)}${test.name} ${tags} ${marker}${extra}`.replace(/ +$/, ""));
+    console.log(
+      `${"  ".repeat(test.depth)}${test.name} ${tags} ${marker}${extra}`.replace(/ +$/, ""),
+    );
     for (const [name] of Object.entries(test.def.services ?? {})) {
       if (!test.isMatrixWrapper) {
         console.log(`${"  ".repeat(test.depth + 1)}${color(36, "◆")} service ${name}`);
@@ -160,15 +171,42 @@ export function printSuite(session: Session, active: Set<number>, annotate?: (te
 
 export function addFilterOptions(command: Command): Command {
   return command
-    .option("-f, --filter <value>", "only tests matching by name/path, tag, or key:value matrix (repeatable)", collect, [])
-    .option("-n, --filter-name <name-or-path>", "only tests whose path contains this (repeatable)", collect, [])
-    .option("-t, --filter-tags <tags>", "only tests tagged with any of these comma-separated tags (repeatable)", collect, [])
-    .option("-m, --filter-matrix <key:value>", "only matrix instances with this value (repeatable)", collect, [])
+    .option(
+      "-f, --filter <value>",
+      "only tests matching by name/path, tag, or key:value matrix (repeatable)",
+      collect,
+      [],
+    )
+    .option(
+      "-n, --filter-name <name-or-path>",
+      "only tests whose path contains this (repeatable)",
+      collect,
+      [],
+    )
+    .option(
+      "-t, --filter-tags <tags>",
+      "only tests tagged with any of these comma-separated tags (repeatable)",
+      collect,
+      [],
+    )
+    .option(
+      "-m, --filter-matrix <key:value>",
+      "only matrix instances with this value (repeatable)",
+      collect,
+      [],
+    )
     .option("--failed", "only tests that failed in the last recorded run", false)
-    .option("--changed", "only tests whose inputs match files changed against the base branch (plus local changes)", false)
-    .option("--changed-since <ref>", "base branch/ref for --changed, e.g. origin/main (implies --changed)")
+    .option(
+      "--changed",
+      "only tests whose inputs match files changed against the base branch (plus local changes)",
+      false,
+    )
+    .option(
+      "--changed-since <ref>",
+      "base branch/ref for --changed, e.g. origin/main (implies --changed)",
+    )
     .option(
       "--shard <i/n>",
-      "run only this shard of the selected tests, e.g. 2/4 (time-balanced from the run history)"
+      "run only this shard of the selected tests, e.g. 2/4 (time-balanced from the run history)",
     );
 }

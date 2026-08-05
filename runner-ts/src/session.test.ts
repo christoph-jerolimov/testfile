@@ -71,10 +71,11 @@ test("artifacts are collected into the run folder and recorded", async () => {
       test: {
         name: "produce",
         artifacts: ["out/**/*.txt"],
-        script: "mkdir -p out/nested\necho hello > out/a.txt\necho deep > out/nested/b.txt\necho ignored > out/c.log",
+        script:
+          "mkdir -p out/nested\necho hello > out/a.txt\necho deep > out/nested/b.txt\necho ignored > out/c.log",
       },
     },
-    dir
+    dir,
   );
   assert.equal(await session.runAll(), "passed");
   const record = session.lastRecord!;
@@ -95,9 +96,13 @@ test("artifacts are collected from failing tests too", async () => {
   const session = new Session(
     {
       version: 0,
-      test: { name: "fails", artifacts: ["report.txt"], script: "echo partial > report.txt\nfalse" },
+      test: {
+        name: "fails",
+        artifacts: ["report.txt"],
+        script: "echo partial > report.txt\nfalse",
+      },
     },
-    dir
+    dir,
   );
   assert.equal(await session.runAll(), "failed");
   const entry = session.lastRecord!.tests.find((t) => t.path === "fails")!;
@@ -160,10 +165,7 @@ test("running with an empty selection does nothing", async () => {
 
 test("a cancelled run is recorded as cancelled with exit code 130", async () => {
   const dir = tempDir();
-  const session = new Session(
-    { version: 0, test: { name: "slow", command: "sleep 10" } },
-    dir
-  );
+  const session = new Session({ version: 0, test: { name: "slow", command: "sleep 10" } }, dir);
   const done = session.runAll();
   setTimeout(() => session.runner?.requestStop(), 300);
   await done;

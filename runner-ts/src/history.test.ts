@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -30,16 +38,20 @@ const lines = [{ text: "out", stream: "stdout" as const }];
 test("each run is self-contained: run.yaml per run folder, no global index", () => {
   const dir = tempDir();
   const history = new RunHistory(dir);
-  const first = history.saveRun(meta(Date.UTC(2026, 0, 1, 10, 0, 0)), [
-    { path: "all/one", status: "passed", durationMs: 1, lines },
-  ], []);
-  const second = history.saveRun(meta(Date.UTC(2026, 0, 2, 10, 0, 0), "failed"), [
-    { path: "all/one", status: "failed", durationMs: 2, lines },
-  ], []);
+  const first = history.saveRun(
+    meta(Date.UTC(2026, 0, 1, 10, 0, 0)),
+    [{ path: "all/one", status: "passed", durationMs: 1, lines }],
+    [],
+  );
+  const second = history.saveRun(
+    meta(Date.UTC(2026, 0, 2, 10, 0, 0), "failed"),
+    [{ path: "all/one", status: "failed", durationMs: 2, lines }],
+    [],
+  );
 
   assert.ok(!existsSync(join(dir, ".testfile", "runs.yaml")), "no global index is written");
   const record = parse(
-    readFileSync(join(dir, ".testfile", "runs", first.id, "run.yaml"), "utf8")
+    readFileSync(join(dir, ".testfile", "runs", first.id, "run.yaml"), "utf8"),
   ) as RunRecord;
   assert.equal(record.id, first.id);
   assert.equal(record.status, "passed");
@@ -49,7 +61,7 @@ test("each run is self-contained: run.yaml per run folder, no global index", () 
   const fresh = new RunHistory(dir);
   assert.deepEqual(
     fresh.runs.map((run) => run.id),
-    [second.id, first.id]
+    [second.id, first.id],
   );
   assert.equal(fresh.readLog(fresh.runs[1], fresh.runs[1].tests[0]), "out\n");
 });
@@ -74,14 +86,14 @@ test("a legacy runs.yaml index is migrated into per-run run.yaml files", () => {
   writeFileSync(join(historyDir, "runs", "20260101-000000-aaaa", "tests", "one.log"), "hello\n");
   writeFileSync(
     join(historyDir, "runs.yaml"),
-    stringify({ runs: [record("20260102-000000-bbbb"), record("20260101-000000-aaaa")] })
+    stringify({ runs: [record("20260102-000000-bbbb"), record("20260101-000000-aaaa")] }),
   );
 
   const history = new RunHistory(dir);
   assert.ok(!existsSync(join(historyDir, "runs.yaml")), "the legacy index is removed");
   assert.deepEqual(
     history.runs.map((run) => run.id),
-    ["20260102-000000-bbbb", "20260101-000000-aaaa"]
+    ["20260102-000000-bbbb", "20260101-000000-aaaa"],
   );
   assert.equal(history.readLog(history.runs[1], history.runs[1].tests[0]), "hello\n");
   // the migration is complete: a fresh scan sees the same runs
@@ -98,9 +110,12 @@ test("pruning removes the oldest run folders beyond the keep limit", () => {
   ];
   assert.deepEqual(
     history.runs.map((run) => run.id),
-    [runs[2].id, runs[1].id]
+    [runs[2].id, runs[1].id],
   );
-  assert.deepEqual(readdirSync(join(dir, ".testfile", "runs")).sort(), [runs[1].id, runs[2].id].sort());
+  assert.deepEqual(
+    readdirSync(join(dir, ".testfile", "runs")).sort(),
+    [runs[1].id, runs[2].id].sort(),
+  );
   assert.ok(!existsSync(join(dir, ".testfile", "runs", runs[0].id)));
 });
 
@@ -109,18 +124,26 @@ test("reload picks up runs recorded by another process", () => {
   const history = new RunHistory(dir);
   assert.equal(history.runs.length, 0);
   const other = new RunHistory(dir);
-  const saved = other.saveRun(meta(Date.UTC(2026, 0, 5)), [{ path: "a", status: "passed", lines }], []);
+  const saved = other.saveRun(
+    meta(Date.UTC(2026, 0, 5)),
+    [{ path: "a", status: "passed", lines }],
+    [],
+  );
   assert.equal(history.runs.length, 0, "not visible before reload");
   history.reload();
   assert.deepEqual(
     history.runs.map((run) => run.id),
-    [saved.id]
+    [saved.id],
   );
 });
 
 test("folders without a readable run.yaml are skipped", () => {
   const dir = tempDir();
-  new RunHistory(dir).saveRun(meta(Date.UTC(2026, 0, 1)), [{ path: "a", status: "passed", lines }], []);
+  new RunHistory(dir).saveRun(
+    meta(Date.UTC(2026, 0, 1)),
+    [{ path: "a", status: "passed", lines }],
+    [],
+  );
   mkdirSync(join(dir, ".testfile", "runs", "not-a-run"), { recursive: true });
   mkdirSync(join(dir, ".testfile", "runs", "broken"), { recursive: true });
   writeFileSync(join(dir, ".testfile", "runs", "broken", "run.yaml"), "");
@@ -135,9 +158,13 @@ test("service logs are persisted per service and appear in the merged log", () =
     meta(Date.UTC(2026, 0, 6)),
     [{ path: "all", status: "passed", durationMs: 1, lines }],
     [
-      { name: "db", status: "stopped", lines: [{ text: "ready to accept connections", stream: "stdout" }] },
+      {
+        name: "db",
+        status: "stopped",
+        lines: [{ text: "ready to accept connections", stream: "stdout" }],
+      },
       { name: "quiet", status: "stopped", lines: [] },
-    ]
+    ],
   );
   assert.equal(run.services?.length, 2);
   assert.equal(run.services?.[0].log, "services/db-" + run.services[0].log!.split("-").pop());
@@ -159,10 +186,15 @@ test("every run folder contains a junit.xml built from the record", () => {
     [
       { path: "all", status: "failed", durationMs: 9, lines: [] },
       { path: "all/good", status: "passed", durationMs: 3, lines },
-      { path: "all/bad", status: "failed", durationMs: 4, lines: [{ text: "boom", stream: "stderr" }] },
+      {
+        path: "all/bad",
+        status: "failed",
+        durationMs: 4,
+        lines: [{ text: "boom", stream: "stderr" }],
+      },
       { path: "all/off", status: "skipped", lines: [] },
     ],
-    []
+    [],
   );
   assert.equal(run.junit, "junit.xml");
   const xml = readFileSync(join(dir, ".testfile", "runs", run.id, "junit.xml"), "utf8");
@@ -199,7 +231,7 @@ test("run.yaml records the Testfile's tree, tags and matrix combinations", async
         ],
       },
     },
-    dir
+    dir,
   );
   // only one test runs; the recorded tree still describes the whole file
   await session.runSelected([[...session.byId.values()].find((t) => t.name === "lint")!.id]);
@@ -207,7 +239,10 @@ test("run.yaml records the Testfile's tree, tags and matrix combinations", async
   const suite = session.lastRecord!.suite!;
   assert.equal(suite.path, "root");
   assert.equal(suite.kind, "sequence");
-  assert.deepEqual(suite.children!.map((child) => child.name), ["lint", "checks"]);
+  assert.deepEqual(
+    suite.children!.map((child) => child.name),
+    ["lint", "checks"],
+  );
   assert.deepEqual(suite.children![0].tags, ["fast"], "own tags are recorded");
 
   const checks = suite.children![1];
@@ -217,13 +252,13 @@ test("run.yaml records the Testfile's tree, tags and matrix combinations", async
   assert.deepEqual(
     wrapper.children!.map((instance) => instance.matrix),
     [{ db: "pg" }, { db: "mysql" }],
-    "every matrix instance carries its combination"
+    "every matrix instance carries its combination",
   );
   assert.deepEqual(wrapper.children![0].services, ["database"], "declared services are listed");
   // the filtered-out tests are in the tree but not in the results
   assert.deepEqual(
     session.lastRecord!.tests.map((entry) => entry.path),
-    ["root", "root/lint"]
+    ["root", "root/lint"],
   );
 
   // and it survives a round trip through the recorded file
@@ -247,10 +282,12 @@ test("variants are recorded when the run was given some", () => {
       selected: [],
     },
     [{ path: "all", status: "passed", lines: [] }],
-    []
+    [],
   );
   assert.deepEqual(record.variants, { platform: "linux", node: "22" });
-  const written = parse(readFileSync(join(dir, ".testfile", "runs", record.id, "run.yaml"), "utf8"));
+  const written = parse(
+    readFileSync(join(dir, ".testfile", "runs", record.id, "run.yaml"), "utf8"),
+  );
   assert.deepEqual(written.variants, { platform: "linux", node: "22" });
 
   // no variants, no field: a plain run's record stays as it was
@@ -267,7 +304,7 @@ test("variants are recorded when the run was given some", () => {
       selected: [],
     },
     [{ path: "all", status: "passed", lines: [] }],
-    []
+    [],
   );
   assert.equal(plain.variants, undefined);
 });

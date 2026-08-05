@@ -57,7 +57,7 @@ export interface ShardResult {
 export function selectShard(
   tests: readonly ShardableTest[],
   shard: ShardSpec,
-  durations?: Map<string, number>
+  durations?: Map<string, number>,
 ): ShardResult {
   if (shard.total === 1) return { ids: tests.map((test) => test.id), balanced: false };
 

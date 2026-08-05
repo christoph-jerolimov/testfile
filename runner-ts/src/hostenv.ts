@@ -50,7 +50,7 @@ export function matchesEnvPattern(name: string, pattern: string): boolean {
 // The host variables matched by any of the given patterns.
 export function forwardedEnv(
   patterns: readonly string[] | undefined,
-  host: NodeJS.ProcessEnv = process.env
+  host: NodeJS.ProcessEnv = process.env,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   if (!patterns || patterns.length === 0) return out;
@@ -66,7 +66,7 @@ export function forwardedEnv(
 // forwarded variables win over the defaults).
 export function baseEnv(
   forwardPatterns: readonly string[] | undefined,
-  host: NodeJS.ProcessEnv = process.env
+  host: NodeJS.ProcessEnv = process.env,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const key of ESSENTIAL_HOST_ENV) {

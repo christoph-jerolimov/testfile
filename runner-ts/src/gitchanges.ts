@@ -55,13 +55,13 @@ export function collectGitChanges(dir: string, baseOverride?: string): GitChange
   let baseRef: string | undefined;
   if (baseOverride) {
     baseRef = [baseOverride, `origin/${baseOverride}`].find(
-      (candidate) => git(dir, "rev-parse", "--verify", "-q", `${candidate}^{commit}`) !== undefined
+      (candidate) => git(dir, "rev-parse", "--verify", "-q", `${candidate}^{commit}`) !== undefined,
     );
     if (!baseRef) {
       throw new Error(
         `cannot resolve base "${baseOverride}" (also tried "origin/${baseOverride}") - ` +
           `fetch it first, e.g. git fetch origin ${baseOverride}` +
-          ` (on GitHub Actions use actions/checkout with fetch-depth: 0)`
+          ` (on GitHub Actions use actions/checkout with fetch-depth: 0)`,
       );
     }
   } else {
@@ -69,7 +69,7 @@ export function collectGitChanges(dir: string, baseOverride?: string): GitChange
     if (!baseRef) {
       throw new Error(
         "cannot detect a base branch (tried origin/HEAD, origin/main, origin/master, main, master) - " +
-          "pass one with --changed-since <ref>"
+          "pass one with --changed-since <ref>",
       );
     }
   }
@@ -94,7 +94,10 @@ export function collectGitChanges(dir: string, baseOverride?: string): GitChange
   for (const line of porcelain.split("\n")) {
     if (!line) continue;
     const flags = line.slice(0, 2);
-    const path = line.slice(3).replace(/^.* -> /, "").replace(/^"(.*)"$/, "$1");
+    const path = line
+      .slice(3)
+      .replace(/^.* -> /, "")
+      .replace(/^"(.*)"$/, "$1");
     byPath.set(path, { path, source: "local", status: localStatus(flags) });
   }
 
@@ -159,7 +162,10 @@ export interface PatternMatch {
 
 // Groups files under the first pattern that matches each, so every file is
 // counted once even when patterns overlap. Patterns with no match are absent.
-export function groupByPattern(files: readonly string[], patterns: readonly string[]): PatternMatch[] {
+export function groupByPattern(
+  files: readonly string[],
+  patterns: readonly string[],
+): PatternMatch[] {
   const groups = new Map<string, string[]>();
   for (const file of files) {
     const pattern = patterns.find((p) => matchesPathPattern(file, p));
@@ -176,7 +182,7 @@ export function groupByPattern(files: readonly string[], patterns: readonly stri
 export function matchChangedInputs(
   changes: GitChanges,
   cwd: string,
-  patterns: readonly string[]
+  patterns: readonly string[],
 ): PatternMatch[] {
   const relativePaths: string[] = [];
   for (const file of changes.files) {
@@ -193,7 +199,9 @@ export function describeMatches(matches: readonly PatternMatch[]): string {
   return matches
     .map(({ pattern, files }) => {
       const count = `${files.length} changed file${files.length === 1 ? "" : "s"}`;
-      return files.length < 4 ? `${pattern}: ${count} (${files.join(", ")})` : `${pattern}: ${count}`;
+      return files.length < 4
+        ? `${pattern}: ${count} (${files.join(", ")})`
+        : `${pattern}: ${count}`;
     })
     .join("; ");
 }

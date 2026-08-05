@@ -55,7 +55,11 @@ async function gitlabApi(url: string, options: GitlabOptions): Promise<unknown> 
 // newest first.
 export async function gitlabRunArchives(options: GitlabOptions): Promise<GitlabArchive[]> {
   const base = apiBase(options);
-  const query = new URLSearchParams({ per_page: String(options.latest), order_by: "id", sort: "desc" });
+  const query = new URLSearchParams({
+    per_page: String(options.latest),
+    order_by: "id",
+    sort: "desc",
+  });
   if (options.ref) query.set("ref", options.ref);
   const pipelines = (await gitlabApi(`${base}/pipelines?${query}`, options)) as {
     id: number;
@@ -87,7 +91,7 @@ export async function gitlabRunArchives(options: GitlabOptions): Promise<GitlabA
 export async function syncFromGitlab(
   baseDir: string,
   options: GitlabOptions,
-  exec: Exec = defaultExec
+  exec: Exec = defaultExec,
 ): Promise<ImportResult & { archives: number }> {
   const doFetch = options.fetchImpl ?? fetch;
   const archives = await gitlabRunArchives(options);
@@ -103,7 +107,7 @@ export async function syncFromGitlab(
     });
     if (!response.ok) {
       throw new Error(
-        `downloading artifacts of job ${archive.job} failed: ${response.status} ${response.statusText}`
+        `downloading artifacts of job ${archive.job} failed: ${response.status} ${response.statusText}`,
       );
     }
     const tmp = mkdtempSync(join(tmpdir(), "testfile-gitlab-"));

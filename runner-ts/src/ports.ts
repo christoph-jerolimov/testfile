@@ -13,7 +13,7 @@ export function allocateRandomPort(): Promise<number> {
 }
 
 export async function resolvePorts(
-  def: Record<string, number | "random"> | undefined
+  def: Record<string, number | "random"> | undefined,
 ): Promise<Record<string, number>> {
   const out: Record<string, number> = {};
   for (const [name, value] of Object.entries(def ?? {})) {

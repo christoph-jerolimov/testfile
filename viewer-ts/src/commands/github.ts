@@ -4,35 +4,38 @@ import { color, pad } from "../util.js";
 import { commandFailed, reportImport, resolveHistoryBase } from "./shared.js";
 
 export function registerGithub(program: Command): void {
-const githubCommand = program
-  .command("github")
-  .description("Bring run artifacts of GitHub Actions runs into the local history (needs GITHUB_TOKEN)");
+  const githubCommand = program
+    .command("github")
+    .description(
+      "Bring run artifacts of GitHub Actions runs into the local history (needs GITHUB_TOKEN)",
+    );
 
-function githubToken(): string {
-  const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
-  if (!token) throw new Error("set GITHUB_TOKEN (or GH_TOKEN) to access workflow artifacts");
-  return token;
-}
+  function githubToken(): string {
+    const token = process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+    if (!token) throw new Error("set GITHUB_TOKEN (or GH_TOKEN) to access workflow artifacts");
+    return token;
+  }
 
-function addGithubOptions(command: ReturnType<Command["command"]>): ReturnType<Command["command"]> {
-  return command
-    .option(
-      "--latest <n>",
-      "number of recent workflow runs to consider",
-      (value: string) => Number.parseInt(value, 10),
-      5
-    )
-    .option("--artifact <name>", "artifact name the action uploads", "testfile-run");
-}
+  function addGithubOptions(
+    command: ReturnType<Command["command"]>,
+  ): ReturnType<Command["command"]> {
+    return command
+      .option(
+        "--latest <n>",
+        "number of recent workflow runs to consider",
+        (value: string) => Number.parseInt(value, 10),
+        5,
+      )
+      .option("--artifact <name>", "artifact name the action uploads", "testfile-run");
+  }
 
-addGithubOptions(
-  githubCommand
-    .command("sync")
-    .argument("<owner/repo>", "GitHub repository whose workflow runs to sync from")
-    .argument("[path]", "directory containing a .testfile folder", ".")
-    .description("Download the run artifacts of recent workflow runs and import them")
-)
-  .action(async (repo: string, path: string, options: { latest: number; artifact: string }) => {
+  addGithubOptions(
+    githubCommand
+      .command("sync")
+      .argument("<owner/repo>", "GitHub repository whose workflow runs to sync from")
+      .argument("[path]", "directory containing a .testfile folder", ".")
+      .description("Download the run artifacts of recent workflow runs and import them"),
+  ).action(async (repo: string, path: string, options: { latest: number; artifact: string }) => {
     try {
       if (!(options.latest >= 1)) throw new Error("--latest must be a positive integer");
       const result = await syncFromGithub(resolveHistoryBase(path), {
@@ -43,7 +46,10 @@ addGithubOptions(
       });
       if (result.archives === 0) {
         console.log(
-          color(90, `no "${options.artifact}" artifacts in the last ${options.latest} workflow runs`)
+          color(
+            90,
+            `no "${options.artifact}" artifacts in the last ${options.latest} workflow runs`,
+          ),
         );
       }
       reportImport(result);
@@ -52,13 +58,12 @@ addGithubOptions(
     }
   });
 
-addGithubOptions(
-  githubCommand
-    .command("list")
-    .argument("<owner/repo>", "GitHub repository whose workflow runs to list")
-    .description("List the run artifacts available in recent workflow runs")
-)
-  .action(async (repo: string, options: { latest: number; artifact: string }) => {
+  addGithubOptions(
+    githubCommand
+      .command("list")
+      .argument("<owner/repo>", "GitHub repository whose workflow runs to list")
+      .description("List the run artifacts available in recent workflow runs"),
+  ).action(async (repo: string, options: { latest: number; artifact: string }) => {
     try {
       if (!(options.latest >= 1)) throw new Error("--latest must be a positive integer");
       const archives = await githubRunArchives({
@@ -69,7 +74,10 @@ addGithubOptions(
       });
       if (archives.length === 0) {
         console.log(
-          color(90, `no "${options.artifact}" artifacts in the last ${options.latest} workflow runs`)
+          color(
+            90,
+            `no "${options.artifact}" artifacts in the last ${options.latest} workflow runs`,
+          ),
         );
         return;
       }
@@ -77,7 +85,9 @@ addGithubOptions(
         String(archive.workflowRun),
         archive.workflowName || "-",
         archive.createdAt ? archive.createdAt.replace("T", " ").slice(0, 19) : "-",
-        archive.sizeBytes !== undefined ? `${Math.max(1, Math.round(archive.sizeBytes / 1024))} KiB` : "-",
+        archive.sizeBytes !== undefined
+          ? `${Math.max(1, Math.round(archive.sizeBytes / 1024))} KiB`
+          : "-",
       ]);
       const header = ["WORKFLOW RUN", "WORKFLOW", "CREATED", "SIZE"];
       const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));

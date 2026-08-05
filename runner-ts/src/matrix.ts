@@ -18,7 +18,7 @@ export function expandMatrix(def: MatrixDef): Combination[] {
 
   const excludes = (def.exclude ?? []) as Record<string, Scalar>[];
   combos = combos.filter(
-    (combo) => !excludes.some((ex) => Object.entries(ex).every(([k, v]) => combo[k] === String(v)))
+    (combo) => !excludes.some((ex) => Object.entries(ex).every(([k, v]) => combo[k] === String(v))),
   );
 
   const includes = (def.include ?? []) as Record<string, Scalar>[];

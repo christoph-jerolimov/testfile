@@ -31,7 +31,7 @@ export function buildTestContainerArgs(
   scopes: Scopes,
   where: string,
   shellArgv: string[],
-  detect: () => string = detectEngine
+  detect: () => string = detectEngine,
 ): TestContainerPlan {
   const engine = def.engine && def.engine !== "auto" ? def.engine : detect();
   if (engine === "kubernetes") {

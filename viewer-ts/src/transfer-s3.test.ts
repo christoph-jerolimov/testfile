@@ -20,17 +20,14 @@ let runCounter = 0;
 function recordRun(baseDir: string): string {
   runCounter++;
   const stamp = String(runCounter).padStart(2, "0");
-  return writeRun(
-    baseDir,
-    `202601${stamp}-100000-aaaa`,
-    `2026-01-${stamp}T10:00:00.000Z`,
-    [{ path: "all/one", status: "passed", durationMs: 3, log: "out\n" }]
-  ).id;
+  return writeRun(baseDir, `202601${stamp}-100000-aaaa`, `2026-01-${stamp}T10:00:00.000Z`, [
+    { path: "all/one", status: "passed", durationMs: 3, log: "out\n" },
+  ]).id;
 }
 
 // A real exec for tar, recording (and faking) everything else.
 function fakeAws(
-  onCall: (command: string, args: string[]) => { status: number; stdout: string } | undefined
+  onCall: (command: string, args: string[]) => { status: number; stdout: string } | undefined,
 ): { exec: Exec; calls: string[][] } {
   const calls: string[][] = [];
   const exec: Exec = (command, args, options) => {
@@ -57,37 +54,37 @@ test("s3Push packs and uploads to <prefix>/<run-id>.tgz", { skip: needs("tar") }
   assert.equal(calls[0][4], url);
 });
 
-test("s3List returns archives newest first, s3Pull imports the latest", { skip: needs("tar") }, () => {
-  const source = tempDir();
-  const id = recordRun(source);
-  const prepared = join(tempDir(), `${id}.tgz`);
-  packRun(source, id, prepared);
+test(
+  "s3List returns archives newest first, s3Pull imports the latest",
+  { skip: needs("tar") },
+  () => {
+    const source = tempDir();
+    const id = recordRun(source);
+    const prepared = join(tempDir(), `${id}.tgz`);
+    packRun(source, id, prepared);
 
-  const listing = [
-    `2026-01-01 10:00:05        123 ${id}.tgz`,
-    "2026-01-01 09:00:05        120 20251231-090000-aaaa.tgz",
-    "", // trailing blank line
-  ].join("\n");
-  const { exec, calls } = fakeAws((_command, args) => {
-    if (args[1] === "ls") return { status: 0, stdout: listing };
-    if (args[1] === "cp") {
-      cpSync(prepared, args[3]); // "download" to the requested local file
-      return { status: 0, stdout: "" };
-    }
-    return undefined;
-  });
+    const listing = [
+      `2026-01-01 10:00:05        123 ${id}.tgz`,
+      "2026-01-01 09:00:05        120 20251231-090000-aaaa.tgz",
+      "", // trailing blank line
+    ].join("\n");
+    const { exec, calls } = fakeAws((_command, args) => {
+      if (args[1] === "ls") return { status: 0, stdout: listing };
+      if (args[1] === "cp") {
+        cpSync(prepared, args[3]); // "download" to the requested local file
+        return { status: 0, stdout: "" };
+      }
+      return undefined;
+    });
 
-  assert.deepEqual(s3List("s3://bucket/runs", exec), [
-    `${id}.tgz`,
-    "20251231-090000-aaaa.tgz",
-  ]);
+    assert.deepEqual(s3List("s3://bucket/runs", exec), [`${id}.tgz`, "20251231-090000-aaaa.tgz"]);
 
-  const target = tempDir();
-  const result = s3Pull(target, "s3://bucket/runs", undefined, exec);
-  assert.equal(result.archive, `${id}.tgz`);
-  assert.deepEqual(result.imported, [id]);
-  assert.equal(new RunHistory(target).runs[0]?.id, id);
-  const cp = calls.find((call) => call[2] === "cp");
-  assert.equal(cp?.[3], `s3://bucket/runs/${id}.tgz`);
-});
-
+    const target = tempDir();
+    const result = s3Pull(target, "s3://bucket/runs", undefined, exec);
+    assert.equal(result.archive, `${id}.tgz`);
+    assert.deepEqual(result.imported, [id]);
+    assert.equal(new RunHistory(target).runs[0]?.id, id);
+    const cp = calls.find((call) => call[2] === "cp");
+    assert.equal(cp?.[3], `s3://bucket/runs/${id}.tgz`);
+  },
+);

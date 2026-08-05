@@ -34,7 +34,7 @@ export function loadEnvFiles(
   baseDir: string,
   scopes: Scopes,
   where: string,
-  secrets: Set<string>
+  secrets: Set<string>,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const file of typeof spec === "string" ? [spec] : (spec ?? [])) {

@@ -14,7 +14,7 @@ export interface TuiHandle {
 
 export function startTui(
   history: RunHistory,
-  options: { baseDir: string; name?: string; view?: ViewerView }
+  options: { baseDir: string; name?: string; view?: ViewerView },
 ): TuiHandle {
   const app = render(
     React.createElement(App, {
@@ -23,7 +23,7 @@ export function startTui(
       name: options.name,
       initialView: options.view ?? "runs",
     }),
-    { exitOnCtrlC: false }
+    { exitOnCtrlC: false },
   );
   process.stdout.write(MOUSE_ENABLE);
   let restored = false;

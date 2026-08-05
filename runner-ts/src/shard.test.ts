@@ -9,8 +9,9 @@ const tests: ShardableTest[] = Array.from({ length: 8 }, (_, i) => ({
 }));
 
 function allShards(total: number, durations?: Map<string, number>): number[][] {
-  return Array.from({ length: total }, (_, i) =>
-    selectShard(tests, { index: i + 1, total }, durations).ids
+  return Array.from(
+    { length: total },
+    (_, i) => selectShard(tests, { index: i + 1, total }, durations).ids,
   );
 }
 
@@ -32,7 +33,10 @@ test("without durations the shards partition the suite round-robin", () => {
     [4, 8],
   ]);
   // every test lands in exactly one shard
-  assert.deepEqual(shards.flat().sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8]);
+  assert.deepEqual(
+    shards.flat().sort((a, b) => a - b),
+    [1, 2, 3, 4, 5, 6, 7, 8],
+  );
   assert.deepEqual(selectShard(tests, { index: 1, total: 1 }).ids, [1, 2, 3, 4, 5, 6, 7, 8]);
 });
 
@@ -49,7 +53,11 @@ test("recorded durations balance the shards by time", () => {
     ["suite/test-8", 1000],
   ]);
   const shards = allShards(2, durations);
-  assert.deepEqual(shards.flat().sort((a, b) => a - b), [1, 2, 3, 4, 5, 6, 7, 8], "still a partition");
+  assert.deepEqual(
+    shards.flat().sort((a, b) => a - b),
+    [1, 2, 3, 4, 5, 6, 7, 8],
+    "still a partition",
+  );
 
   const slow = shards.find((ids) => ids.includes(1))!;
   assert.equal(slow.length, 1, "the slow test gets a shard of its own");
@@ -71,7 +79,12 @@ test("sparse duration data falls back to the round-robin split", () => {
 test("durationsFrom prefers the newest recorded duration per test", () => {
   const runs = [
     { tests: [{ path: "a", status: "passed", durationMs: 200 }] },
-    { tests: [{ path: "a", status: "passed", durationMs: 100 }, { path: "b", status: "passed", durationMs: 50 }] },
+    {
+      tests: [
+        { path: "a", status: "passed", durationMs: 100 },
+        { path: "b", status: "passed", durationMs: 50 },
+      ],
+    },
   ] as unknown as RunRecord[];
   const durations = durationsFrom(runs);
   assert.equal(durations.get("a"), 200, "runs are newest first");

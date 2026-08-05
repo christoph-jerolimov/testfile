@@ -42,7 +42,13 @@ export function aggregate(runs: RunRecord[]): Aggregate[] {
         // runs are newest first, so the first occurrence is the latest one
         byPath.set(
           test.path,
-          (entry = { path: test.path, occurrences: 0, passes: 0, fails: 0, lastStatus: test.status })
+          (entry = {
+            path: test.path,
+            occurrences: 0,
+            passes: 0,
+            fails: 0,
+            lastStatus: test.status,
+          }),
         );
       }
       entry.occurrences++;

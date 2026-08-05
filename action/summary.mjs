@@ -48,8 +48,8 @@ for (const test of run.tests ?? []) {
     .join(", ");
   lines.push(
     `| \`${cell(test.path)}\` | ${STATUS[test.status] ?? cell(test.status)} | ${formatMs(
-      test.durationMs
-    )} | ${cell(notes)} |`
+      test.durationMs,
+    )} | ${cell(notes)} |`,
   );
 }
 lines.push("");

@@ -145,7 +145,7 @@ export class ViewerServer {
     if (!viewerDir) {
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       return void response.end(
-        "<!doctype html><h1>testfile serve</h1><p>The web viewer is not built; the REST API is available under <a href=\"/api/runs\">/api/runs</a>.</p>"
+        '<!doctype html><h1>testfile serve</h1><p>The web viewer is not built; the REST API is available under <a href="/api/runs">/api/runs</a>.</p>',
       );
     }
     const relative = pathname === "/" ? "index.html" : pathname.slice(1);

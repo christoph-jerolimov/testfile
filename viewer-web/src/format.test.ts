@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aggregate, countSummary, formatMs, mergedVariantLabel, startedLabel, variantLabel } from "./format.js";
+import {
+  aggregate,
+  countSummary,
+  formatMs,
+  mergedVariantLabel,
+  startedLabel,
+  variantLabel,
+} from "./format.js";
 import type { RunRecord } from "./types.js";
 
 function run(id: string, startedAt: string, tests: RunRecord["tests"]): RunRecord {
@@ -58,9 +65,21 @@ test("aggregate folds runs per test path, newest run first", () => {
 
   const rows = aggregate([newest, oldest]);
   const unit = rows.find((row) => row.path === "ci/unit")!;
-  assert.deepEqual(unit, { path: "ci/unit", occurrences: 2, passes: 1, fails: 1, lastStatus: "failed" });
+  assert.deepEqual(unit, {
+    path: "ci/unit",
+    occurrences: 2,
+    passes: 1,
+    fails: 1,
+    lastStatus: "failed",
+  });
   const build = rows.find((row) => row.path === "ci/build")!;
-  assert.deepEqual(build, { path: "ci/build", occurrences: 2, passes: 2, fails: 0, lastStatus: "passed" });
+  assert.deepEqual(build, {
+    path: "ci/build",
+    occurrences: 2,
+    passes: 2,
+    fails: 0,
+    lastStatus: "passed",
+  });
   const old = rows.find((row) => row.path === "ci/old")!;
   assert.equal(old.fails, 1, "aborted counts as a failure");
   assert.equal(old.lastStatus, "aborted", "first occurrence wins as the latest status");
@@ -79,7 +98,7 @@ test("variantLabel is sorted by key and empty without variants", () => {
 test("mergedVariantLabel lists every value a merged run combined", () => {
   assert.equal(
     mergedVariantLabel({ platform: ["linux", "macos", "windows"], node: ["22"] }),
-    "node=22, platform=linux|macos|windows"
+    "node=22, platform=linux|macos|windows",
   );
   assert.equal(mergedVariantLabel(undefined), "");
 });

@@ -29,7 +29,7 @@ test("listTests walks the suite with paths, lines and default names", () => {
       "7:all/checks/*",
       "9:all/checks/npm run test:unit",
       "10:all/checks/e2e",
-    ]
+    ],
   );
 });
 
@@ -52,7 +52,7 @@ test("listRuns reads run.yaml folders, newest first", () => {
     mkdirSync(join(dir, ".testfile", "runs", id), { recursive: true });
     writeFileSync(
       join(dir, ".testfile", "runs", id, "run.yaml"),
-      `id: ${id}\nstartedAt: ${startedAt}\nstatus: passed\ndurationMs: 3\ntests:\n  - path: all\n    status: passed\n`
+      `id: ${id}\nstartedAt: ${startedAt}\nstatus: passed\ndurationMs: 3\ntests:\n  - path: all\n    status: passed\n`,
     );
   };
   write("20260101-000000-aaaa", "2026-01-01T00:00:00.000Z");
@@ -62,7 +62,7 @@ test("listRuns reads run.yaml folders, newest first", () => {
   const runs = listRuns(dir);
   assert.deepEqual(
     runs.map((run) => run.id),
-    ["20260102-000000-bbbb", "20260101-000000-aaaa"]
+    ["20260102-000000-bbbb", "20260101-000000-aaaa"],
   );
   assert.equal(runs[0].tests[0].path, "all");
   assert.deepEqual(listRuns(mkdtempSync(join(tmpdir(), "testfile-vscode-empty-"))), []);

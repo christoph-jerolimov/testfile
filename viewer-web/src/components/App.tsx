@@ -11,8 +11,12 @@ export function App(): React.ReactElement {
   const [live, setLive] = useState(false);
 
   const refresh = (): void => {
-    void fetchSummary().then(setSummary).catch(() => undefined);
-    void fetchRuns().then(setRuns).catch(() => undefined);
+    void fetchSummary()
+      .then(setSummary)
+      .catch(() => undefined);
+    void fetchRuns()
+      .then(setRuns)
+      .catch(() => undefined);
   };
 
   useEffect(() => {

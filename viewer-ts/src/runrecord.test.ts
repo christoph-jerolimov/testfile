@@ -57,10 +57,7 @@ test("diffRuns reports significant duration changes of passing tests only", () =
     { path: "root/failing", status: "failed", durationMs: 9000 },
   ]);
   const diff = diffRuns(base, compare);
-  assert.deepEqual(
-    diff.durations.map((d) => d.path).sort(),
-    ["root/faster", "root/slower"]
-  );
+  assert.deepEqual(diff.durations.map((d) => d.path).sort(), ["root/faster", "root/slower"]);
 });
 
 test("identical runs produce an empty diff", () => {
@@ -105,7 +102,7 @@ test("detectFlaky finds tests that alternate and counts flips", () => {
   assert.deepEqual(
     reports.map((r) => r.path),
     ["a/flaky", "a/once-fixed"],
-    "stable, always-broken and skip-only tests are not flaky"
+    "stable, always-broken and skip-only tests are not flaky",
   );
   const flaky = reports[0];
   assert.equal(flaky.occurrences, 4);

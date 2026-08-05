@@ -22,7 +22,7 @@ test("matchPaths returns folders by default, alphabetically", () => {
   const dir = fixture();
   assert.deepEqual(
     matchPaths("packages/*", dir).map((match) => match.path),
-    ["packages/api", "packages/legacy", "packages/ui"]
+    ["packages/api", "packages/legacy", "packages/ui"],
   );
 });
 
@@ -30,29 +30,26 @@ test("file and folder toggles select what is matched", () => {
   const dir = fixture();
   assert.deepEqual(
     matchPaths({ glob: "packages/*", folder: false, file: true }, dir).map((m) => m.path),
-    ["packages/notes.md"]
+    ["packages/notes.md"],
   );
   assert.deepEqual(
     matchPaths({ glob: "packages/*", file: true }, dir).map((m) => m.path),
     ["packages/api", "packages/legacy", "packages/notes.md", "packages/ui"],
-    "both toggles on matches everything"
+    "both toggles on matches everything",
   );
-  assert.throws(
-    () => matchPaths({ glob: "packages/*", folder: false }, dir),
-    /nothing can match/
-  );
+  assert.throws(() => matchPaths({ glob: "packages/*", folder: false }, dir), /nothing can match/);
 });
 
 test("ignore drops matches", () => {
   const dir = fixture();
   assert.deepEqual(
     matchPaths({ glob: "packages/*", ignore: ["packages/legacy"] }, dir).map((m) => m.path),
-    ["packages/api", "packages/ui"]
+    ["packages/api", "packages/ui"],
   );
   assert.deepEqual(
     matchPaths({ glob: "packages/*", ignore: ["**/l*"] }, dir).map((m) => m.path),
     ["packages/api", "packages/ui"],
-    "ignore patterns are globs"
+    "ignore patterns are globs",
   );
 });
 
@@ -85,8 +82,14 @@ test("applyEach substitutes into every string of the template", () => {
   // the original is untouched
   assert.equal(template.name, "${{ each.name }}");
   assert.throws(
-    () => applyEach({ name: "${{ each.nope }}" } as TestDef, { path: "p", name: "n", dir: ".", absolute: "/p" }),
-    /unknown reference "each.nope"/
+    () =>
+      applyEach({ name: "${{ each.nope }}" } as TestDef, {
+        path: "p",
+        name: "n",
+        dir: ".",
+        absolute: "/p",
+      }),
+    /unknown reference "each.nope"/,
   );
 });
 
@@ -102,24 +105,24 @@ test("expandForeach turns a test into a parallel group and rejects misuse", () =
   assert.deepEqual(
     def.parallel!.map((child) => `${child.name}:${child.workdir}`),
     ["api:packages/api", "ui:packages/ui"],
-    "a template without a name is named after the match"
+    "a template without a name is named after the match",
   );
 
   assert.throws(
     () => expandForeach({ foreach: "packages/*" } as TestDef, dir),
-    /needs a "template"/
+    /needs a "template"/,
   );
   assert.throws(
     () => expandForeach({ foreach: "nope/*", template: { command: "true" } } as TestDef, dir),
-    /matched nothing/
+    /matched nothing/,
   );
   assert.throws(
     () =>
       expandForeach(
         { foreach: "packages/*", template: { command: "true" }, command: "true" } as TestDef,
-        dir
+        dir,
       ),
-    /cannot be combined with command\/script/
+    /cannot be combined with command\/script/,
   );
 });
 
@@ -138,12 +141,12 @@ test("a Testfile with foreach loads into the expanded suite", () => {
       "    name: ${{ each.name }} tests",
       "    workdir: ${{ each.path }}",
       "    command: test -f package.json",
-    ].join("\n")
+    ].join("\n"),
   );
   const { doc } = loadTestfile(dir);
   assert.deepEqual(
     doc.test.parallel!.map((child) => child.name),
-    ["api tests", "ui tests"]
+    ["api tests", "ui tests"],
   );
   assert.equal(doc.test.foreach, undefined);
 });

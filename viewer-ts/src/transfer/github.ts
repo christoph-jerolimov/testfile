@@ -49,7 +49,7 @@ export async function githubRunArchives(options: GithubOptions): Promise<GithubA
   const base = options.apiBase ?? "https://api.github.com";
   const runs = (await githubApi(
     `${base}/repos/${options.repo}/actions/runs?status=completed&per_page=${options.latest}`,
-    options
+    options,
   )) as { workflow_runs?: { id: number; name?: string; artifacts_url: string }[] };
   const archives: GithubArchive[] = [];
   for (const run of runs.workflow_runs ?? []) {
@@ -85,7 +85,7 @@ export async function githubRunArchives(options: GithubOptions): Promise<GithubA
 export async function syncFromGithub(
   baseDir: string,
   options: GithubOptions,
-  exec: Exec = defaultExec
+  exec: Exec = defaultExec,
 ): Promise<ImportResult & { archives: number }> {
   const doFetch = options.fetchImpl ?? fetch;
   const archives = await githubRunArchives(options);
@@ -101,7 +101,7 @@ export async function syncFromGithub(
     });
     if (!response.ok) {
       throw new Error(
-        `downloading artifact ${archive.artifactId} failed: ${response.status} ${response.statusText}`
+        `downloading artifact ${archive.artifactId} failed: ${response.status} ${response.statusText}`,
       );
     }
     const tmp = mkdtempSync(join(tmpdir(), "testfile-sync-"));

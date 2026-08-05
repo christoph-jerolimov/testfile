@@ -6,7 +6,6 @@ import { test } from "node:test";
 import {
   effectiveTags,
   filterByLastFailed,
-  
   parseMatrixFilters,
   parseTagFilters,
   selectTests,
@@ -56,16 +55,16 @@ test("selectTests by name matches path substrings, case-insensitively", () => {
   const suite = buildRunSuite(doc);
   assert.deepEqual(
     selectTests(suite, filters({ names: ["e2e"] })).map((n) => n.path),
-    ["all/checks/e2e"]
+    ["all/checks/e2e"],
   );
   assert.deepEqual(
     selectTests(suite, filters({ names: ["UNIT"] })).map((n) => n.path),
-    ["all/checks/unit tests"]
+    ["all/checks/unit tests"],
   );
   // a group name matches everything below it
   assert.deepEqual(
     selectTests(suite, filters({ names: ["all/checks"] })).map((n) => n.name),
-    ["unit tests", "e2e"]
+    ["unit tests", "e2e"],
   );
   assert.deepEqual(selectTests(suite, filters({ names: ["nope"] })), []);
 });
@@ -80,7 +79,7 @@ test("tags apply to all nested tests and match case-insensitively", () => {
   // "fast" is on lint and on the checks group -> its children inherit it
   assert.deepEqual(
     selectTests(suite, filters({ tags: ["FAST"] })).map((n) => n.name),
-    ["lint", "unit tests", "e2e"]
+    ["lint", "unit tests", "e2e"],
   );
   // several tags are ORed; matrix instances inherit the wrapper's tags
   const slow = selectTests(suite, filters({ tags: ["slow"] })).map((n) => n.name);
@@ -111,11 +110,11 @@ test("name, tag and matrix filters are ANDed", () => {
       tags: ["slow"],
       names: ["integration"],
       matrix: parseMatrixFilters(["db:postgres", "node:22"]),
-    })
+    }),
   );
   assert.deepEqual(
     combined.map((n) => n.name),
-    ["integration (db=postgres, node=22)"]
+    ["integration (db=postgres, node=22)"],
   );
 });
 
@@ -130,12 +129,12 @@ test("the generic filter matches names or tags", () => {
   // "e2e" is a test name
   assert.deepEqual(
     selectTests(suite, filters({ any: ["e2e"] })).map((n) => n.name),
-    ["e2e"]
+    ["e2e"],
   );
   // "fast" is a tag (on lint and the checks group)
   assert.deepEqual(
     selectTests(suite, filters({ any: ["fast"] })).map((n) => n.name),
-    ["lint", "unit tests", "e2e"]
+    ["lint", "unit tests", "e2e"],
   );
   // several generic values are ORed: name match or tag match
   assert.deepEqual(
@@ -146,7 +145,7 @@ test("the generic filter matches names or tags", () => {
       "integration (db=postgres, node=22)",
       "integration (db=mysql, node=20)",
       "integration (db=mysql, node=22)",
-    ]
+    ],
   );
 });
 
@@ -158,11 +157,11 @@ test("generic matrix values combine with the dedicated matrix filter", () => {
     filters({
       any: generic.nameOrTag,
       matrix: parseMatrixFilters([...generic.matrixSpecs, "node:20"]),
-    })
+    }),
   );
   assert.deepEqual(
     combined.map((n) => n.name),
-    ["integration (db=mysql, node=20)"]
+    ["integration (db=mysql, node=20)"],
   );
 });
 
@@ -209,7 +208,7 @@ test("filterByLastFailed selects only tests that failed in the recorded run", as
   const failedTests = filterByLastFailed(selected, lastRun);
   assert.deepEqual(
     failedTests.map((n) => n.path),
-    ["root/bad"]
+    ["root/bad"],
   );
 
   // re-running just the failed selection leaves the others untouched:
@@ -244,7 +243,7 @@ test("a matrix-filtered selection skips excluded instances", async () => {
   const session = new Session(doc, tempDir());
   const selected = selectTests(
     session.suite,
-    filters({ names: ["integration"], matrix: parseMatrixFilters(["db:postgres", "node:22"]) })
+    filters({ names: ["integration"], matrix: parseMatrixFilters(["db:postgres", "node:22"]) }),
   );
   const status = await session.runSelected(selected.map((n) => n.id));
   assert.equal(status, "passed");

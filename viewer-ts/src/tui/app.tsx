@@ -68,7 +68,7 @@ export function App({
         runLogs.current.clear();
         setTick((t) => t + 1);
       }),
-    [history, baseDir]
+    [history, baseDir],
   );
 
   const runs = history.runs;
@@ -87,7 +87,11 @@ export function App({
               note: "merged log",
               lines: loadRunLog(history, currentRun, runLogs.current),
             }
-          : { title: `run ${currentRun.id}`, note: "details — enter for the log", lines: describeRun(currentRun) }
+          : {
+              title: `run ${currentRun.id}`,
+              note: "details — enter for the log",
+              lines: describeRun(currentRun),
+            }
         : { title: "runs", lines: [{ text: "no recorded runs yet", stream: "system" }] }
       : currentTest
         ? {
@@ -189,7 +193,11 @@ export function App({
     <Box flexDirection="column" height={height}>
       <Text wrap="truncate">
         {name ? <Text bold>{name} </Text> : null}
-        <Text bold={view === "runs"} color={view === "runs" ? "cyan" : "gray"} inverse={view === "runs"}>
+        <Text
+          bold={view === "runs"}
+          color={view === "runs" ? "cyan" : "gray"}
+          inverse={view === "runs"}
+        >
           {" 1 runs "}
         </Text>{" "}
         <Text
@@ -216,7 +224,12 @@ export function App({
                 </Text>
               )}
               {table.rows.map((row, i) => (
-                <Text key={runs[i].id} inverse={i === runsIndex} color={RUN_COLOR[runs[i].status]} wrap="truncate">
+                <Text
+                  key={runs[i].id}
+                  inverse={i === runsIndex}
+                  color={RUN_COLOR[runs[i].status]}
+                  wrap="truncate"
+                >
                   {row}
                 </Text>
               ))}
@@ -260,7 +273,9 @@ export function App({
               key={i}
               wrap={wrap ? "wrap" : "truncate"}
               inverse={above + i === currentMatchLine}
-              color={line.stream === "stderr" ? "yellow" : line.stream === "system" ? "cyan" : undefined}
+              color={
+                line.stream === "stderr" ? "yellow" : line.stream === "system" ? "cyan" : undefined
+              }
               dimColor={line.stream === "system"}
             >
               {line.text || " "}
@@ -281,7 +296,11 @@ export function App({
 }
 
 // Merged run logs for browsing, cached per run id.
-function loadRunLog(history: RunHistory, run: RunRecord, cache: Map<string, OutputLine[]>): OutputLine[] {
+function loadRunLog(
+  history: RunHistory,
+  run: RunRecord,
+  cache: Map<string, OutputLine[]>,
+): OutputLine[] {
   let lines = cache.get(run.id);
   if (!lines) {
     lines = logToLines(history.readRunLog(run), "(no log recorded)");

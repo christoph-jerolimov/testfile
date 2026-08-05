@@ -101,6 +101,8 @@ export function listRuns(baseDir: string, limit = 20): RunInfo[] {
     }
   }
   return runs
-    .sort((a, b) => String(b.startedAt).localeCompare(String(a.startedAt)) || b.id.localeCompare(a.id))
+    .sort(
+      (a, b) => String(b.startedAt).localeCompare(String(a.startedAt)) || b.id.localeCompare(a.id),
+    )
     .slice(0, limit);
 }

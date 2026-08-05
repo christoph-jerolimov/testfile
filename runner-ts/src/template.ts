@@ -18,7 +18,7 @@ export function resolveTemplate(
   value: string,
   scopes: Scopes,
   where: string,
-  options: { lenient?: boolean } = {}
+  options: { lenient?: boolean } = {},
 ): string {
   return value.replace(TEMPLATE_RE, (_all, scope: string, name: string, fallback?: string) => {
     const defaultValue = fallback !== undefined ? unquote(fallback.trim()) : undefined;
@@ -43,7 +43,11 @@ function unquote(value: string): string {
 
 // Resolves an env map's values against the given scopes. Values reference the
 // *parent* environment, not their siblings.
-export function resolveEnvMap(map: EnvMap | undefined, scopes: Scopes, where: string): Record<string, string> {
+export function resolveEnvMap(
+  map: EnvMap | undefined,
+  scopes: Scopes,
+  where: string,
+): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [key, value] of Object.entries(map ?? {})) {
     out[key] = resolveTemplate(String(value), scopes, `${where}.env.${key}`);
