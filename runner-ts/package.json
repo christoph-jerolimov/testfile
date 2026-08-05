@@ -15,11 +15,11 @@
   "dependencies": {
     "@testfile/schema": "0.1.0",
     "ajv": "^8.17.1",
-    "commander": "^12.1.0",
+    "commander": "^15.0.0",
     "yaml": "^2.8.0"
   },
   "devDependencies": {
-    "@types/node": "^22.15.0",
-    "typescript": "^5.8.0"
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
   }
 }

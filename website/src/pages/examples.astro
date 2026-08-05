@@ -1,7 +1,4 @@
 ---
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { Code } from "astro:components";
 import { parse } from "yaml";
 import Layout from "../layouts/Layout.astro";
@@ -10,10 +7,19 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const repo = "https://github.com/christoph-jerolimov/testfile/blob/main/examples";
 
 // The gallery renders the real Testfiles from the repository's examples/
-// folder (validated in CI), so the page can never drift from them.
-// fileURLToPath, not .pathname: on Windows the latter keeps the URL's
-// leading slash ("/D:/...") and readdirSync cannot open that.
-const examplesDir = fileURLToPath(new URL("../../../examples/", import.meta.url));
+// folder (validated in CI), so the page can never drift from them. The files
+// are pulled in at build time, resolved against *this* file - reading them
+// from disk at render time would depend on where the compiled page ends up.
+const metaFiles = import.meta.glob("../../../examples/*/example.yaml", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+const testfiles = import.meta.glob("../../../examples/*/Testfile", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
 
 interface Meta {
   order: number;
@@ -23,18 +29,18 @@ interface Meta {
   highlights: string[];
 }
 
-const examples = readdirSync(examplesDir, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => {
-    const dir = join(examplesDir, entry.name);
-    const meta = parse(readFileSync(join(dir, "example.yaml"), "utf8")) as Meta;
+// ".../examples/pytest-postgres/example.yaml" -> "pytest-postgres"
+const idOf = (path: string): string => path.split("/").at(-2)!;
+
+const examples = Object.entries(metaFiles)
+  .map(([path, source]) => {
+    const id = idOf(path);
+    const testfile = Object.entries(testfiles).find(([file]) => idOf(file) === id)?.[1];
+    if (testfile === undefined) throw new Error(`examples/${id} has no Testfile`);
     return {
-      id: entry.name,
-      meta,
-      testfile: readFileSync(join(dir, "Testfile"), "utf8").replace(
-        /^# yaml-language-server:.*\n/,
-        ""
-      ),
+      id,
+      meta: parse(source) as Meta,
+      testfile: testfile.replace(/^# yaml-language-server:.*\n/, ""),
     };
   })
   .sort((a, b) => a.meta.order - b.meta.order);

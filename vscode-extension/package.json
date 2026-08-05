@@ -125,9 +125,9 @@
     "yaml": "^2.8.0"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.1.2",
     "@types/vscode": "^1.90.0",
-    "esbuild": "^0.24.0",
-    "typescript": "^5.5.4"
+    "esbuild": "^0.28.1",
+    "typescript": "^7.0.2"
   }
 }
