@@ -61,6 +61,7 @@ Other useful commands:
 
 ```sh
 testfile validate   # check the file against the JSON schema
+testfile doctor     # check this machine against what the file needs
 testfile list       # print the expanded test suite without running it
 testfile-viewer tui # browse recorded runs (read-only terminal UI)
 ```

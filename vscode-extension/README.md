@@ -16,6 +16,9 @@ format and runner.
 - **Testfile Runs** view in the explorer: the recorded runs from
   `.testfile/runs/` with per-test status, duration and one-click access to the
   recorded logs. The view refreshes automatically when new runs are recorded.
+- **`Testfile: Check This Machine (doctor)`** runs `testfile doctor` in the
+  terminal: what this Testfile needs (container engine, fixed ports, shells,
+  git, a writable `.testfile/`) and what of it is missing.
 - Shortcuts to the other frontends: `Testfile: Open the TUI` and
   `Testfile: Serve the Web Viewer`.
 

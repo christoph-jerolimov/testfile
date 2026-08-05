@@ -159,6 +159,10 @@ export function activate(context: vscode.ExtensionContext): void {
       runInTerminal(`run -n "${path}"`, workspaceDirOf(uri));
     }),
 
+    vscode.commands.registerCommand("testfile.doctor", () => {
+      runInTerminal("doctor", workspaceDirOf(vscode.window.activeTextEditor?.document.uri));
+    }),
+
     vscode.commands.registerCommand("testfile.openTui", () => {
       runInTerminal(
         "tui",
