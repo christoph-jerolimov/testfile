@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { test } from "node:test";
 import {
   commandsUsed,
@@ -58,6 +58,9 @@ function find(checks: Check[], name: string): Check {
   assert.ok(check, `no "${name}" check in ${checks.map((c) => c.name).join(", ")}`);
   return check;
 }
+
+// an absolute path on every platform ("/repo" is drive-relative on Windows)
+const REPO = resolve("/repo");
 
 const doc = (test: TestfileDoc["test"], rest: Partial<TestfileDoc> = {}): TestfileDoc => ({
   version: 0,
@@ -264,16 +267,16 @@ test("commandsUsed collects tests, hooks and services with their directory", () 
         },
       },
     ),
-    "/repo",
+    REPO,
   );
   assert.deepEqual(
     uses.map((use) => `${use.token} @ ${use.dir}`),
     [
-      "./run.sh @ /repo/app/e2e",
-      "pg_isready @ /repo",
-      "postgres @ /repo",
-      "prisma @ /repo/app",
-      "vitest @ /repo/app",
+      `./run.sh @ ${resolve(REPO, "app/e2e")}`,
+      `pg_isready @ ${REPO}`,
+      `postgres @ ${REPO}`,
+      `prisma @ ${resolve(REPO, "app")}`,
+      `vitest @ ${resolve(REPO, "app")}`,
     ],
     "workdir decides where a relative command resolves; containers and custom shells are left out",
   );
@@ -306,22 +309,20 @@ test("a relative command is resolved against the test's directory", async () => 
     parallel: [
       { name: "build", command: "./scripts/build.sh" },
       { name: "gone", command: "./scripts/gone.sh --fast" },
-      { name: "absolute", command: "/opt/tool/bin/tool" },
+      { name: "absolute", command: resolve(REPO, "opt/tool") },
     ],
   });
+  const build = resolve(REPO, "app/scripts/build.sh");
   const checks = await runChecks(
     withScripts,
-    "/repo",
-    machine({
-      commands: HEALTHY,
-      executables: ["/repo/app/scripts/build.sh", "/opt/tool/bin/tool"],
-    }),
+    REPO,
+    machine({ commands: HEALTHY, executables: [build, resolve(REPO, "opt/tool")] }),
   );
-  assert.equal(find(checks, "command (./scripts/build.sh)").detail, "/repo/app/scripts/build.sh");
-  assert.equal(find(checks, "command (/opt/tool/bin/tool)").status, "ok");
+  assert.equal(find(checks, "command (./scripts/build.sh)").detail, build);
+  assert.equal(find(checks, `command (${resolve(REPO, "opt/tool")})`).status, "ok");
   const gone = find(checks, "command (./scripts/gone.sh)");
   assert.equal(gone.status, "fail");
-  assert.match(gone.detail, /\/repo\/app\/scripts\/gone\.sh is missing or not executable/);
+  assert.equal(gone.detail, `${resolve(REPO, "app/scripts/gone.sh")} is missing or not executable`);
   assert.match(gone.hint ?? "", /chmod \+x/);
 });
 
