@@ -66,6 +66,9 @@ export const REPO_BLOB_URL = "https://github.com/christoph-jerolimov/testfile/bl
 // resolves. `repoRoot` enables the repository-file check above.
 export function checkLinks(dist, { base = "", repoRoot } = {}) {
   const problems = [];
+  // paths in messages and in the resolution below are always "/"-separated,
+  // including on Windows
+  const inDist = (file) => relative(dist, file).split("\\").join("/");
   const idCache = new Map();
   const idsFor = (file, html) => {
     if (!idCache.has(file)) idCache.set(file, idsOf(html ?? readFileSync(file, "utf8")));
@@ -75,7 +78,7 @@ export function checkLinks(dist, { base = "", repoRoot } = {}) {
   for (const file of htmlFiles(dist).sort()) {
     const html = readFileSync(file, "utf8");
     idsFor(file, html);
-    const page = `/${relative(dist, file).split("\\").join("/")}`;
+    const page = `/${inDist(file)}`;
     for (const href of linksOf(html)) {
       if (!href) continue;
       if (repoRoot && href.startsWith(REPO_BLOB_URL)) {
@@ -104,7 +107,7 @@ export function checkLinks(dist, { base = "", repoRoot } = {}) {
         target = found;
       }
       if (anchor && !idsFor(target).has(decodeURIComponent(anchor))) {
-        problems.push(`${page}: ${href} - ${relative(dist, target)} has no "${anchor}" anchor`);
+        problems.push(`${page}: ${href} - ${inDist(target)} has no "${anchor}" anchor`);
       }
     }
   }
