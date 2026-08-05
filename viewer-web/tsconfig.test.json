@@ -33,6 +33,8 @@
     "src/components/RunsView.tsx",
     "src/components/ResultsView.tsx",
     "src/components/views.test.tsx",
+    "src/ansi.ts",
+    "src/ansi.test.ts",
     "src/suite.ts",
     "src/suite.test.ts",
     "src/components/SuiteTree.tsx",

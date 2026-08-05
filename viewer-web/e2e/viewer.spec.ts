@@ -56,6 +56,58 @@ test("a single test log opens from the run detail", async ({ page }) => {
   await expect(page).toHaveScreenshot("test-log.png");
 });
 
+test("the log renders ANSI colour instead of printing it", async ({ page }) => {
+  const log = page.locator(".detail .log");
+  // the escape sequences are gone from the text ...
+  await expect(log).toContainText("41 tests passed");
+  await expect(log).not.toContainText("[32m", { timeout: 1000 });
+  // ... and are colour on the page instead
+  const failed = log.locator("span", { hasText: "boom: expected 4 to equal 5" }).last();
+  await expect(failed).toHaveCSS("color", "rgb(255, 92, 105)");
+  await expect(failed).toHaveCSS("font-weight", "600");
+  const passed = log.locator("span", { hasText: "41 tests passed" }).last();
+  await expect(passed).toHaveCSS("color", "rgb(61, 220, 132)");
+});
+
+test("the log can be searched, wrapped and followed", async ({ page }) => {
+  const log = page.locator(".detail .log");
+  await expect(page.locator(".log-lines")).toContainText("lines");
+
+  // wrap is on to begin with and can be turned off
+  const wrap = page.getByRole("button", { name: "wrap" });
+  await expect(wrap).toHaveAttribute("aria-pressed", "true");
+  await expect(log).toHaveCSS("white-space", "pre-wrap");
+  await wrap.click();
+  await expect(log).toHaveCSS("white-space", "pre");
+  await wrap.click();
+
+  // searching highlights every hit and says which one is current
+  await page.getByPlaceholder("find in log").fill("failed");
+  await expect(log.locator("mark")).toHaveCount(2);
+  await expect(page.locator(".log-hits")).toContainText("1 of 2");
+  await expect(log.locator("mark.on")).toHaveCount(1);
+
+  await page.getByRole("button", { name: "next match" }).click();
+  await expect(page.locator(".log-hits")).toContainText("2 of 2");
+  // the buttons wrap around rather than stopping at the end
+  await page.getByRole("button", { name: "next match" }).click();
+  await expect(page.locator(".log-hits")).toContainText("1 of 2");
+  await page.getByRole("button", { name: "previous match" }).click();
+  await expect(page.locator(".log-hits")).toContainText("2 of 2");
+
+  await expect(page).toHaveScreenshot("log-search.png");
+
+  await page.getByPlaceholder("find in log").fill("nothing here");
+  await expect(page.locator(".log-hits")).toContainText("no match");
+  await expect(log.locator("mark")).toHaveCount(0);
+
+  // follow is off until asked for
+  const follow = page.getByRole("button", { name: "follow" });
+  await expect(follow).toHaveAttribute("aria-pressed", "false");
+  await follow.click();
+  await expect(follow).toHaveAttribute("aria-pressed", "true");
+});
+
 test("older runs can be selected", async ({ page }) => {
   await page.locator(".list tbody tr").nth(1).click();
   const detail = page.locator(".detail");

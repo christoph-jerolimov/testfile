@@ -203,8 +203,59 @@ pre.log {
   font-size: 0.8rem;
   line-height: 1.45;
   max-height: 60vh;
+  white-space: pre;
+}
+
+/* Wrapping is on by default: a log is read, not measured. Turning it off
+   keeps one line per line, which is what a wide table of output wants. */
+pre.log.wrap {
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.log-line {
+  min-height: 1.45em;
+}
+
+/* Search hits inside the log; the one the ‹ › buttons are on stands out. */
+pre.log mark {
+  background: color-mix(in srgb, var(--yellow) 35%, transparent);
+  color: inherit;
+  border-radius: 2px;
+}
+
+pre.log mark.on {
+  background: var(--yellow);
+  color: #0b0e13;
+}
+
+/* Above the log: find, wrap, follow, and how long the thing is. */
+.log-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.log-hits {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--dim);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.log-hits .link:disabled {
+  color: var(--border);
+  cursor: default;
+}
+
+.log-lines {
+  margin-left: auto;
+  color: var(--dim);
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .empty {
