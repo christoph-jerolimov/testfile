@@ -1,3 +1,5 @@
+spec:
+  - RESULTS.md#run.yaml
 args: --variant platform=conformance --variant shard=1/2
 exitCode: 0
 status: passed

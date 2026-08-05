@@ -113,7 +113,10 @@ is:
 ## Enforcement
 
 - Every semantic change lands with a conformance case; CI runs the suite on
-  every push.
+  every push. Which case pins which section of this specification is
+  recorded in the cases themselves (`spec:` in `expected.yaml`) and checked
+  on every run, so a new section cannot arrive without a case — see
+  [coverage](../conformance/README.md#coverage).
 - The schema's example corpus (`schema/tests/valid`, `schema/tests/invalid`)
   is append-only within a major version: a schema change that breaks an
   existing valid example is by definition a breaking change and must be

@@ -1,0 +1,13 @@
+spec:
+  - Stopping (stop)
+exitCode: 0
+status: passed
+tests:
+  - { path: root/service-started, status: passed }
+  - { path: root/stopped-after-the-previous-run, status: failed }
+reruns:
+  # the first run stopped its service, and stop.command left the marker
+  - exitCode: 0
+    status: passed
+    tests:
+      - { path: root/stopped-after-the-previous-run, status: passed }

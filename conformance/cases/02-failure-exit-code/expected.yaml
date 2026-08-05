@@ -1,3 +1,5 @@
+spec:
+  - Exit code
 exitCode: 1
 status: failed
 tests:

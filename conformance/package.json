@@ -6,7 +6,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "node run.mjs"
+    "test": "node run.mjs",
+    "coverage": "node --test coverage.test.mjs && node coverage.mjs"
   },
   "devDependencies": {
     "yaml": "^2.8.0"

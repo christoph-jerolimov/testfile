@@ -1,0 +1,8 @@
+spec:
+  - Env files
+exitCode: 0
+status: passed
+tests:
+  - { path: root/values, status: passed }
+  - { path: root/precedence, status: passed }
+  - { path: root/test-level-file, status: passed }

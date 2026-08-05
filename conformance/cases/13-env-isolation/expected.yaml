@@ -1,3 +1,5 @@
+spec:
+  - Environment and templates
 # Host env vars must not reach tests unless forwarded via forwardEnv; the
 # runner provides CI=1 and forces color output.
 env:

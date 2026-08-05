@@ -1,3 +1,5 @@
+spec:
+  - Execution semantics
 exitCode: 1
 status: failed
 tests:

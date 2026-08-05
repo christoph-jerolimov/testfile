@@ -1,3 +1,5 @@
+spec:
+  - Result caching
 # Result caching via `inputs`: a passing test with unchanged input files is
 # served from the cache on the next run; changing an input re-runs it.
 # Tests without `inputs` are never cached.

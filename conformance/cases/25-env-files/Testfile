@@ -1,0 +1,36 @@
+version: 0
+# The dotenv format: comments, blank lines, an "export " prefix, quoted
+# values and templates. Later files win over earlier ones, and an explicit
+# `env` of the same level wins over both.
+envFile:
+  - base.env
+  - override.env
+env:
+  EXPLICIT: from-env
+test:
+  name: root
+  sequence:
+    - name: values
+      script: |
+        test "$PLAIN" = plain-value
+        test "$QUOTED" = "with spaces"
+        test "$SINGLE" = 'single quoted'
+        test "$EXPORTED" = exported-value
+        test "$TEMPLATED" = "port-${{ ports.p }}"
+        test "$COMMENTED" = ""
+    - name: precedence
+      script: |
+        # override.env is loaded last, so it wins over base.env ...
+        test "$OVERRIDDEN" = from-override
+        # ... but the explicit env of the same level wins over both
+        test "$EXPLICIT" = from-env
+    - name: test-level-file
+      envFile: test-level.env
+      script: |
+        test "$TEST_LEVEL" = test-level-value
+        # a test-level file still loses against the test's own env
+        test "$LOCAL" = local-wins
+      env:
+        LOCAL: local-wins
+ports:
+  p: random
