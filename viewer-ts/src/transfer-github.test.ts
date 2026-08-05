@@ -20,12 +20,9 @@ let runCounter = 0;
 function recordRun(baseDir: string): string {
   runCounter++;
   const stamp = String(runCounter).padStart(2, "0");
-  return writeRun(
-    baseDir,
-    `202601${stamp}-100000-aaaa`,
-    `2026-01-${stamp}T10:00:00.000Z`,
-    [{ path: "all/one", status: "passed", durationMs: 3, log: "out\n" }]
-  ).id;
+  return writeRun(baseDir, `202601${stamp}-100000-aaaa`, `2026-01-${stamp}T10:00:00.000Z`, [
+    { path: "all/one", status: "passed", durationMs: 3, log: "out\n" },
+  ]).id;
 }
 
 interface FakeResponseInit {
@@ -84,7 +81,9 @@ test("githubRunArchives lists matching, unexpired artifacts of recent runs", asy
     },
     "https://api.github.com/runs/10/artifacts": {
       json: {
-        artifacts: [{ id: 3, name: "testfile-run", archive_download_url: "https://dl/3", expired: true }],
+        artifacts: [
+          { id: 3, name: "testfile-run", archive_download_url: "https://dl/3", expired: true },
+        ],
       },
     },
   });
@@ -106,80 +105,104 @@ test("githubRunArchives lists matching, unexpired artifacts of recent runs", asy
       sizeBytes: 15692,
     },
   ]);
-  assert.ok(requests.every((request) => request.auth === "Bearer tok"), "every call authenticates");
+  assert.ok(
+    requests.every((request) => request.auth === "Bearer tok"),
+    "every call authenticates",
+  );
 });
 
-test("syncFromGithub imports artifact zips holding the run contents directly", { skip: needs("zip", "unzip") }, async () => {
-  const source = tempDir();
-  const id = recordRun(source);
-  const staging = tempDir();
-  spawnSync("zip", ["-q", "-r", join(staging, "artifact.zip"), "."], {
-    cwd: join(source, ".testfile", "runs", id),
-  });
-  const zipBytes = readFileSync(join(staging, "artifact.zip"));
+test(
+  "syncFromGithub imports artifact zips holding the run contents directly",
+  { skip: needs("zip", "unzip") },
+  async () => {
+    const source = tempDir();
+    const id = recordRun(source);
+    const staging = tempDir();
+    spawnSync("zip", ["-q", "-r", join(staging, "artifact.zip"), "."], {
+      cwd: join(source, ".testfile", "runs", id),
+    });
+    const zipBytes = readFileSync(join(staging, "artifact.zip"));
 
-  const { fetchImpl } = fakeFetch({
-    "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1": {
-      json: {
-        workflow_runs: [{ id: 7, name: "CI", artifacts_url: "https://api.github.com/runs/7/artifacts" }],
+    const { fetchImpl } = fakeFetch({
+      "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1": {
+        json: {
+          workflow_runs: [
+            { id: 7, name: "CI", artifacts_url: "https://api.github.com/runs/7/artifacts" },
+          ],
+        },
       },
-    },
-    "https://api.github.com/runs/7/artifacts": {
-      json: { artifacts: [{ id: 9, name: "testfile-run", archive_download_url: "https://dl/9" }] },
-    },
-    "https://dl/9": { bytes: zipBytes },
-  });
-
-  const target = tempDir();
-  const result = await syncFromGithub(target, {
-    repo: "o/r",
-    latest: 1,
-    artifact: "testfile-run",
-    token: "tok",
-    fetchImpl,
-  });
-  assert.equal(result.archives, 1);
-  assert.deepEqual(result.imported, [id]);
-  assert.equal(new RunHistory(target).runs[0]?.id, id);
-
-  // a second sync skips the already-imported run
-  const again = await syncFromGithub(target, {
-    repo: "o/r",
-    latest: 1,
-    artifact: "testfile-run",
-    token: "tok",
-    fetchImpl,
-  });
-  assert.deepEqual(again.skipped, [id]);
-});
-
-test("syncFromGithub still imports legacy artifacts wrapping a .tgz", { skip: needs("zip", "unzip", "tar") }, async () => {
-  const source = tempDir();
-  const id = recordRun(source);
-  const staging = tempDir();
-  packRun(source, id, join(staging, "testfile-run.tgz"));
-  spawnSync("zip", ["-q", "-j", join(staging, "artifact.zip"), join(staging, "testfile-run.tgz")]);
-  const zipBytes = readFileSync(join(staging, "artifact.zip"));
-
-  const { fetchImpl } = fakeFetch({
-    "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1": {
-      json: {
-        workflow_runs: [{ id: 8, name: "CI", artifacts_url: "https://api.github.com/runs/8/artifacts" }],
+      "https://api.github.com/runs/7/artifacts": {
+        json: {
+          artifacts: [{ id: 9, name: "testfile-run", archive_download_url: "https://dl/9" }],
+        },
       },
-    },
-    "https://api.github.com/runs/8/artifacts": {
-      json: { artifacts: [{ id: 10, name: "testfile-run", archive_download_url: "https://dl/10" }] },
-    },
-    "https://dl/10": { bytes: zipBytes },
-  });
+      "https://dl/9": { bytes: zipBytes },
+    });
 
-  const target = tempDir();
-  const result = await syncFromGithub(target, {
-    repo: "o/r",
-    latest: 1,
-    artifact: "testfile-run",
-    token: "tok",
-    fetchImpl,
-  });
-  assert.deepEqual(result.imported, [id]);
-});
+    const target = tempDir();
+    const result = await syncFromGithub(target, {
+      repo: "o/r",
+      latest: 1,
+      artifact: "testfile-run",
+      token: "tok",
+      fetchImpl,
+    });
+    assert.equal(result.archives, 1);
+    assert.deepEqual(result.imported, [id]);
+    assert.equal(new RunHistory(target).runs[0]?.id, id);
+
+    // a second sync skips the already-imported run
+    const again = await syncFromGithub(target, {
+      repo: "o/r",
+      latest: 1,
+      artifact: "testfile-run",
+      token: "tok",
+      fetchImpl,
+    });
+    assert.deepEqual(again.skipped, [id]);
+  },
+);
+
+test(
+  "syncFromGithub still imports legacy artifacts wrapping a .tgz",
+  { skip: needs("zip", "unzip", "tar") },
+  async () => {
+    const source = tempDir();
+    const id = recordRun(source);
+    const staging = tempDir();
+    packRun(source, id, join(staging, "testfile-run.tgz"));
+    spawnSync("zip", [
+      "-q",
+      "-j",
+      join(staging, "artifact.zip"),
+      join(staging, "testfile-run.tgz"),
+    ]);
+    const zipBytes = readFileSync(join(staging, "artifact.zip"));
+
+    const { fetchImpl } = fakeFetch({
+      "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1": {
+        json: {
+          workflow_runs: [
+            { id: 8, name: "CI", artifacts_url: "https://api.github.com/runs/8/artifacts" },
+          ],
+        },
+      },
+      "https://api.github.com/runs/8/artifacts": {
+        json: {
+          artifacts: [{ id: 10, name: "testfile-run", archive_download_url: "https://dl/10" }],
+        },
+      },
+      "https://dl/10": { bytes: zipBytes },
+    });
+
+    const target = tempDir();
+    const result = await syncFromGithub(target, {
+      repo: "o/r",
+      latest: 1,
+      artifact: "testfile-run",
+      token: "tok",
+      fetchImpl,
+    });
+    assert.deepEqual(result.imported, [id]);
+  },
+);

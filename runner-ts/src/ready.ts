@@ -49,7 +49,10 @@ export async function waitReady(def: ReadyDef | undefined, opts: WaitReadyOption
   }
 }
 
-async function checkHttp(def: NonNullable<ReadyDef["http"]>, opts: WaitReadyOptions): Promise<boolean> {
+async function checkHttp(
+  def: NonNullable<ReadyDef["http"]>,
+  opts: WaitReadyOptions,
+): Promise<boolean> {
   const spec = typeof def === "string" ? { url: def } : def;
   const url = resolveTemplate(spec.url, opts.scopes, opts.where);
   try {
@@ -67,7 +70,7 @@ function checkTcp(def: NonNullable<ReadyDef["tcp"]>, opts: WaitReadyOptions): Pr
   const spec = typeof def === "object" ? def : { port: def };
   const host = spec.host ?? "localhost";
   const port = Number(
-    typeof spec.port === "string" ? resolveTemplate(spec.port, opts.scopes, opts.where) : spec.port
+    typeof spec.port === "string" ? resolveTemplate(spec.port, opts.scopes, opts.where) : spec.port,
   );
   return new Promise((resolve) => {
     const socket = connect({ host, port });

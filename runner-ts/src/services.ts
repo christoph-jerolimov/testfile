@@ -28,7 +28,7 @@ export function detectEngine(): string {
 function execCapture(
   cmd: string,
   args: string[],
-  cwd: string
+  cwd: string,
 ): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     const child = spawn(cmd, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
@@ -63,7 +63,7 @@ export function buildContainerRunArgs(
   name: string,
   container: ContainerDef,
   scopes: Scopes,
-  where: string
+  where: string,
 ): string[] {
   const args = ["run", "--rm", "-d"];
   if (container.pull) args.push(`--pull=${container.pull}`);
@@ -102,7 +102,9 @@ async function ensureNetwork(engine: string, network: string, cwd: string): Prom
   if (inspect.code !== 0) {
     const create = await execCapture(engine, ["network", "create", network], cwd);
     if (create.code !== 0 && !/already exists/i.test(create.stderr)) {
-      throw new Error(`failed to create network "${network}": ${(create.stderr || create.stdout).trim()}`);
+      throw new Error(
+        `failed to create network "${network}": ${(create.stderr || create.stdout).trim()}`,
+      );
     }
   }
   ensuredNetworks.add(key);
@@ -159,7 +161,7 @@ export class ServiceInstance extends EventEmitter {
 
   constructor(
     readonly name: string,
-    readonly def: ServiceDef
+    readonly def: ServiceDef,
   ) {
     super();
   }
@@ -299,9 +301,11 @@ export class ServiceInstance extends EventEmitter {
       }
       if (this.containerId && this.engine) {
         const seconds = Math.max(1, Math.ceil(timeoutMs / 1000));
-        await execCapture(this.engine, ["stop", "-t", String(seconds), this.containerId], this.cwd).catch(
-          () => {}
-        );
+        await execCapture(
+          this.engine,
+          ["stop", "-t", String(seconds), this.containerId],
+          this.cwd,
+        ).catch(() => {});
         this.child?.kill("SIGKILL"); // ends the log follower
       } else if (this.child && !this.exited && !stopDef.command) {
         const signal = (stopDef.signal ?? "SIGTERM") as NodeJS.Signals;

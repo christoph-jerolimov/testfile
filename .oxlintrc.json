@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Only the correctness category, the rules that flag code that is very
+  // likely wrong - as errors, so `npm run lint` fails on them. The
+  // stylistic categories are left to the formatter and to review.
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    // The runner and the terminal UI parse ANSI sequences, so their regexes
+    // legitimately match control characters.
+    "no-control-regex": "off"
+  },
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/.astro/**",
+    "conformance/cases/**",
+    "viewer-web/e2e/fixture/**"
+  ]
+}

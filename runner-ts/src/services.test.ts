@@ -50,7 +50,7 @@ test("buildContainerRunArgs assembles ports, env, volumes and image with templat
       volumes: ["./fixtures:/docker-entrypoint-initdb.d:ro"],
     },
     scopes,
-    "t"
+    "t",
   );
   assert.deepEqual(args, [
     "run",
@@ -77,7 +77,7 @@ test("pull policy, network with alias, entrypoint and command overrides", () => 
       command: ["./start.sh"],
     },
     scopes,
-    "t"
+    "t",
   );
   assert.deepEqual(args, [
     "run",
@@ -96,12 +96,7 @@ test("pull policy, network with alias, entrypoint and command overrides", () => 
 });
 
 test("a single-part entrypoint is passed plainly", () => {
-  const args = buildContainerRunArgs(
-    "tool",
-    { image: "img", entrypoint: ["/entry"] },
-    scopes,
-    "t"
-  );
+  const args = buildContainerRunArgs("tool", { image: "img", entrypoint: ["/entry"] }, scopes, "t");
   assert.deepEqual(args.slice(-3), ["--entrypoint", "/entry", "img"]);
 });
 
@@ -126,13 +121,13 @@ test("a service with needs starts only after its dependency is ready", async () 
       env: { ORDER: join(dir, "order.txt") },
       test: { name: "root", command: "true" },
     },
-    dir
+    dir,
   );
   assert.equal(await session.runAll(), "passed");
   assert.deepEqual(
     readFileSync(join(dir, "order.txt"), "utf8").trim().split("\n"),
     ["db", "app"],
-    "app waited for the database to report ready"
+    "app waited for the database to report ready",
   );
 });
 
@@ -145,9 +140,9 @@ test("service needs are validated: unknown names and cycles", () => {
           services: { app: { needs: ["nope"], command: "true", ready: { log: "x" } } },
           test: { name: "root", command: "true" },
         },
-        "."
+        ".",
       ),
-    /needs unknown service "nope"/
+    /needs unknown service "nope"/,
   );
   assert.throws(
     () =>
@@ -160,8 +155,8 @@ test("service needs are validated: unknown names and cycles", () => {
           },
           test: { name: "root", command: "true" },
         },
-        "."
+        ".",
       ),
-    /cyclic service needs/
+    /cyclic service needs/,
   );
 });

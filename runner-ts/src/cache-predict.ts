@@ -28,7 +28,7 @@ async function visitResolved(
   session: Session,
   active: Set<number>,
   visitor: (test: RunTest, ctx: ResolvedContext) => void,
-  onUnresolvable?: (test: RunTest) => void
+  onUnresolvable?: (test: RunTest) => void,
 ): Promise<boolean> {
   const baseEnv = hostBaseEnv([
     ...(session.doc.forwardEnv ?? []),
@@ -41,7 +41,13 @@ async function visitResolved(
   try {
     const ports = await resolvePorts(session.doc.ports);
     const bootstrap: Scopes = { env: baseEnv, ports, matrix: {} };
-    const fileEnv = loadEnvFiles(session.doc.envFile, session.baseDir, bootstrap, "Testfile", new Set());
+    const fileEnv = loadEnvFiles(
+      session.doc.envFile,
+      session.baseDir,
+      bootstrap,
+      "Testfile",
+      new Set(),
+    );
     const withFiles = { ...baseEnv, ...fileEnv };
     const docEnv = resolveEnvMap(session.doc.env, { ...bootstrap, env: withFiles }, "Testfile");
     scopes = { ...bootstrap, env: { ...withFiles, ...docEnv } };
@@ -96,7 +102,10 @@ async function visitResolved(
 
 // Predicts, without running anything, which active tests would be served
 // from the result cache (used by --dry-run).
-export async function predictCacheHits(session: Session, active: Set<number>): Promise<Set<number>> {
+export async function predictCacheHits(
+  session: Session,
+  active: Set<number>,
+): Promise<Set<number>> {
   const hits = new Set<number>();
   if (!session.cache.enabled) return hits;
 
@@ -109,7 +118,7 @@ export async function predictCacheHits(session: Session, active: Set<number>): P
       test.path,
       source,
       resolveEnvMap(def.env, parentScopes, where),
-      test.matrix
+      test.matrix,
     );
     const entry = session.cache.get(key);
     if (entry && entry.hash === ResultCache.inputsState(cwd, def.inputs).hash) {
@@ -127,7 +136,7 @@ export async function predictCacheHits(session: Session, active: Set<number>): P
 export async function gitChangedSelection(
   session: Session,
   active: Set<number>,
-  changes: GitChanges
+  changes: GitChanges,
 ): Promise<{ ids: number[]; notes: Map<number, string> }> {
   const ids: number[] = [];
   const notes = new Map<number, string>();
@@ -148,7 +157,7 @@ export async function gitChangedSelection(
       if (matches.length > 0) {
         notes.set(
           test.id,
-          `selected by --changed against ${changes.baseRef}: ${describeMatches(matches)}`
+          `selected by --changed against ${changes.baseRef}: ${describeMatches(matches)}`,
         );
         select(test);
       }
@@ -158,7 +167,7 @@ export async function gitChangedSelection(
       for (const leaf of collectLeaves(test)) {
         if (active.has(leaf.id)) select(leaf);
       }
-    }
+    },
   );
   if (!resolved) {
     // top-level resolution failed; run everything selected rather than

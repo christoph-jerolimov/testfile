@@ -26,7 +26,7 @@ async function ranSession(): Promise<Session> {
         ],
       },
     },
-    tempDir()
+    tempDir(),
   );
   await session.runAll();
   return session;

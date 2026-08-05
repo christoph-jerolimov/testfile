@@ -11,7 +11,7 @@ export function ResultsView({ runs }: { runs: RunRecord[] }): React.ReactElement
   // A merged run holds one result per leg, so a run can contribute more
   // than one execution of the same test.
   const executions: { run: RunRecord; test: RunTest }[] = runs.flatMap((run) =>
-    run.tests.filter((t) => t.path === current.path).map((test) => ({ run, test }))
+    run.tests.filter((t) => t.path === current.path).map((test) => ({ run, test })),
   );
   return (
     <main>

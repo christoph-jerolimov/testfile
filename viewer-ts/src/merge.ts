@@ -67,7 +67,7 @@ function collectVariants(sources: readonly MergeSource[]): Record<string, string
   return Object.fromEntries(
     Object.entries(all)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, values]) => [key, [...values].sort()])
+      .map(([key, values]) => [key, [...values].sort()]),
   );
 }
 
@@ -89,9 +89,10 @@ function commonEntries<T>(maps: readonly Record<string, T>[]): Record<string, T>
 // while carrying a failed test is not going to be reported as green here.
 function worstStatus(
   statuses: readonly RunRecord["status"][],
-  tests: readonly RunRecordTest[]
+  tests: readonly RunRecordTest[],
 ): RunRecord["status"] {
-  if (statuses.includes("failed") || tests.some((test) => test.status === "failed")) return "failed";
+  if (statuses.includes("failed") || tests.some((test) => test.status === "failed"))
+    return "failed";
   if (statuses.includes("aborted") || tests.some((test) => test.status === "aborted")) {
     return "aborted";
   }
@@ -161,7 +162,8 @@ export function mergeRuns(sources: readonly MergeSource[], id: string): MergeRes
         } else {
           const group = tests[at];
           if (test.status === "failed" || group.status === "failed") group.status = "failed";
-          else if (test.status === "aborted" || group.status === "aborted") group.status = "aborted";
+          else if (test.status === "aborted" || group.status === "aborted")
+            group.status = "aborted";
           if (test.durationMs !== undefined) {
             group.durationMs = (group.durationMs ?? 0) + test.durationMs;
           }
@@ -174,7 +176,7 @@ export function mergeRuns(sources: readonly MergeSource[], id: string): MergeRes
         throw new Error(
           `runs ${clash} and ${record.id} both recorded "${test.path}"` +
             (where ? ` with variants ${where}` : "") +
-            ` - give the runs distinct --variant values (e.g. --variant platform=linux)`
+            ` - give the runs distinct --variant values (e.g. --variant platform=linux)`,
         );
       }
       seen.set(key, record.id);
@@ -204,7 +206,10 @@ export function mergeRuns(sources: readonly MergeSource[], id: string): MergeRes
     }
   }
 
-  const status = worstStatus(records.map((record) => record.status), tests);
+  const status = worstStatus(
+    records.map((record) => record.status),
+    tests,
+  );
   const cancelled = records.some((record) => record.cancelled);
   const merged: MergedRunInfo = {
     runs: records.map((record) => ({
@@ -244,7 +249,7 @@ export function mergeRuns(sources: readonly MergeSource[], id: string): MergeRes
 export function writeMergedRun(
   baseDir: string,
   sources: readonly MergeSource[],
-  id: string
+  id: string,
 ): { id: string; dir: string; record: RunRecord } {
   const { record, files } = mergeRuns(sources, id);
   const runDir = join(baseDir, HISTORY_DIR, "runs", id);
@@ -257,7 +262,7 @@ export function writeMergedRun(
   }
   writeFileSync(
     join(runDir, "run.yaml"),
-    `${RUN_SCHEMA_MODELINE}\n${stringify(record, { lineWidth: 0 })}`
+    `${RUN_SCHEMA_MODELINE}\n${stringify(record, { lineWidth: 0 })}`,
   );
   return { id, dir: runDir, record };
 }

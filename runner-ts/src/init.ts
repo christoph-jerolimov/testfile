@@ -35,7 +35,7 @@ const AUTO_DETECT = [
 
 export function detectSources(dir: string): string[] {
   const found = AUTO_DETECT.filter((name) => existsSync(join(dir, name))).map((name) =>
-    join(dir, name)
+    join(dir, name),
   );
   // the first workflow that has run: steps, so a project without other
   // sources still gets its CI commands
@@ -62,7 +62,8 @@ function scriptTests(pkg: PackageJson | undefined): TestDef[] {
   }
   if (scripts.test) checks.push({ name: "test", command: "npm test" });
   for (const script of Object.keys(scripts)) {
-    if (/^test:/.test(script)) checks.push({ name: script.slice(5), command: `npm run ${script}` });
+    if (script.startsWith("test:"))
+      checks.push({ name: script.slice(5), command: `npm run ${script}` });
   }
   return checks;
 }
@@ -151,7 +152,7 @@ export function generateTestfile(dir: string): string {
 
 export function initTestfile(
   pathOrDir: string,
-  options: GenerateOptions = {}
+  options: GenerateOptions = {},
 ): { path: string; content: string; imported: string[]; notes: string[] } {
   const dir = resolve(pathOrDir);
   for (const name of TESTFILE_NAMES) {

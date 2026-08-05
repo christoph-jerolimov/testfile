@@ -14,9 +14,9 @@ if (!located) process.exit(0); // no recorded runs (e.g. the Testfile failed val
 const { baseDir, run } = located;
 
 // %, CR and LF must be escaped in workflow command data
-const escapeData = (text) => text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
-const escapeProp = (text) =>
-  escapeData(text).replaceAll(":", "%3A").replaceAll(",", "%2C");
+const escapeData = (text) =>
+  text.replaceAll("%", "%25").replaceAll("\r", "%0D").replaceAll("\n", "%0A");
+const escapeProp = (text) => escapeData(text).replaceAll(":", "%3A").replaceAll(",", "%2C");
 
 let failures = 0;
 for (const test of run.tests ?? []) {
@@ -37,6 +37,6 @@ for (const test of run.tests ?? []) {
 
 if (failures > 0) {
   console.log(
-    `::notice title=Testfile::${failures} test${failures === 1 ? "" : "s"} failed in run ${run.id} (exit code ${run.exitCode})`
+    `::notice title=Testfile::${failures} test${failures === 1 ? "" : "s"} failed in run ${run.id} (exit code ${run.exitCode})`,
   );
 }

@@ -1,20 +1,15 @@
 import { basename, dirname, join } from "node:path";
 import * as vscode from "vscode";
-import {
-  listRuns,
-  listTests,
-  testAtLine,
-  TESTFILE_NAMES,
-  type RunInfo,
-  type TestEntry,
-} from "./testfile-doc.js";
+import { listRuns, listTests, testAtLine, TESTFILE_NAMES, type RunInfo } from "./testfile-doc.js";
 
 function isTestfileDocument(document: vscode.TextDocument): boolean {
   return TESTFILE_NAMES.includes(basename(document.fileName));
 }
 
 function testfileCommand(): string {
-  return vscode.workspace.getConfiguration("testfile").get<string>("command", "testfile") || "testfile";
+  return (
+    vscode.workspace.getConfiguration("testfile").get<string>("command", "testfile") || "testfile"
+  );
 }
 
 function viewerCommand(): string {
@@ -52,7 +47,7 @@ class TestfileCodeLensProvider implements vscode.CodeLensProvider {
           tooltip: `testfile run -n "${test.path}"`,
           command: "testfile.runTest",
           arguments: [document.uri, test.path],
-        })
+        }),
     );
   }
 }
@@ -102,7 +97,7 @@ class RunsTreeProvider implements vscode.TreeDataProvider<RunTreeNode> {
       const run = element.run;
       const item = new vscode.TreeItem(
         run.startedAt.replace("T", " ").slice(0, 19),
-        vscode.TreeItemCollapsibleState.Collapsed
+        vscode.TreeItemCollapsibleState.Collapsed,
       );
       item.id = run.id;
       item.description = `${run.status} · ${formatMs(run.durationMs)}`;
@@ -141,36 +136,46 @@ export function activate(context: vscode.ExtensionContext): void {
       runInTerminal("run", workspaceDirOf(vscode.window.activeTextEditor?.document.uri));
     }),
 
-    vscode.commands.registerCommand(
-      "testfile.runTest",
-      (uri?: vscode.Uri, path?: string) => {
-        const editor = vscode.window.activeTextEditor;
-        if (path === undefined && editor && isTestfileDocument(editor.document)) {
-          const found = testAtLine(listTests(editor.document.getText()), editor.selection.active.line);
-          if (!found) {
-            void vscode.window.showInformationMessage("No test found at the cursor.");
-            return;
-          }
-          uri = editor.document.uri;
-          path = found.path;
-        }
-        if (path === undefined) {
-          void vscode.window.showInformationMessage("Open a Testfile and place the cursor on a test.");
+    vscode.commands.registerCommand("testfile.runTest", (uri?: vscode.Uri, path?: string) => {
+      const editor = vscode.window.activeTextEditor;
+      if (path === undefined && editor && isTestfileDocument(editor.document)) {
+        const found = testAtLine(
+          listTests(editor.document.getText()),
+          editor.selection.active.line,
+        );
+        if (!found) {
+          void vscode.window.showInformationMessage("No test found at the cursor.");
           return;
         }
-        runInTerminal(`run -n "${path}"`, workspaceDirOf(uri));
+        uri = editor.document.uri;
+        path = found.path;
       }
-    ),
+      if (path === undefined) {
+        void vscode.window.showInformationMessage(
+          "Open a Testfile and place the cursor on a test.",
+        );
+        return;
+      }
+      runInTerminal(`run -n "${path}"`, workspaceDirOf(uri));
+    }),
 
     vscode.commands.registerCommand("testfile.openTui", () => {
-      runInTerminal("tui", workspaceDirOf(vscode.window.activeTextEditor?.document.uri), viewerCommand());
+      runInTerminal(
+        "tui",
+        workspaceDirOf(vscode.window.activeTextEditor?.document.uri),
+        viewerCommand(),
+      );
     }),
 
     vscode.commands.registerCommand("testfile.serve", () => {
-      runInTerminal("serve", workspaceDirOf(vscode.window.activeTextEditor?.document.uri), viewerCommand());
+      runInTerminal(
+        "serve",
+        workspaceDirOf(vscode.window.activeTextEditor?.document.uri),
+        viewerCommand(),
+      );
     }),
 
-    vscode.commands.registerCommand("testfile.refreshRuns", () => runs.refresh())
+    vscode.commands.registerCommand("testfile.refreshRuns", () => runs.refresh()),
   );
 
   // New recorded runs appear in the view automatically.

@@ -25,7 +25,7 @@ test("init from package.json scripts builds a sequence with parallel checks", ()
         test: "vitest run",
         "test:e2e": "playwright test",
       },
-    })
+    }),
   );
   const { path, content } = initTestfile(dir);
   assert.ok(path.endsWith("Testfile"));
@@ -38,7 +38,7 @@ test("init from package.json scripts builds a sequence with parallel checks", ()
   assert.equal(checks.name, "checks");
   assert.deepEqual(
     checks.parallel!.map((c) => c.name),
-    ["lint", "test", "e2e"]
+    ["lint", "test", "e2e"],
   );
   assert.deepEqual(checks.parallel![0].tags, ["fast"]);
   // and the generated file loads through the normal loader

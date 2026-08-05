@@ -113,7 +113,7 @@ export function expandForeach(def: TestDef, baseDir: string): TestDef[] {
   if (matches.length === 0) {
     throw new Error(
       `${where}: matched nothing in ${baseDir}` +
-        ((spec.ignore ?? []).length > 0 ? " (after applying ignore)" : "")
+        ((spec.ignore ?? []).length > 0 ? " (after applying ignore)" : ""),
     );
   }
 

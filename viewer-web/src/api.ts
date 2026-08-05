@@ -23,7 +23,10 @@ export function serviceLogUrl(runId: string, serviceName: string): string {
 }
 
 // Server-sent events: the server pings whenever .testfile/runs/ changes.
-export function subscribeRunsChanged(onChange: () => void, onState: (live: boolean) => void): () => void {
+export function subscribeRunsChanged(
+  onChange: () => void,
+  onState: (live: boolean) => void,
+): () => void {
   const events = new EventSource("/api/events");
   events.onopen = () => onState(true);
   events.onerror = () => onState(false);

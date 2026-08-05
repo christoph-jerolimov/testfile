@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { countSummary, formatMs, mergedVariantLabel, startedLabel, variantLabel } from "../format.js";
+import {
+  countSummary,
+  formatMs,
+  mergedVariantLabel,
+  startedLabel,
+  variantLabel,
+} from "../format.js";
 import type { RunRecord } from "../types.js";
 import { RunDetail } from "./RunDetail.js";
 import { StatusCell } from "./StatusCell.js";

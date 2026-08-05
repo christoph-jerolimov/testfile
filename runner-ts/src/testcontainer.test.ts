@@ -21,7 +21,7 @@ function plan(def: Parameters<typeof buildTestContainerArgs>[0], hostCwd = PROJE
     scopes,
     'test "x"',
     ["sh", "-c", "npm test"],
-    () => "docker"
+    () => "docker",
   );
 }
 
@@ -86,8 +86,5 @@ test("workdir, volumes, pull, network, options and env are honored", () => {
 test("templates are resolved and kubernetes is rejected", () => {
   const result = plan({ image: "app:${{ ports.web }}", engine: "podman" });
   assert.ok(result.args.includes("app:5001"));
-  assert.throws(
-    () => plan({ image: "x", engine: "kubernetes" }),
-    /reserved for a future version/
-  );
+  assert.throws(() => plan({ image: "x", engine: "kubernetes" }), /reserved for a future version/);
 });

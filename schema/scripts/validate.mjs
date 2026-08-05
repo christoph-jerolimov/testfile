@@ -14,7 +14,12 @@ const runSchema = JSON.parse(readFileSync(join(schemaDir, "testrun.schema.json")
 
 // strictRequired is off: the schema intentionally uses the idiomatic
 // oneOf/anyOf-with-required pattern to express "exactly/at least one of".
-const ajv = new Ajv2020({ allErrors: true, strict: true, allowUnionTypes: true, strictRequired: false });
+const ajv = new Ajv2020({
+  allErrors: true,
+  strict: true,
+  allowUnionTypes: true,
+  strictRequired: false,
+});
 addFormats(ajv);
 const validate = ajv.compile(schema);
 const validateRun = ajv.compile(runSchema);
@@ -70,7 +75,7 @@ if (existsSync(examplesDir)) {
   const found = [];
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
-      a.name.localeCompare(b.name)
+      a.name.localeCompare(b.name),
     )) {
       const path = join(dir, entry.name);
       if (entry.isDirectory()) walk(path);
@@ -106,14 +111,20 @@ function checkRun(file, expectValid, name) {
 console.log("Run records (testrun.schema.json):");
 const runsValid = join(schemaDir, "tests", "runs", "valid");
 const runsInvalid = join(schemaDir, "tests", "runs", "invalid");
-for (const [dir, expect] of [[runsValid, true], [runsInvalid, false]]) {
+for (const [dir, expect] of [
+  [runsValid, true],
+  [runsInvalid, false],
+]) {
   if (!existsSync(dir)) continue;
-  const files = readdirSync(dir).filter((f) => f.endsWith(".yaml")).sort();
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith(".yaml"))
+    .sort();
   if (files.length === 0) {
     failures++;
     console.error(`  FAILED  no run records in ${dir}`);
   }
-  for (const f of files) checkRun(join(dir, f), expect, `runs/${expect ? "valid" : "invalid"}/${f}`);
+  for (const f of files)
+    checkRun(join(dir, f), expect, `runs/${expect ? "valid" : "invalid"}/${f}`);
 }
 
 // Runs this repository recorded itself, when present: the real thing.

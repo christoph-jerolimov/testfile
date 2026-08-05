@@ -32,7 +32,7 @@ test("shards merge into one run without variants", () => {
   assert.deepEqual(
     record.tests.map((t) => t.path),
     ["ci/unit", "ci/e2e"],
-    "the union of the shards, in the order they were given"
+    "the union of the shards, in the order they were given",
   );
   assert.equal(record.status, "failed", "one failed shard fails the merged run");
   assert.equal(record.exitCode, 1);
@@ -40,13 +40,13 @@ test("shards merge into one run without variants", () => {
   assert.equal(record.startedAt, "2026-01-01T10:00:00.000Z", "the earliest start");
   assert.deepEqual(
     record.merged?.runs.map((r) => r.id),
-    ["20260101-100000-aa01", "20260101-100005-aa02"]
+    ["20260101-100000-aa01", "20260101-100005-aa02"],
   );
   assert.equal(record.merged?.variants, undefined, "no variants were used");
   assert.deepEqual(
     record.tests.map((t) => t.origin),
     ["20260101-100000-aa01", "20260101-100005-aa02"],
-    "every test says which run produced it"
+    "every test says which run produced it",
   );
 });
 
@@ -58,19 +58,25 @@ test("group nodes are folded, not treated as a clash", () => {
     { path: "ci", status: "passed", durationMs: 400 },
     { path: "ci/a", status: "passed", durationMs: 200 },
   ]);
-  writeRun(dir, "20260101-100005-ff02", "2026-01-01T10:00:05.000Z", [
-    { path: "ci", status: "failed", durationMs: 600 },
-    { path: "ci/b", status: "failed", durationMs: 300 },
-  ], { status: "failed" });
+  writeRun(
+    dir,
+    "20260101-100005-ff02",
+    "2026-01-01T10:00:05.000Z",
+    [
+      { path: "ci", status: "failed", durationMs: 600 },
+      { path: "ci/b", status: "failed", durationMs: 300 },
+    ],
+    { status: "failed" },
+  );
 
   const { record } = mergeRuns(
     [source(dir, "20260101-100000-ff01"), source(dir, "20260101-100005-ff02")],
-    "merged-groups"
+    "merged-groups",
   );
   assert.deepEqual(
     record.tests.map((t) => `${t.path}:${t.status}`),
     ["ci:failed", "ci/a:passed", "ci/b:failed"],
-    "one group entry, worst status, both leaves"
+    "one group entry, worst status, both leaves",
   );
   assert.equal(record.tests[0].durationMs, 1000, "the group's durations are summed");
   assert.equal(record.tests[0].origin, undefined, "a folded group came from more than one run");
@@ -87,7 +93,7 @@ test("the same test from two runs needs distinct variants", () => {
   const sources = [source(dir, "20260101-100000-bb01"), source(dir, "20260101-100005-bb02")];
   assert.throws(
     () => mergeRuns(sources, "merged-2"),
-    /both recorded "ci\/unit".*distinct --variant/s
+    /both recorded "ci\/unit".*distinct --variant/s,
   );
 });
 
@@ -102,21 +108,30 @@ test("one job per platform merges into a single run", () => {
       dir,
       id,
       `2026-01-01T10:00:0${id.slice(-1)}.000Z`,
-      [{ path: "ci/unit", status: status === "failed" ? "failed" : "passed", log: `${platform}\n` }],
-      { status, variants: { platform, node: "22" } }
+      [
+        {
+          path: "ci/unit",
+          status: status === "failed" ? "failed" : "passed",
+          log: `${platform}\n`,
+        },
+      ],
+      { status, variants: { platform, node: "22" } },
     );
   }
   const sources = ["20260101-100000-cc01", "20260101-100001-cc02", "20260101-100002-cc03"].map(
-    (id) => source(dir, id)
+    (id) => source(dir, id),
   );
   const { record, files } = mergeRuns(sources, "merged-3");
 
   assert.equal(record.tests.length, 3, "the same test once per platform");
   assert.deepEqual(
     record.tests.map((t) => t.variants?.platform),
-    ["linux", "macos", "windows"]
+    ["linux", "macos", "windows"],
   );
-  assert.deepEqual(record.merged?.variants, { node: ["22"], platform: ["linux", "macos", "windows"] });
+  assert.deepEqual(record.merged?.variants, {
+    node: ["22"],
+    platform: ["linux", "macos", "windows"],
+  });
   assert.deepEqual(record.variants, { node: "22" }, "what every merged run agreed on stays on top");
   assert.equal(record.status, "failed");
   assert.deepEqual(
@@ -126,18 +141,29 @@ test("one job per platform merges into a single run", () => {
       "tests/20260101-100001-cc02/0.log",
       "tests/20260101-100002-cc03/0.log",
     ],
-    "logs are namespaced by the run they came from"
+    "logs are namespaced by the run they came from",
   );
 });
 
 test("writeMergedRun produces a run the viewer reads like any other", () => {
   const dir = tempDir();
-  writeRun(dir, "20260101-100000-dd01", "2026-01-01T10:00:00.000Z", [
-    { path: "ci/unit", status: "passed", log: "linux\n" },
-  ], { variants: { platform: "linux" }, services: [{ name: "db", status: "stopped", log: "ready\n" }] });
-  writeRun(dir, "20260101-100001-dd02", "2026-01-01T10:00:01.000Z", [
-    { path: "ci/unit", status: "passed", log: "macos\n" },
-  ], { variants: { platform: "macos" } });
+  writeRun(
+    dir,
+    "20260101-100000-dd01",
+    "2026-01-01T10:00:00.000Z",
+    [{ path: "ci/unit", status: "passed", log: "linux\n" }],
+    {
+      variants: { platform: "linux" },
+      services: [{ name: "db", status: "stopped", log: "ready\n" }],
+    },
+  );
+  writeRun(
+    dir,
+    "20260101-100001-dd02",
+    "2026-01-01T10:00:01.000Z",
+    [{ path: "ci/unit", status: "passed", log: "macos\n" }],
+    { variants: { platform: "macos" } },
+  );
 
   const target = tempDir();
   const sources = [source(dir, "20260101-100000-dd01"), source(dir, "20260101-100001-dd02")];

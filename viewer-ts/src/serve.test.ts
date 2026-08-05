@@ -22,7 +22,7 @@ test("the REST API serves runs, logs and results on localhost", async () => {
       { path: "all/good", status: "passed", durationMs: 1, log: "fine\n" },
       { path: "all/bad", status: "failed", durationMs: 2, log: "boom\n" },
     ],
-    { status: "failed" }
+    { status: "failed" },
   );
 
   const server = new ViewerServer({ baseDir: dir, port: 0, name: "demo" });

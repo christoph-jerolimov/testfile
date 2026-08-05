@@ -43,7 +43,7 @@ test("matchesPathPattern globbing", () => {
 test("groupByPattern counts each file once, under the first matching pattern", () => {
   const groups = groupByPattern(
     ["src/a.ts", "src/b.ts", "package.json", "README.md"],
-    ["src/**/*.ts", "**/*.ts", "package.json"]
+    ["src/**/*.ts", "**/*.ts", "package.json"],
   );
   assert.deepEqual(groups, [
     { pattern: "src/**/*.ts", files: ["src/a.ts", "src/b.ts"] },
@@ -54,11 +54,11 @@ test("groupByPattern counts each file once, under the first matching pattern", (
 test("describeMatches lists names only for small sets", () => {
   assert.equal(
     describeMatches([{ pattern: "src/**", files: ["a", "b"] }]),
-    "src/**: 2 changed files (a, b)"
+    "src/**: 2 changed files (a, b)",
   );
   assert.equal(
     describeMatches([{ pattern: "src/**", files: ["a", "b", "c", "d"] }]),
-    "src/**: 4 changed files"
+    "src/**: 4 changed files",
   );
 });
 
@@ -91,7 +91,7 @@ test("collectGitChanges merges the base diff with local changes", () => {
       "edited.txt local modified",
       "untracked.txt local untracked",
     ],
-    "alphabetical, diff + local merged"
+    "alphabetical, diff + local merged",
   );
 });
 
@@ -115,7 +115,7 @@ test("collectGitChanges diffs from the merge base, not the base tip", () => {
   assert.deepEqual(
     changes.files.map((file) => file.path),
     ["feature.txt"],
-    "commits that are only on the base branch don't count"
+    "commits that are only on the base branch don't count",
   );
 });
 
@@ -128,7 +128,10 @@ test("collectGitChanges errors helpfully outside git or with a bad base", () => 
   writeFileSync(join(dir, "a.txt"), "x");
   git(dir, "add", ".");
   git(dir, "commit", "-q", "-m", "base");
-  assert.throws(() => collectGitChanges(dir, "no-such-branch"), /cannot resolve base "no-such-branch"/);
+  assert.throws(
+    () => collectGitChanges(dir, "no-such-branch"),
+    /cannot resolve base "no-such-branch"/,
+  );
 });
 
 test("matchChangedInputs interprets patterns relative to the test's workdir", () => {
@@ -147,5 +150,9 @@ test("matchChangedInputs interprets patterns relative to the test's workdir", ()
   };
   const matches = matchChangedInputs(changes, join(dir, "pkg"), ["src/**/*.ts"]);
   assert.deepEqual(matches, [{ pattern: "src/**/*.ts", files: ["src/a.ts"] }]);
-  assert.deepEqual(matchChangedInputs(changes, join(dir, "pkg"), ["elsewhere/**"]), [], "files outside the workdir never match");
+  assert.deepEqual(
+    matchChangedInputs(changes, join(dir, "pkg"), ["elsewhere/**"]),
+    [],
+    "files outside the workdir never match",
+  );
 });

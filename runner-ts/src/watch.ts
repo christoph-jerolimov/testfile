@@ -17,7 +17,7 @@ export class WatchScheduler {
       debounceMs: number;
       isRunning: () => boolean;
       trigger: () => void;
-    }
+    },
   ) {}
 
   notify(): void {

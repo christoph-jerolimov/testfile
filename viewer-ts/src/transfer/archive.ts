@@ -23,7 +23,7 @@ import { HISTORY_DIR } from "../runrecord.js";
 export type Exec = (
   command: string,
   args: string[],
-  options?: { cwd?: string }
+  options?: { cwd?: string },
 ) => { status: number | null; stdout: string; stderr: string };
 
 export const defaultExec: Exec = (command, args, options) => {
@@ -33,7 +33,7 @@ export const defaultExec: Exec = (command, args, options) => {
     throw new Error(
       code === "ENOENT"
         ? `"${command}" is not installed (needed for this command)`
-        : result.error.message
+        : result.error.message,
     );
   }
   return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
@@ -50,7 +50,12 @@ function runsDir(baseDir: string): string {
 
 // Packs one recorded run (the whole runs/<id>/ folder) into a .tgz whose
 // single top-level entry is the run id.
-export function packRun(baseDir: string, runId: string, outFile: string, exec: Exec = defaultExec): void {
+export function packRun(
+  baseDir: string,
+  runId: string,
+  outFile: string,
+  exec: Exec = defaultExec,
+): void {
   const dir = join(runsDir(baseDir), runId);
   if (!existsSync(join(dir, "run.yaml"))) {
     throw new Error(`no recorded run "${runId}" in ${HISTORY_DIR}/runs/`);
@@ -128,7 +133,7 @@ function readRecordId(file: string): string | undefined {
 export function importRunArchive(
   baseDir: string,
   archive: string,
-  exec: Exec = defaultExec
+  exec: Exec = defaultExec,
 ): ImportResult {
   const tmp = mkdtempSync(join(tmpdir(), "testfile-import-"));
   try {
@@ -152,4 +157,3 @@ export function importRunArchive(
     rmSync(tmp, { recursive: true, force: true });
   }
 }
-

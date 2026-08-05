@@ -20,12 +20,9 @@ let runCounter = 0;
 function recordRun(baseDir: string): string {
   runCounter++;
   const stamp = String(runCounter).padStart(2, "0");
-  return writeRun(
-    baseDir,
-    `202601${stamp}-100000-aaaa`,
-    `2026-01-${stamp}T10:00:00.000Z`,
-    [{ path: "all/one", status: "passed", durationMs: 3, log: "out\n" }]
-  ).id;
+  return writeRun(baseDir, `202601${stamp}-100000-aaaa`, `2026-01-${stamp}T10:00:00.000Z`, [
+    { path: "all/one", status: "passed", durationMs: 3, log: "out\n" },
+  ]).id;
 }
 
 interface FakeResponseInit {
@@ -64,7 +61,12 @@ test("gitlabRunArchives lists artifacts of the matching job in recent pipelines"
     [`${base}/pipelines?per_page=2&order_by=id&sort=desc`]: { json: [{ id: 22 }, { id: 21 }] },
     [`${base}/pipelines/22/jobs`]: {
       json: [
-        { id: 220, name: "testfile", created_at: "2026-02-01T10:00:00Z", artifacts_file: { filename: "artifacts.zip" } },
+        {
+          id: 220,
+          name: "testfile",
+          created_at: "2026-02-01T10:00:00Z",
+          artifacts_file: { filename: "artifacts.zip" },
+        },
         { id: 221, name: "lint", artifacts_file: { filename: "artifacts.zip" } },
       ],
     },
@@ -90,40 +92,44 @@ test("gitlabRunArchives lists artifacts of the matching job in recent pipelines"
   ]);
   assert.ok(
     requests.every((request) => request.token === "tok"),
-    "every call sends the private token"
+    "every call sends the private token",
   );
 });
 
-test("syncFromGitlab imports the run folder from a job artifact zip", { skip: needs("zip", "unzip") }, async () => {
-  const source = tempDir();
-  const id = recordRun(source);
-  const staging = tempDir();
-  // GitLab archives the paths as declared, so the zip holds .testfile/runs/<id>/
-  // (zip runs in the source with a relative path, no shell involved)
-  spawnSync("zip", ["-q", "-r", join(staging, "artifacts.zip"), `.testfile/runs/${id}`], {
-    cwd: source,
-  });
-  const zipBytes = readFileSync(join(staging, "artifacts.zip"));
+test(
+  "syncFromGitlab imports the run folder from a job artifact zip",
+  { skip: needs("zip", "unzip") },
+  async () => {
+    const source = tempDir();
+    const id = recordRun(source);
+    const staging = tempDir();
+    // GitLab archives the paths as declared, so the zip holds .testfile/runs/<id>/
+    // (zip runs in the source with a relative path, no shell involved)
+    spawnSync("zip", ["-q", "-r", join(staging, "artifacts.zip"), `.testfile/runs/${id}`], {
+      cwd: source,
+    });
+    const zipBytes = readFileSync(join(staging, "artifacts.zip"));
 
-  const base = "https://gitlab.example.com/api/v4/projects/17";
-  const { fetchImpl } = fakeFetch({
-    [`${base}/pipelines?per_page=1&order_by=id&sort=desc`]: { json: [{ id: 5 }] },
-    [`${base}/pipelines/5/jobs`]: {
-      json: [{ id: 50, name: "testfile", artifacts_file: { filename: "artifacts.zip" } }],
-    },
-    [`${base}/jobs/50/artifacts`]: { bytes: zipBytes },
-  });
+    const base = "https://gitlab.example.com/api/v4/projects/17";
+    const { fetchImpl } = fakeFetch({
+      [`${base}/pipelines?per_page=1&order_by=id&sort=desc`]: { json: [{ id: 5 }] },
+      [`${base}/pipelines/5/jobs`]: {
+        json: [{ id: 50, name: "testfile", artifacts_file: { filename: "artifacts.zip" } }],
+      },
+      [`${base}/jobs/50/artifacts`]: { bytes: zipBytes },
+    });
 
-  const target = tempDir();
-  const result = await syncFromGitlab(target, {
-    project: "17",
-    latest: 1,
-    job: "testfile",
-    token: "tok",
-    host: "https://gitlab.example.com",
-    fetchImpl,
-  });
-  assert.equal(result.archives, 1);
-  assert.deepEqual(result.imported, [id]);
-  assert.equal(new RunHistory(target).runs[0]?.id, id);
-});
+    const target = tempDir();
+    const result = await syncFromGitlab(target, {
+      project: "17",
+      latest: 1,
+      job: "testfile",
+      token: "tok",
+      host: "https://gitlab.example.com",
+      fetchImpl,
+    });
+    assert.equal(result.archives, 1);
+    assert.deepEqual(result.imported, [id]);
+    assert.equal(new RunHistory(target).runs[0]?.id, id);
+  },
+);

@@ -1,4 +1,12 @@
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join, sep } from "node:path";
 import { parse, stringify } from "yaml";
 import { junitFromRecord } from "./junit.js";
@@ -122,7 +130,10 @@ export class RunHistory {
   readonly dir: string;
   private index: RunRecord[] = [];
 
-  constructor(baseDir: string, private readonly keep = 50) {
+  constructor(
+    baseDir: string,
+    private readonly keep = 50,
+  ) {
     this.dir = join(baseDir, HISTORY_DIR);
     this.migrateLegacyIndex();
     this.index = this.load();
@@ -161,9 +172,9 @@ export class RunHistory {
     }
     for (const id of entries) {
       try {
-        const record = parse(readFileSync(join(this.dir, "runs", id, "run.yaml"), "utf8")) as
-          | RunRecord
-          | null;
+        const record = parse(
+          readFileSync(join(this.dir, "runs", id, "run.yaml"), "utf8"),
+        ) as RunRecord | null;
         if (record && typeof record === "object" && Array.isArray(record.tests)) {
           runs.push({ ...record, id: record.id ?? id });
         }
@@ -173,9 +184,7 @@ export class RunHistory {
     }
     // startedAt has millisecond resolution; the id (which starts with the
     // run's UTC timestamp) only resolves seconds, so it is the tie-breaker.
-    return runs.sort(
-      (a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id)
-    );
+    return runs.sort((a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id));
   }
 
   // Newest first.
@@ -249,7 +258,7 @@ export class RunHistory {
   saveRun(
     meta: RunMeta,
     tests: RunLogInput[],
-    services: { name: string; status?: string; lines: OutputLine[] }[]
+    services: { name: string; status?: string; lines: OutputLine[] }[],
   ): RunRecord {
     const startedAt = new Date(meta.startedAtMs);
     const stamp = startedAt.toISOString().slice(0, 19).replace(/[-:]/g, "").replace("T", "-");
@@ -323,7 +332,7 @@ export class RunHistory {
           const testLines = logByPath.get(test.path);
           return testLines && testLines.length > 0 ? renderLines(testLines) : undefined;
         },
-      })
+      }),
     );
     record.junit = "junit.xml";
     writeFileSync(join(runDir, "run.yaml"), `${RUN_SCHEMA_MODELINE}\n${stringify(record)}`);

@@ -30,7 +30,7 @@ function glyph(status: Status): string {
 export class ConsoleReporter {
   constructor(
     private readonly runner: Runner,
-    private readonly options: { verbose: boolean } = { verbose: false }
+    private readonly options: { verbose: boolean } = { verbose: false },
   ) {
     runner.on("test-start", (test: RunTest) => {
       this.print(`${glyph("running")} ${this.label(test)}`);
@@ -39,21 +39,27 @@ export class ConsoleReporter {
       }
     });
     runner.on("test-end", (test: RunTest) => {
-      const duration = test.startedAt && test.endedAt ? ` (${formatMs(test.endedAt - test.startedAt)})` : "";
+      const duration =
+        test.startedAt && test.endedAt ? ` (${formatMs(test.endedAt - test.startedAt)})` : "";
       const error = test.error && test.status !== "passed" ? ` — ${test.error}` : "";
       this.print(`${glyph(test.status)} ${this.label(test)}${duration}${error}`);
     });
     runner.on("service-added", (service: ServiceInstance) => {
       this.print(`${color(36, "◆")} service ${service.name} starting`);
       service.on("update", () => {
-        if (service.status === "ready") this.print(`${color(36, "◆")} service ${service.name} ready`);
+        if (service.status === "ready")
+          this.print(`${color(36, "◆")} service ${service.name} ready`);
         if (service.status === "failed") {
-          this.print(`${glyph("failed")} service ${service.name} failed${service.error ? `: ${service.error}` : ""}`);
+          this.print(
+            `${glyph("failed")} service ${service.name} failed${service.error ? `: ${service.error}` : ""}`,
+          );
           this.dumpTail(service);
         }
       });
       if (this.options.verbose) {
-        service.output.on("line", (line: OutputLine) => this.printLine(`svc:${service.name}`, line, true));
+        service.output.on("line", (line: OutputLine) =>
+          this.printLine(`svc:${service.name}`, line, true),
+        );
       }
     });
   }
@@ -83,7 +89,8 @@ export class ConsoleReporter {
     const lines: string[] = [];
     const visit = (test: RunTest) => {
       counts[test.status] = (counts[test.status] ?? 0) + 1;
-      const duration = test.startedAt && test.endedAt ? ` (${formatMs(test.endedAt - test.startedAt)})` : "";
+      const duration =
+        test.startedAt && test.endedAt ? ` (${formatMs(test.endedAt - test.startedAt)})` : "";
       lines.push(`${"  ".repeat(test.depth)}${glyph(test.status)} ${test.name}${duration}`);
       test.children.forEach(visit);
     };

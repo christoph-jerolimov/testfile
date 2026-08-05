@@ -53,14 +53,14 @@ test("validateSemantics accepts a valid needs DAG", () => {
       { name: "build", command: "true" },
       { name: "unit", needs: ["build"], command: "true" },
       { name: "report", needs: ["build", "unit"], command: "true" },
-    ])
+    ]),
   );
 });
 
 test("validateSemantics rejects unknown, ambiguous, self and cyclic needs", () => {
   assert.throws(
     () => validateSemantics(docWith([{ name: "a", needs: ["nope"], command: "true" }])),
-    /unknown sibling "nope"/
+    /unknown sibling "nope"/,
   );
   assert.throws(
     () =>
@@ -69,13 +69,13 @@ test("validateSemantics rejects unknown, ambiguous, self and cyclic needs", () =
           { name: "dup", command: "true" },
           { name: "dup", command: "true" },
           { name: "b", needs: ["dup"], command: "true" },
-        ])
+        ]),
       ),
-    /ambiguous sibling "dup"/
+    /ambiguous sibling "dup"/,
   );
   assert.throws(
     () => validateSemantics(docWith([{ name: "a", needs: ["a"], command: "true" }])),
-    /cannot need itself/
+    /cannot need itself/,
   );
   assert.throws(
     () =>
@@ -83,9 +83,9 @@ test("validateSemantics rejects unknown, ambiguous, self and cyclic needs", () =
         docWith([
           { name: "a", needs: ["b"], command: "true" },
           { name: "b", needs: ["a"], command: "true" },
-        ])
+        ]),
       ),
-    /cyclic needs/
+    /cyclic needs/,
   );
   assert.throws(
     () =>
@@ -93,7 +93,7 @@ test("validateSemantics rejects unknown, ambiguous, self and cyclic needs", () =
         version: 0,
         test: { sequence: [{ name: "a", needs: ["b"], command: "true" }] },
       }),
-    /only allowed on children of a parallel group/
+    /only allowed on children of a parallel group/,
   );
 });
 
@@ -114,11 +114,13 @@ function includeFixture(): string {
       "  name: a tests",
       // runs in packages/a thanks to the include workdir
       '  command: test -f marker-a && test "$PKG" = a',
-    ].join("\n")
+    ].join("\n"),
   );
   writeFileSync(
     join(dir, "packages", "b", "testfile.yaml"),
-    ["version: 0", "name: pkg-b", "ports:", "  web: random", "test:", "  command: 'true'"].join("\n")
+    ["version: 0", "name: pkg-b", "ports:", "  web: random", "test:", "  command: 'true'"].join(
+      "\n",
+    ),
   );
   writeFileSync(
     join(dir, "Testfile"),
@@ -132,7 +134,7 @@ function includeFixture(): string {
       "      include: packages/*",
       "    - name: single",
       "      include: ./packages/a",
-    ].join("\n")
+    ].join("\n"),
   );
   return dir;
 }
@@ -161,20 +163,17 @@ test("include cycles and missing targets are rejected", () => {
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   writeFileSync(
     join(dir, "Testfile"),
-    ["version: 0", "test:", "  include: ./other.yaml"].join("\n")
+    ["version: 0", "test:", "  include: ./other.yaml"].join("\n"),
   );
   writeFileSync(
     join(dir, "other.yaml"),
-    ["version: 0", "test:", "  include: ./Testfile"].join("\n")
+    ["version: 0", "test:", "  include: ./Testfile"].join("\n"),
   );
   assert.throws(() => loadTestfile(dir), /include cycle/);
 
   const dir2 = mkdtempSync(join(tmpdir(), "testfile-missing-"));
   process.on("exit", () => rmSync(dir2, { recursive: true, force: true }));
-  writeFileSync(
-    join(dir2, "Testfile"),
-    ["version: 0", "test:", "  include: ./nope"].join("\n")
-  );
+  writeFileSync(join(dir2, "Testfile"), ["version: 0", "test:", "  include: ./nope"].join("\n"));
   assert.throws(() => loadTestfile(dir2), /include "\.\/nope"/);
 });
 
@@ -183,17 +182,11 @@ test("conflicting included ports are rejected", () => {
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   writeFileSync(
     join(dir, "child.yaml"),
-    ["version: 0", "ports:", "  web: 8080", "test:", "  command: 'true'"].join("\n")
+    ["version: 0", "ports:", "  web: 8080", "test:", "  command: 'true'"].join("\n"),
   );
   writeFileSync(
     join(dir, "Testfile"),
-    [
-      "version: 0",
-      "ports:",
-      "  web: 9090",
-      "test:",
-      "  include: ./child.yaml",
-    ].join("\n")
+    ["version: 0", "ports:", "  web: 9090", "test:", "  include: ./child.yaml"].join("\n"),
   );
   assert.throws(() => loadTestfile(dir), /port "web".*conflicts/);
 });

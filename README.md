@@ -72,7 +72,15 @@ node viewer-ts/dist/cli.js tui          # browse the recorded runs
 
 # build the documentation website
 npm run build --workspace website
+
+# lint and format every JavaScript/TypeScript workspace
+npm run lint          # oxlint, configured in .oxlintrc.json
+npm run format        # oxfmt, configured in .oxfmtrc.json
 ```
+
+`npm run lint:fix` applies the fixes oxlint can make itself, and
+`npm run format:check` is what CI runs — the `lint` and `format` tests in
+[`Testfile`](Testfile) call both.
 
 ## GitHub Action
 

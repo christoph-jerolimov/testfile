@@ -24,7 +24,7 @@ test("parseEnvFile handles comments, export, quotes and inline comments", () => 
       "SINGLE='single # not a comment'",
       "TRAILING=value # comment",
     ].join("\n"),
-    "test"
+    "test",
   );
   assert.deepEqual(parsed, {
     PLAIN: "value",
@@ -54,7 +54,7 @@ test("envFile values reach tests, explicit env wins, logs are masked", async () 
         script: 'echo "secret is $SECRET"\ntest "$OVERRIDDEN" = explicit',
       },
     },
-    dir
+    dir,
   );
   assert.equal(await session.runAll(), "passed");
   // live output contains the value; the persisted log does not
@@ -65,10 +65,7 @@ test("envFile values reach tests, explicit env wins, logs are masked", async () 
   assert.ok(!log.includes("supersecretvalue"));
   // the record's env only contains explicit doc env
   assert.deepEqual(latest.run.env, { OVERRIDDEN: "explicit" });
-  const runYaml = readFileSync(
-    join(dir, ".testfile", "runs", latest.run.id, "run.yaml"),
-    "utf8"
-  );
+  const runYaml = readFileSync(join(dir, ".testfile", "runs", latest.run.id, "run.yaml"), "utf8");
   assert.ok(!runYaml.includes("supersecretvalue"));
 });
 
@@ -90,7 +87,7 @@ test("test-level envFile resolves relative to the test workdir", async () => {
         ],
       },
     },
-    dir
+    dir,
   );
   assert.equal(await session.runAll(), "passed");
 });
@@ -99,7 +96,7 @@ test("a missing env file fails the run", async () => {
   const dir = tempDir();
   const session = new Session(
     { version: 0, envFile: ".env.missing", test: { command: "true" } },
-    dir
+    dir,
   );
   assert.equal(await session.runAll(), "failed");
   assert.match(session.runner!.root.error ?? "", /cannot read env file/);
@@ -126,18 +123,21 @@ test("secrets are forwarded from the host and masked in the record", async () =>
           command: 'test "$TESTFILE_TEST_TOKEN" = "s3cr3t-value" && echo "token is s3cr3t-value"',
         },
       },
-      dir
+      dir,
     );
     assert.equal(await session.runAll(), "passed");
 
     const record = session.lastRecord!;
     const history = new (await import("./history.js")).RunHistory(dir);
-    const log = history.readLog(record, record.tests.find((t) => t.path === "root")!)!;
+    const log = history.readLog(
+      record,
+      record.tests.find((t) => t.path === "root")!,
+    )!;
     assert.ok(!log.includes("s3cr3t-value"), "the secret is masked in the recorded log");
     assert.ok(log.includes("***"), "and replaced by a mask");
     assert.ok(
       !JSON.stringify(record.env).includes("s3cr3t-value"),
-      "and masked where it appears in the recorded env"
+      "and masked where it appears in the recorded env",
     );
   } finally {
     delete process.env.TESTFILE_TEST_TOKEN;

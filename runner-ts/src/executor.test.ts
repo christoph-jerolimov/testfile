@@ -7,7 +7,10 @@ import { Runner } from "./executor.js";
 import type { TestfileDoc } from "./model.js";
 import { buildRunSuite, type RunTest } from "./runsuite.js";
 
-function makeRunner(doc: TestfileDoc, options: ConstructorParameters<typeof Runner>[3] = {}): Runner {
+function makeRunner(
+  doc: TestfileDoc,
+  options: ConstructorParameters<typeof Runner>[3] = {},
+): Runner {
   return new Runner(doc, buildRunSuite(doc), process.cwd(), options);
 }
 
@@ -272,7 +275,7 @@ test("needs orders parallel children and runs dependents after dependencies", as
   assert.equal(dependent.name, "late-start");
   assert.ok(
     dependent.startedAt! >= dependency.endedAt!,
-    "dependent must start after its dependency finished"
+    "dependent must start after its dependency finished",
   );
 });
 
@@ -427,7 +430,7 @@ test("failFast aborts the rest of the run at the first failure", async () => {
         ],
       },
     },
-    { failFast: true }
+    { failFast: true },
   );
   const startedAt = Date.now();
   assert.equal(await runner.run(), "failed");
@@ -450,7 +453,7 @@ test("a global maxParallel caps concurrency across groups", async () => {
         ],
       },
     },
-    { maxParallel: 1 }
+    { maxParallel: 1 },
   );
   const startedAt = Date.now();
   assert.equal(await runner.run(), "passed");
@@ -612,7 +615,7 @@ test("--forward-env (runner option) forwards like the document field", async () 
   try {
     const runner = makeRunner(
       { version: 0, test: { command: 'test "$TESTFILE_CLI_FWD" = "cli"' } },
-      { forwardEnv: ["TESTFILE_CLI_*"] }
+      { forwardEnv: ["TESTFILE_CLI_*"] },
     );
     assert.equal(await runner.run(), "passed");
   } finally {

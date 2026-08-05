@@ -59,7 +59,7 @@ export function buildRunSuite(doc: TestfileDoc): RunTest {
     depth: number,
     parentPath: string,
     expandOwnMatrix: boolean,
-    nameOverride?: string
+    nameOverride?: string,
   ): RunTest {
     const name = nameOverride ?? defaultName(def);
     const path = parentPath ? `${parentPath}/${name}` : name;
@@ -85,7 +85,7 @@ export function buildRunSuite(doc: TestfileDoc): RunTest {
           depth + 1,
           path,
           false,
-          `${defaultName(def)} (${comboLabel(combo)})`
+          `${defaultName(def)} (${comboLabel(combo)})`,
         );
         instance.parent = wrapper;
         return instance;

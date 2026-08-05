@@ -31,7 +31,7 @@ test("collectTags counts inherited tags on leaves and untagged tests", () => {
           { name: "d", command: "true" },
         ],
       },
-    })
+    }),
   );
 
   assert.equal(summary.tests, 4);
@@ -39,7 +39,7 @@ test("collectTags counts inherited tags on leaves and untagged tests", () => {
   assert.deepEqual(
     summary.tags.map(({ name, count, appearance }) => `${appearance}:${name}=${count}`),
     ["0:fast=2", "1:slow=2", "2:nightly=2"],
-    "appearance follows document order; group tags count for every nested leaf"
+    "appearance follows document order; group tags count for every nested leaf",
   );
 });
 
@@ -58,7 +58,7 @@ test("collectTags counts every matrix instance", () => {
           },
         ],
       },
-    })
+    }),
   );
   assert.deepEqual(summary.tags, [{ name: "db", appearance: 0, count: 2 }]);
   assert.equal(summary.tests, 2);
@@ -70,13 +70,7 @@ test("tags from included Testfiles are part of the inventory", () => {
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   writeFileSync(
     join(dir, "child.yaml"),
-    [
-      "version: 0",
-      "test:",
-      "  name: child",
-      "  tags: [included]",
-      "  command: 'true'",
-    ].join("\n")
+    ["version: 0", "test:", "  name: child", "  tags: [included]", "  command: 'true'"].join("\n"),
   );
   writeFileSync(
     join(dir, "Testfile"),
@@ -90,15 +84,15 @@ test("tags from included Testfiles are part of the inventory", () => {
       "      command: 'true'",
       "    - name: sub",
       "      include: child.yaml",
-    ].join("\n")
+    ].join("\n"),
   );
 
   const { doc } = loadTestfile(dir);
   const summary = collectTags(new Session(doc, dir).suite);
-  assert.deepEqual(
-    summary.tags.map((tag) => `${tag.name}=${tag.count}`).sort(),
-    ["included=1", "local=1"]
-  );
+  assert.deepEqual(summary.tags.map((tag) => `${tag.name}=${tag.count}`).sort(), [
+    "included=1",
+    "local=1",
+  ]);
 });
 
 test("sortTags orders alphabetically, by appearance or by count", () => {
@@ -107,11 +101,17 @@ test("sortTags orders alphabetically, by appearance or by count", () => {
     { name: "alpha", appearance: 1, count: 3 },
     { name: "mid", appearance: 2, count: 3 },
   ];
-  assert.deepEqual(sortTags(tags, "alpha").map((t) => t.name), ["alpha", "mid", "zeta"]);
-  assert.deepEqual(sortTags(tags, "appearance").map((t) => t.name), ["zeta", "alpha", "mid"]);
+  assert.deepEqual(
+    sortTags(tags, "alpha").map((t) => t.name),
+    ["alpha", "mid", "zeta"],
+  );
+  assert.deepEqual(
+    sortTags(tags, "appearance").map((t) => t.name),
+    ["zeta", "alpha", "mid"],
+  );
   assert.deepEqual(
     sortTags(tags, "count").map((t) => t.name),
     ["alpha", "mid", "zeta"],
-    "count descending, ties alphabetical"
+    "count descending, ties alphabetical",
   );
 });

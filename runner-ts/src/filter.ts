@@ -27,7 +27,10 @@ export function hasFilters(filters: TestFilters): boolean {
 
 // Sorts the generic --filter values: anything with a ":" is a matrix spec,
 // the rest matches names or tags.
-export function splitGenericFilters(values: string[]): { nameOrTag: string[]; matrixSpecs: string[] } {
+export function splitGenericFilters(values: string[]): {
+  nameOrTag: string[];
+  matrixSpecs: string[];
+} {
   const nameOrTag: string[] = [];
   const matrixSpecs: string[] = [];
   for (const raw of values) {
@@ -92,7 +95,7 @@ export function filterByLastFailed(tests: RunTest[], lastRun: RunRecord | undefi
   const failedPaths = new Set(
     lastRun.tests
       .filter((test) => test.status === "failed" || test.status === "aborted")
-      .map((test) => test.path)
+      .map((test) => test.path),
   );
   return tests.filter((test) => failedPaths.has(test.path));
 }

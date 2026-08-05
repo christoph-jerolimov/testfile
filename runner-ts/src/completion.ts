@@ -30,17 +30,17 @@ _${model.program}_completions() {
   local cur cmd opts
   cur="\${COMP_WORDS[COMP_CWORD]}"
   cmd="\${COMP_WORDS[1]}"
-  if [ "\$COMP_CWORD" -eq 1 ]; then
-    COMPREPLY=( \$(compgen -W "${commandNames}" -- "\$cur") )
+  if [ "$COMP_CWORD" -eq 1 ]; then
+    COMPREPLY=( $(compgen -W "${commandNames}" -- "$cur") )
     return
   fi
-  case "\$cmd" in
+  case "$cmd" in
 ${cases}
     *) opts="" ;;
   esac
-  case "\$cur" in
-    -*) COMPREPLY=( \$(compgen -W "\$opts" -- "\$cur") ) ;;
-    *) COMPREPLY=( \$(compgen -f -- "\$cur") ) ;;
+  case "$cur" in
+    -*) COMPREPLY=( $(compgen -W "$opts" -- "$cur") ) ;;
+    *) COMPREPLY=( $(compgen -f -- "$cur") ) ;;
   esac
 }
 complete -F _${model.program}_completions ${model.program}
@@ -52,7 +52,10 @@ function zsh(model: CompletionModel): string {
     .map((c) => `    '${c.name}:${c.description.replace(/'/g, "")}'`)
     .join("\n");
   const cases = model.commands
-    .map((c) => `      ${c.name}) _arguments ${c.flags.map((f) => `'${f}'`).join(" ")} '*:file:_files' ;;`)
+    .map(
+      (c) =>
+        `      ${c.name}) _arguments ${c.flags.map((f) => `'${f}'`).join(" ")} '*:file:_files' ;;`,
+    )
     .join("\n");
   return `#compdef ${model.program}
 # zsh completion for ${model.program}
@@ -65,13 +68,13 @@ ${commandLines}
   if (( CURRENT == 2 )); then
     _describe 'command' commands
   else
-    case "\$words[2]" in
+    case "$words[2]" in
 ${cases}
       *) _files ;;
     esac
   fi
 }
-_${model.program} "\$@"
+_${model.program} "$@"
 `;
 }
 
@@ -84,14 +87,14 @@ function fish(model: CompletionModel): string {
   for (const command of model.commands) {
     const description = command.description.replace(/'/g, "");
     lines.push(
-      `complete -c ${model.program} -n __fish_use_subcommand -a ${command.name} -d '${description}'`
+      `complete -c ${model.program} -n __fish_use_subcommand -a ${command.name} -d '${description}'`,
     );
     for (const flag of command.flags) {
       const long = flag.startsWith("--") ? flag.slice(2) : undefined;
       const short = !flag.startsWith("--") && flag.startsWith("-") ? flag.slice(1) : undefined;
       const spec = long ? `-l ${long}` : `-s ${short}`;
       lines.push(
-        `complete -c ${model.program} -n "__fish_seen_subcommand_from ${command.name}" ${spec}`
+        `complete -c ${model.program} -n "__fish_seen_subcommand_from ${command.name}" ${spec}`,
       );
     }
   }

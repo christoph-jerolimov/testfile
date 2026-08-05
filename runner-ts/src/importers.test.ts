@@ -41,7 +41,11 @@ services:
   assert.deepEqual(api.needs, ["db"], "depends_on becomes health-gated needs");
   assert.deepEqual(api.container!.ports, ["${{ ports.api }}:3000"], "the container port is kept");
   assert.deepEqual(api.container!.env, { TOKEN: "abc" }, "list-style environment is parsed");
-  assert.deepEqual(api.ready, { tcp: "${{ ports.api }}", timeout: "60s" }, "no healthcheck: wait for the port");
+  assert.deepEqual(
+    api.ready,
+    { tcp: "${{ ports.api }}", timeout: "60s" },
+    "no healthcheck: wait for the port",
+  );
 });
 
 test("compose services without image or checks are reported", () => {
@@ -55,9 +59,12 @@ services:
   assert.deepEqual(result.services.worker.ready, undefined);
   assert.ok(
     result.notes.some((note) => note.includes('"worker"') && note.includes("ready")),
-    "a service without ports and healthcheck is flagged"
+    "a service without ports and healthcheck is flagged",
   );
-  assert.ok(result.notes.some((note) => note.includes("build:")), "build-only services are flagged");
+  assert.ok(
+    result.notes.some((note) => note.includes("build:")),
+    "build-only services are flagged",
+  );
 });
 
 test("GitHub workflow run steps become tests, action steps are dropped", () => {
@@ -79,11 +86,11 @@ jobs:
   assert.deepEqual(
     result.tests.map((entry) => entry.name),
     ["build", "linting"],
-    "one test per job, the job's name wins"
+    "one test per job, the job's name wins",
   );
   assert.deepEqual(
     result.tests[0].sequence!.map((step) => step.name),
-    ["install", "unit"]
+    ["install", "unit"],
   );
   assert.equal(result.tests[1].script, "npm run lint", "a single step collapses into the job");
   assert.ok(result.notes.some((note) => note.includes("action step")));
@@ -91,16 +98,18 @@ jobs:
 
 test("Makefile, Taskfile and justfile contribute their check targets", () => {
   assert.deepEqual(
-    fromMakefile("all: test\n\ntest:\n\tgo test ./...\n\nbuild:\n\tgo build\n\nlint:\n\tvet\n").tests,
+    fromMakefile("all: test\n\ntest:\n\tgo test ./...\n\nbuild:\n\tgo build\n\nlint:\n\tvet\n")
+      .tests,
     [
       { name: "test", command: "make test" },
       { name: "lint", command: "make lint" },
     ],
-    "only test-ish targets, and never the phony all/clean"
+    "only test-ish targets, and never the phony all/clean",
   );
-  assert.deepEqual(fromTaskfile("tasks:\n  test:\n    cmds: [go test]\n  deploy:\n    cmds: [ship]\n").tests, [
-    { name: "test", command: "task test" },
-  ]);
+  assert.deepEqual(
+    fromTaskfile("tasks:\n  test:\n    cmds: [go test]\n  deploy:\n    cmds: [ship]\n").tests,
+    [{ name: "test", command: "task test" }],
+  );
   assert.deepEqual(fromJustfile("test:\n    cargo test\n\ndeploy target:\n    ship\n").tests, [
     { name: "test", command: "just test" },
   ]);

@@ -44,7 +44,7 @@ export class Session extends EventEmitter {
       forwardEnv?: string[];
       // Recorded with the run, e.g. { platform: linux } - see --variant.
       variants?: Record<string, string>;
-    } = {}
+    } = {},
   ) {
     super();
     validateSemantics(doc);
@@ -71,12 +71,14 @@ export class Session extends EventEmitter {
 
   async runSelected(
     selection: Iterable<number>,
-    options: { exclude?: (test: RunTest) => boolean } = {}
+    options: { exclude?: (test: RunTest) => boolean } = {},
   ): Promise<Status | undefined> {
     if (this.running) return undefined;
     const selectedIds = [...selection];
     const active = this.activeSetFor(selectedIds);
     if (options.exclude) {
+      // iterate over a copy: the loop deletes from `active`
+      // oxlint-disable-next-line no-useless-spread
       for (const id of [...active]) {
         const test = this.byId.get(id);
         if (test && options.exclude(test)) active.delete(id);
@@ -125,7 +127,7 @@ export class Session extends EventEmitter {
     selectedIds: number[],
     status: Status,
     startedAtMs: number,
-    durationMs: number
+    durationMs: number,
   ): void {
     // Values loaded from env files never reach the recorded logs or record.
     const secrets = [...runner.secrets].filter((secret) => secret.length >= 4);
@@ -163,7 +165,7 @@ export class Session extends EventEmitter {
         machine: detectMachine(),
         variants: this.runDefaults.variants,
         env: Object.fromEntries(
-          Object.entries(runner.docEnv).map(([key, value]) => [key, maskSecrets(value, secrets)])
+          Object.entries(runner.docEnv).map(([key, value]) => [key, maskSecrets(value, secrets)]),
         ),
         ports: runner.ports,
         selected: selectedIds
@@ -176,7 +178,7 @@ export class Session extends EventEmitter {
         name: service.name,
         status: service.status,
         lines: mask(service.output.lines),
-      }))
+      })),
     );
   }
 }

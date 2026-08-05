@@ -10,7 +10,7 @@ test("CI actor names win over anything else", () => {
   assert.equal(
     detect({ GITHUB_ACTOR: "octocat", GITLAB_USER_LOGIN: "gl-user" }),
     "octocat",
-    "GitHub first"
+    "GitHub first",
   );
 });
 

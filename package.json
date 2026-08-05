@@ -2,7 +2,7 @@
   "name": "testfile-monorepo",
   "private": true,
   "version": "0.1.0",
-  "description": "Testfile \u2014 a declarative YAML format for running test suites with services, matrices and dynamic ports",
+  "description": "Testfile — a declarative YAML format for running test suites with services, matrices and dynamic ports",
   "license": "Apache-2.0",
   "workspaces": [
     "schema",
@@ -15,9 +15,17 @@
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
-    "test": "npm test --workspaces --if-present"
+    "test": "npm test --workspaces --if-present",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.62.0",
+    "oxlint": "^1.77.0"
   }
 }

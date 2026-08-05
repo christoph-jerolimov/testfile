@@ -105,8 +105,8 @@ export function runsTable(runs: readonly RunRecord[]): { header: string; rows: s
     (run) =>
       `${pad(run.startedAt.replace("T", " ").slice(0, 19), 19)}  ${pad(run.status, 7)}  ${pad(
         formatMs(run.durationMs),
-        8
-      )}  ${width > 0 ? `${pad(label(run), width)}  ` : ""}${testSummary(run)}`
+        8,
+      )}  ${width > 0 ? `${pad(label(run), width)}  ` : ""}${testSummary(run)}`,
   );
   return { header, rows };
 }
@@ -129,7 +129,13 @@ export function recordedTests(history: RunHistory): RecordedTest[] {
         // runs are newest first, so the first occurrence is the latest one
         byPath.set(
           test.path,
-          (entry = { path: test.path, occurrences: 0, passes: 0, fails: 0, lastStatus: test.status })
+          (entry = {
+            path: test.path,
+            occurrences: 0,
+            passes: 0,
+            fails: 0,
+            lastStatus: test.status,
+          }),
         );
       }
       entry.occurrences++;
@@ -168,7 +174,7 @@ export function testHistoryLines(path: string, history: RunHistory): OutputLine[
     lines.push({
       text: `${pad(run.id, idWidth)}  ${pad(run.startedAt.replace("T", " ").slice(0, 19), 19)}  ${pad(
         test.status,
-        8
+        8,
       )}  ${pad(test.durationMs !== undefined ? formatMs(test.durationMs) : "-", 8)}  ${notes}`.trimEnd(),
       stream: test.status === "failed" || test.status === "aborted" ? "stderr" : "stdout",
     });
@@ -206,7 +212,11 @@ export function scrollToLine(totalLines: number, height: number, line: number): 
 
 // Slices the tail of a log for display: scroll = 0 follows the end, larger
 // values scroll back. Returns the window plus how many lines are above it.
-export function logWindow<T>(lines: T[], height: number, scroll: number): { window: T[]; above: number } {
+export function logWindow<T>(
+  lines: T[],
+  height: number,
+  scroll: number,
+): { window: T[]; above: number } {
   const maxScroll = Math.max(0, lines.length - height);
   const clamped = Math.min(scroll, maxScroll);
   const end = lines.length - clamped;

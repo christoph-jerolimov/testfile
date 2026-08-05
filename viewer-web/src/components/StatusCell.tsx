@@ -1,6 +1,12 @@
 import React from "react";
 
-export function StatusCell({ status, cached }: { status: string; cached?: boolean }): React.ReactElement {
+export function StatusCell({
+  status,
+  cached,
+}: {
+  status: string;
+  cached?: boolean;
+}): React.ReactElement {
   const glyph =
     status === "passed"
       ? "✔"

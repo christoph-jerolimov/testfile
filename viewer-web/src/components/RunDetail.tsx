@@ -5,7 +5,10 @@ import type { RunRecord } from "../types.js";
 import { Log } from "./Log.js";
 import { StatusCell } from "./StatusCell.js";
 
-type LogChoice = { kind: "run" } | { kind: "test"; path: string } | { kind: "service"; name: string };
+type LogChoice =
+  | { kind: "run" }
+  | { kind: "test"; path: string }
+  | { kind: "service"; name: string };
 
 export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
   const [choice, setChoice] = useState<LogChoice>({ kind: "run" });
@@ -47,8 +50,7 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
           <ul>
             {run.merged.runs.map((source) => (
               <li key={source.id}>
-                <StatusCell status={source.status} />{" "}
-                <span className="mono">{source.id}</span>
+                <StatusCell status={source.status} /> <span className="mono">{source.id}</span>
                 {variantLabel(source.variants) ? (
                   <span className="variant">{variantLabel(source.variants)}</span>
                 ) : null}
@@ -71,7 +73,9 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
           {run.tests.map((test) => (
             <tr
               key={`${test.path} ${test.origin ?? ""}`}
-              className={choice.kind === "test" && choice.path === test.path ? "selected" : undefined}
+              className={
+                choice.kind === "test" && choice.path === test.path ? "selected" : undefined
+              }
             >
               <td className="mono">
                 {test.path}
@@ -86,7 +90,10 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
               <td>{formatMs(test.durationMs)}</td>
               <td>
                 {test.log ? (
-                  <button className="link" onClick={() => setChoice({ kind: "test", path: test.path })}>
+                  <button
+                    className="link"
+                    onClick={() => setChoice({ kind: "test", path: test.path })}
+                  >
                     show
                   </button>
                 ) : (
@@ -101,7 +108,9 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
           {(run.services ?? []).map((service) => (
             <tr
               key={`svc-${service.name}`}
-              className={choice.kind === "service" && choice.name === service.name ? "selected" : undefined}
+              className={
+                choice.kind === "service" && choice.name === service.name ? "selected" : undefined
+              }
             >
               <td className="mono">service {service.name}</td>
               <td>
@@ -110,7 +119,10 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
               <td>-</td>
               <td>
                 {service.log ? (
-                  <button className="link" onClick={() => setChoice({ kind: "service", name: service.name })}>
+                  <button
+                    className="link"
+                    onClick={() => setChoice({ kind: "service", name: service.name })}
+                  >
                     show
                   </button>
                 ) : (
@@ -127,7 +139,9 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
         ) : (
           <>
             log of{" "}
-            <span className="mono">{choice.kind === "test" ? choice.path : `service ${choice.name}`}</span>{" "}
+            <span className="mono">
+              {choice.kind === "test" ? choice.path : `service ${choice.name}`}
+            </span>{" "}
             <button className="link" onClick={() => setChoice({ kind: "run" })}>
               (show merged log)
             </button>

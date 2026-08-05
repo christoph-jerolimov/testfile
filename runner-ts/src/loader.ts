@@ -50,7 +50,7 @@ export function validateSemantics(doc: TestfileDoc): void {
   // must not form a cycle (nothing would ever start).
   const checkServiceNeeds = (
     services: Record<string, ServiceDef> | undefined,
-    where: string
+    where: string,
   ): void => {
     const entries = Object.entries(services ?? {});
     if (entries.length === 0) return;
@@ -85,10 +85,14 @@ export function validateSemantics(doc: TestfileDoc): void {
   const visit = (def: TestDef, path: string, inParallel: boolean): void => {
     checkServiceNeeds(def.services, `${path} services`);
     if (def.include !== undefined) {
-      errors.push(`${path}: unresolved include - includes are expanded when loading a Testfile from disk`);
+      errors.push(
+        `${path}: unresolved include - includes are expanded when loading a Testfile from disk`,
+      );
     }
     if (def.foreach !== undefined) {
-      errors.push(`${path}: unresolved foreach - foreach is expanded when loading a Testfile from disk`);
+      errors.push(
+        `${path}: unresolved foreach - foreach is expanded when loading a Testfile from disk`,
+      );
     }
     if (def.needs?.length && !inParallel) {
       errors.push(`${path}: "needs" is only allowed on children of a parallel group`);
@@ -108,7 +112,9 @@ export function validateSemantics(doc: TestfileDoc): void {
           } else if (!counts.has(needed)) {
             errors.push(`${path}/${childName}: needs unknown sibling "${needed}"`);
           } else if (counts.get(needed)! > 1) {
-            errors.push(`${path}/${childName}: needs ambiguous sibling "${needed}" (name appears more than once)`);
+            errors.push(
+              `${path}/${childName}: needs ambiguous sibling "${needed}" (name appears more than once)`,
+            );
           }
         }
       }
@@ -161,7 +167,9 @@ function expandTest(root: TestfileDoc, def: TestDef, baseDir: string, stack: str
     const pattern = def.include;
     const where = `include "${pattern}"`;
     if (def.workdir !== undefined) {
-      throw new Error(`${where}: "workdir" cannot be combined with include (the included file's directory is used)`);
+      throw new Error(
+        `${where}: "workdir" cannot be combined with include (the included file's directory is used)`,
+      );
     }
     const matches = /[*?[\]{}]/.test(pattern)
       ? globSync(pattern, { cwd: baseDir })
@@ -211,7 +219,9 @@ function embedFile(root: TestfileDoc, pathOrDir: string, stack: string[], where:
   for (const [name, value] of Object.entries(included.ports ?? {})) {
     const existing = root.ports?.[name];
     if (existing !== undefined && existing !== value) {
-      throw new Error(`${where}: port "${name}" (${value}) conflicts with an existing port (${existing})`);
+      throw new Error(
+        `${where}: port "${name}" (${value}) conflicts with an existing port (${existing})`,
+      );
     }
     root.ports = { ...root.ports, [name]: value };
   }

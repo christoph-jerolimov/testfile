@@ -16,7 +16,7 @@ export function s3Push(
   baseDir: string,
   runId: string,
   prefix: string,
-  exec: Exec = defaultExec
+  exec: Exec = defaultExec,
 ): string {
   const tmp = mkdtempSync(join(tmpdir(), "testfile-push-"));
   try {
@@ -54,7 +54,7 @@ export function s3Pull(
   baseDir: string,
   prefix: string,
   runId: string | undefined,
-  exec: Exec = defaultExec
+  exec: Exec = defaultExec,
 ): ImportResult & { archive: string } {
   const name = runId ? `${runId}.tgz` : s3List(prefix, exec)[0];
   if (!name) throw new Error(`no run archives found under ${prefix}`);
@@ -71,4 +71,3 @@ export function s3Pull(
     rmSync(tmp, { recursive: true, force: true });
   }
 }
-

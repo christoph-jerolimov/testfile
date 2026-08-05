@@ -25,7 +25,11 @@ test("inputsHash tracks content and file identity", () => {
   assert.notEqual(changedContent, first, "content changes the hash");
   rmSync(join(dir, "src", "a.ts"));
   writeFileSync(join(dir, "src", "b.ts"), "two");
-  assert.notEqual(ResultCache.inputsHash(dir, ["src/**/*.ts"]), changedContent, "renames change the hash");
+  assert.notEqual(
+    ResultCache.inputsHash(dir, ["src/**/*.ts"]),
+    changedContent,
+    "renames change the hash",
+  );
 });
 
 test("configKey distinguishes source, env and matrix", () => {
@@ -42,7 +46,7 @@ function cachingDoc(): TestfileDoc {
     test: {
       name: "unit",
       inputs: ["input.txt"],
-      script: 'echo ran >> ran.log\ngrep -q good input.txt',
+      script: "echo ran >> ran.log\ngrep -q good input.txt",
     },
   };
 }
@@ -118,7 +122,11 @@ test("predictCacheHits marks unchanged tests without running them", async () => 
     test: {
       name: "root",
       sequence: [
-        { name: "cachable", inputs: ["input.txt"], script: "echo ran >> ran.log\ngrep -q good input.txt" },
+        {
+          name: "cachable",
+          inputs: ["input.txt"],
+          script: "echo ran >> ran.log\ngrep -q good input.txt",
+        },
         { name: "plain", command: "true" },
       ],
     },
@@ -129,7 +137,11 @@ test("predictCacheHits marks unchanged tests without running them", async () => 
   const active = session.activeSetFor([session.suite.id]);
   const before = readFileSync(join(dir, "ran.log"), "utf8");
   const hits = await predictCacheHits(session, active);
-  assert.equal(readFileSync(join(dir, "ran.log"), "utf8"), before, "prediction must not execute anything");
+  assert.equal(
+    readFileSync(join(dir, "ran.log"), "utf8"),
+    before,
+    "prediction must not execute anything",
+  );
   assert.equal(hits.size, 1);
   const hitNode = session.byId.get([...hits][0])!;
   assert.equal(hitNode.name, "cachable");
@@ -169,17 +181,14 @@ test("gitChangedSelection picks tests whose inputs match changed files", async (
   assert.deepEqual(
     miss.ids.map((id) => session.byId.get(id)!.name),
     ["plain"],
-    "no matching input: only inputs-less tests count as changed"
+    "no matching input: only inputs-less tests count as changed",
   );
 
   const hit = await gitChangedSelection(session, active, {
     ...base,
     files: [{ path: "input.txt", source: "local" as const, status: "modified" as const }],
   });
-  assert.deepEqual(
-    hit.ids.map((id) => session.byId.get(id)!.name).sort(),
-    ["cachable", "plain"]
-  );
+  assert.deepEqual(hit.ids.map((id) => session.byId.get(id)!.name).sort(), ["cachable", "plain"]);
   const cachableId = hit.ids.find((id) => session.byId.get(id)!.name === "cachable")!;
   const note = hit.notes.get(cachableId)!;
   assert.match(note, /selected by --changed against origin\/main/);

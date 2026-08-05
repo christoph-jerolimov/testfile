@@ -7,7 +7,7 @@ export function registerGitlab(program: Command): void {
   const gitlabCommand = program
     .command("gitlab")
     .description(
-      "Bring run artifacts of GitLab CI jobs into the local history (needs GITLAB_TOKEN)"
+      "Bring run artifacts of GitLab CI jobs into the local history (needs GITLAB_TOKEN)",
     );
 
   function gitlabToken(): string {
@@ -22,7 +22,7 @@ export function registerGitlab(program: Command): void {
         "--latest <n>",
         "number of recent pipelines to consider",
         (value: string) => Number.parseInt(value, 10),
-        5
+        5,
       )
       .option("--job <name>", "job whose artifacts hold the run", "testfile")
       .option("--ref <ref>", "only pipelines for this branch or tag")
@@ -33,12 +33,12 @@ export function registerGitlab(program: Command): void {
       .command("sync")
       .argument("<project>", 'project path ("group/project") or numeric id')
       .argument("[path]", "directory containing a .testfile folder", ".")
-      .description("Download the run artifacts of recent pipelines and import them")
+      .description("Download the run artifacts of recent pipelines and import them"),
   ).action(
     async (
       project: string,
       path: string,
-      options: { latest: number; job: string; ref?: string; host: string }
+      options: { latest: number; job: string; ref?: string; host: string },
     ) => {
       try {
         if (!(options.latest >= 1)) throw new Error("--latest must be a positive integer");
@@ -52,23 +52,26 @@ export function registerGitlab(program: Command): void {
         });
         if (result.archives === 0) {
           console.log(
-            color(90, `no "${options.job}" job artifacts in the last ${options.latest} pipelines`)
+            color(90, `no "${options.job}" job artifacts in the last ${options.latest} pipelines`),
           );
         }
         reportImport(result);
       } catch (err) {
         commandFailed(err);
       }
-    }
+    },
   );
 
   addOptions(
     gitlabCommand
       .command("list")
       .argument("<project>", 'project path ("group/project") or numeric id')
-      .description("List the run artifacts available in recent pipelines")
+      .description("List the run artifacts available in recent pipelines"),
   ).action(
-    async (project: string, options: { latest: number; job: string; ref?: string; host: string }) => {
+    async (
+      project: string,
+      options: { latest: number; job: string; ref?: string; host: string },
+    ) => {
       try {
         if (!(options.latest >= 1)) throw new Error("--latest must be a positive integer");
         const archives = await gitlabRunArchives({
@@ -81,7 +84,7 @@ export function registerGitlab(program: Command): void {
         });
         if (archives.length === 0) {
           console.log(
-            color(90, `no "${options.job}" job artifacts in the last ${options.latest} pipelines`)
+            color(90, `no "${options.job}" job artifacts in the last ${options.latest} pipelines`),
           );
           return;
         }
@@ -99,6 +102,6 @@ export function registerGitlab(program: Command): void {
       } catch (err) {
         commandFailed(err);
       }
-    }
+    },
   );
 }

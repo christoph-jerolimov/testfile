@@ -38,7 +38,11 @@ test("the runs table only shows a variants column when there is one", () => {
   ]);
   assert.ok(withVariants.header.includes("VARIANTS"));
   assert.match(withVariants.rows[0], /platform=linux/);
-  assert.match(withVariants.rows[1], /platform=linux\|windows/, "a merged run lists what it combined");
+  assert.match(
+    withVariants.rows[1],
+    /platform=linux\|windows/,
+    "a merged run lists what it combined",
+  );
 });
 
 test("a merged run describes its legs and tags every test", () => {
@@ -67,7 +71,7 @@ test("a merged run describes its legs and tags every test", () => {
         { path: "ci/unit", status: "passed", variants: { platform: "linux" } },
         { path: "ci/unit", status: "failed", variants: { platform: "windows" } },
       ],
-    })
+    }),
   ).map((line) => line.text);
 
   assert.ok(lines.some((line) => line.includes("merged:    2 runs (platform=linux|windows)")));
