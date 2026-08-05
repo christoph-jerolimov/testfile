@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -68,7 +68,7 @@ test("s3List returns archives newest first, s3Pull imports the latest", { skip: 
     "2026-01-01 09:00:05        120 20251231-090000-aaaa.tgz",
     "", // trailing blank line
   ].join("\n");
-  const { exec, calls } = fakeAws((command, args) => {
+  const { exec, calls } = fakeAws((_command, args) => {
     if (args[1] === "ls") return { status: 0, stdout: listing };
     if (args[1] === "cp") {
       cpSync(prepared, args[3]); // "download" to the requested local file

@@ -39,8 +39,3 @@ export function detect(env: NodeJS.ProcessEnv = process.env): string | undefined
   const host = hostname();
   return host && host !== "localhost" ? host : undefined;
 }
-
-// Test seam: forget a detected value.
-export function resetMachineCache(): void {
-  cached = null;
-}

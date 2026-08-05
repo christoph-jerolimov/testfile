@@ -6,7 +6,7 @@ import { test } from "node:test";
 import {
   effectiveTags,
   filterByLastFailed,
-  matchesMatrixFilters,
+  
   parseMatrixFilters,
   parseTagFilters,
   selectTests,

@@ -1,7 +1,7 @@
 // Read-only access to recorded Testfile runs. The viewer NEVER writes into
 // .testfile/ - runs are produced by a runner (any implementation following
 // the result format in spec/) and only consumed here.
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
 
