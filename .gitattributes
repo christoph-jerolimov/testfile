@@ -1,0 +1,8 @@
+# Every text file is checked out with LF, on Windows too: the formatter
+# check, the runner's fixtures and the recorded logs (which the result
+# format defines as "\n"-terminated) all compare bytes.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.zip binary
