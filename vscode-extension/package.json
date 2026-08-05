@@ -40,6 +40,10 @@
         "title": "Testfile: Run Test at Cursor"
       },
       {
+        "command": "testfile.doctor",
+        "title": "Testfile: Check This Machine (doctor)"
+      },
+      {
         "command": "testfile.openTui",
         "title": "Testfile: Open the Viewer TUI"
       },

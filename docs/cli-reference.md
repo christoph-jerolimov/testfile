@@ -109,6 +109,18 @@ GitHub workflow steps and Make/Task/just targets.
 | `--from <file>` | Import this file instead of the auto-detected ones: a docker-compose file, a GitHub workflow, a `Makefile`, a `Taskfile` or a `justfile`. Repeatable. |
 | `--no-detect` | Do not look for importable files automatically. |
 
+### `testfile doctor [path]`
+
+Check this machine against what the Testfile needs, before a run finds out
+the hard way: Node.js version, git (and whether the folder is inside a work
+tree), every `shell:` the tests invoke, a container engine when the file
+starts containers, the fixed `ports:` and a writable `.testfile/`. Exits `1`
+when a check fails; warnings (a missing git, for instance) do not.
+
+| Option | Description |
+| ------ | ----------- |
+| `--json [file]` | Write the checks as JSON (`{status, checks: [{name, status, detail, hint}]}`), to a file or (without a value) stdout. |
+
 ### `testfile completion <shell>`
 
 Print a completion script for `bash`, `zsh` or `fish` — see

@@ -5,6 +5,7 @@
 import { Command } from "commander";
 import { registerChanges } from "./commands/changes.js";
 import { registerCompletion } from "./commands/completion.js";
+import { registerDoctor } from "./commands/doctor.js";
 import { registerInit } from "./commands/init.js";
 import { registerList } from "./commands/list.js";
 import { registerRun } from "./commands/run.js";
@@ -25,6 +26,7 @@ registerList(program);
 registerRun(program);
 registerTags(program);
 registerChanges(program);
+registerDoctor(program);
 registerCompletion(program);
 
 await program.parseAsync(process.argv);

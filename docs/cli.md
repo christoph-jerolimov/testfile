@@ -32,6 +32,7 @@ testfile run --watch       # re-run on file changes
 testfile run --reporter junit --output results.xml   # report for CI
 testfile run --variant platform=linux   # tag the run (for merging later)
 testfile validate [path]   # validate against the JSON schema
+testfile doctor [path]     # check this machine against what the file needs
 testfile list [path]       # print the expanded suite, incl. matrix instances
 testfile completion bash   # shell completions (bash, zsh, fish)
 
@@ -64,6 +65,44 @@ across the *whole* run (group-level `maxParallel` still applies on top).
 a filter expression will run; tests whose [inputs](./writing-tests#result-caching)
 are unchanged are marked `[cached]`, with a would-run/served-from-cache
 summary.
+
+## Checking the machine
+
+A Testfile says what a run needs: a container engine, fixed ports, a shell,
+git for [change-based selection](./writing-tests#change-based-selection) —
+and a run that finds one of them missing says so halfway through, in the log
+of whichever test happened to need it first. `testfile doctor` asks the same
+questions up front, and only the ones this file actually raises:
+
+```sh
+$ testfile doctor
+✔ Testfile                   /home/me/app/Testfile
+✔ node                       v22.14.0
+✔ git                        git version 2.43.0
+✔ shell (sh)                 on PATH
+✘ container engine (docker)  installed, but "docker info" failed: Cannot connect to the Docker daemon
+  ↳ is the Docker daemon running?
+✘ port web                   8080 is already in use
+  ↳ stop what listens on 8080, or declare "web: random" and template the value
+✔ .testfile/                 /home/me/app/.testfile is writable
+
+2 failed, 0 warning(s), 8 checks
+```
+
+What it looks at:
+
+| Check | Fails when |
+| ----- | ---------- |
+| `node` | the Node.js running the CLI is older than 20 |
+| `git` | *warns* when git is missing or the folder is not inside a work tree — only `--changed` and `testfile changes` need it |
+| `shell (…)` | a shell a test invokes (`sh` by default, or its `shell:`) cannot be started |
+| `container engine` | the file starts containers and no engine is installed, or the engine is installed but not responding. Files without containers only get a note |
+| `port …` | a fixed `ports:` entry is already taken. `random` ports are allocated per run and never clash |
+| `.testfile/` | recorded runs cannot be written |
+
+`--json` writes the same as `{status, checks: […]}` for scripts, and the
+exit code is `1` when a check failed — warnings alone keep it `0`, so
+`testfile doctor && testfile run` is a usable pre-flight.
 
 ## Machine-readable reports
 
