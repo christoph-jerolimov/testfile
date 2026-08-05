@@ -1,0 +1,13 @@
+# variants map to strings: a number here is a mistake worth catching.
+id: 20260805-100000-bad1
+startedAt: 2026-08-05T10:00:00.000Z
+durationMs: 10
+status: passed
+exitCode: 0
+cancelled: false
+variants:
+  node: 22
+env: {}
+ports: {}
+selected: []
+tests: []

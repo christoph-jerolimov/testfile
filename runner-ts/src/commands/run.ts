@@ -19,6 +19,17 @@ import {
   type FilterFlags,
 } from "./shared.js";
 
+// "platform=linux" pairs into a map, in the order they were given.
+export function parseVariants(pairs: string[]): Record<string, string> {
+  const variants: Record<string, string> = {};
+  for (const pair of pairs) {
+    const at = pair.indexOf("=");
+    if (at <= 0) throw new Error(`--variant expects key=value, got "${pair}"`);
+    variants[pair.slice(0, at).trim()] = pair.slice(at + 1).trim();
+  }
+  return variants;
+}
+
 export function registerRun(program: Command): void {
 interface RunFlags extends FilterFlags {
   verbose: boolean;
@@ -30,6 +41,7 @@ interface RunFlags extends FilterFlags {
   forwardEnv: string[];
   reporter?: ReporterKind;
   output: string;
+  variant: string[];
 }
 
 addFilterOptions(
@@ -53,6 +65,12 @@ addFilterOptions(
       collect,
       []
     )
+    .option(
+      "--variant <key=value>",
+      "record what distinguishes this run from a sibling run, e.g. platform=linux (repeatable)",
+      collect,
+      []
+    )
     .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
     .option("--output <file>", 'report target file, or "-" for stdout', "-")
     .description("Run the test suite")
@@ -73,6 +91,7 @@ addFilterOptions(
         maxParallel: options.maxParallel,
         noCache: !options.cache,
         forwardEnv: options.forwardEnv,
+        variants: parseVariants(options.variant),
       });
       filtered = resolveFilters(session, options);
       if (filtered.testCount === 0) throw new Error("no tests match the given filters");

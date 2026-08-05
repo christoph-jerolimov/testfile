@@ -1,0 +1,11 @@
+args: --variant platform=conformance --variant shard=1/2
+exitCode: 0
+status: passed
+variants:
+  platform: conformance
+  shard: 1/2
+tests:
+  - path: root/one
+    status: passed
+  - path: root/two
+    status: passed

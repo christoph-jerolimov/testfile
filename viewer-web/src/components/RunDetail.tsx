@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { runLogUrl, serviceLogUrl, testLogUrl } from "../api.js";
-import { formatMs, startedLabel } from "../format.js";
+import { formatMs, mergedVariantLabel, startedLabel, variantLabel } from "../format.js";
 import type { RunRecord } from "../types.js";
 import { Log } from "./Log.js";
 import { StatusCell } from "./StatusCell.js";
@@ -31,7 +31,33 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
             · selected <b>{run.selected.join(", ")}</b>
           </>
         ) : null}
+        {variantLabel(run.variants) ? (
+          <>
+            {" "}
+            · <span className="variant">{variantLabel(run.variants)}</span>
+          </>
+        ) : null}
       </div>
+      {run.merged ? (
+        <div className="merged">
+          merged from <b>{run.merged.runs.length}</b> runs
+          {mergedVariantLabel(run.merged.variants)
+            ? ` · ${mergedVariantLabel(run.merged.variants)}`
+            : ""}
+          <ul>
+            {run.merged.runs.map((source) => (
+              <li key={source.id}>
+                <StatusCell status={source.status} />{" "}
+                <span className="mono">{source.id}</span>
+                {variantLabel(source.variants) ? (
+                  <span className="variant">{variantLabel(source.variants)}</span>
+                ) : null}
+                {source.machine ? <span className="muted small"> {source.machine}</span> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <table>
         <thead>
           <tr>
@@ -44,11 +70,14 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
         <tbody>
           {run.tests.map((test) => (
             <tr
-              key={test.path}
+              key={`${test.path} ${test.origin ?? ""}`}
               className={choice.kind === "test" && choice.path === test.path ? "selected" : undefined}
             >
               <td className="mono">
                 {test.path}
+                {variantLabel(test.variants) ? (
+                  <span className="variant">{variantLabel(test.variants)}</span>
+                ) : null}
                 {test.reason ? <div className="muted small">{test.reason}</div> : null}
               </td>
               <td>

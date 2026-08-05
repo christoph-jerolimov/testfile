@@ -42,6 +42,8 @@ export class Session extends EventEmitter {
       maxParallel?: number;
       noCache?: boolean;
       forwardEnv?: string[];
+      // Recorded with the run, e.g. { platform: linux } - see --variant.
+      variants?: Record<string, string>;
     } = {}
   ) {
     super();
@@ -159,6 +161,7 @@ export class Session extends EventEmitter {
         exitCode: runner.interrupted ? 130 : ok ? 0 : 1,
         cancelled: runner.interrupted,
         machine: detectMachine(),
+        variants: this.runDefaults.variants,
         env: Object.fromEntries(
           Object.entries(runner.docEnv).map(([key, value]) => [key, maskSecrets(value, secrets)])
         ),

@@ -9,12 +9,30 @@ export interface RunTest {
   cached?: boolean;
   // Why a test with `inputs` ran or was reused (free-form runner text).
   reason?: string;
+  // Merged runs only: which leg this result came from.
+  variants?: Record<string, string>;
+  origin?: string;
 }
 
 export interface RunService {
   name: string;
   status?: string;
   log?: string;
+  variants?: Record<string, string>;
+  origin?: string;
+}
+
+// What `testfile-viewer merge` combined into a run.
+export interface RunMerged {
+  runs: {
+    id: string;
+    variants?: Record<string, string>;
+    machine?: string;
+    status: string;
+    startedAt: string;
+    durationMs: number;
+  }[];
+  variants?: Record<string, string[]>;
 }
 
 export interface RunRecord {
@@ -24,6 +42,10 @@ export interface RunRecord {
   status: "passed" | "failed" | "aborted";
   exitCode: number;
   cancelled: boolean;
+  // What distinguishes this run from a sibling run of the same suite.
+  variants?: Record<string, string>;
+  // Present when this run was produced by merging others.
+  merged?: RunMerged;
   env: Record<string, string>;
   ports: Record<string, number>;
   selected: string[];

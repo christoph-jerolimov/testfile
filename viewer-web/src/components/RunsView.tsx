@@ -1,13 +1,22 @@
 import React, { useState } from "react";
-import { countSummary, formatMs, startedLabel } from "../format.js";
+import { countSummary, formatMs, mergedVariantLabel, startedLabel, variantLabel } from "../format.js";
 import type { RunRecord } from "../types.js";
 import { RunDetail } from "./RunDetail.js";
 import { StatusCell } from "./StatusCell.js";
+
+// A run's variants, or what a merged run combined - empty for a plain run.
+function runVariants(run: RunRecord): string {
+  return run.merged
+    ? mergedVariantLabel(run.merged.variants) || `merged (${run.merged.runs.length} runs)`
+    : variantLabel(run.variants);
+}
 
 export function RunsView({ runs }: { runs: RunRecord[] }): React.ReactElement {
   const [selected, setSelected] = useState<string | undefined>();
   const run = runs.find((r) => r.id === selected) ?? runs[0];
   if (!run) return <div className="empty">no recorded runs yet — run some tests first</div>;
+  // the column only earns its width when some run has variants
+  const showVariants = runs.some((r) => runVariants(r) !== "");
   return (
     <main>
       <div className="list">
@@ -17,6 +26,7 @@ export function RunsView({ runs }: { runs: RunRecord[] }): React.ReactElement {
               <th>Started</th>
               <th>Status</th>
               <th>Duration</th>
+              {showVariants ? <th>Variants</th> : null}
               <th>Tests</th>
             </tr>
           </thead>
@@ -32,6 +42,11 @@ export function RunsView({ runs }: { runs: RunRecord[] }): React.ReactElement {
                   <StatusCell status={r.status} />
                 </td>
                 <td>{formatMs(r.durationMs)}</td>
+                {showVariants ? (
+                  <td>
+                    {runVariants(r) ? <span className="variant">{runVariants(r)}</span> : null}
+                  </td>
+                ) : null}
                 <td>{countSummary(r)}</td>
               </tr>
             ))}

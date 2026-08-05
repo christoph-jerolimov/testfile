@@ -14,6 +14,10 @@ on:
 # resolves globs, so Linux alone would not catch the portability bugs. Tests
 # that cannot run everywhere (containers, screenshot comparison) carry an
 # `if` condition on TESTFILE_OS in the Testfile itself.
+#
+# Three platforms means three recorded runs. The `merge` job below combines
+# them into a single run - one verdict, one duration, every test tagged with
+# the platform it ran on - and uploads that too.
 jobs:
   ci:
     name: Testfile CI (${{ matrix.os }})
@@ -32,5 +36,54 @@ jobs:
       - name: Run the repository Testfile through the bundled action
         uses: ./
         with:
+          # what tells the three runs apart, and what merging keys on
+          variants: platform=${{ matrix.os }}
           # artifact names are unique per workflow run, so each leg needs its own
           artifact-name: testfile-run-${{ matrix.os }}
+
+  merge:
+    name: Merge the platform runs
+    needs: ci
+    # also when a leg failed: a merged run of two green legs and one red one
+    # is exactly what is worth looking at
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build --workspace viewer-ts
+      # every leg's artifact unpacks into its own folder, and each of those
+      # folders is a run folder (run.yaml next to the logs)
+      - uses: actions/download-artifact@v6
+        with:
+          pattern: testfile-run-*
+          path: downloaded
+      # The merged run is written even when a leg failed, so the artifact
+      # always exists; its verdict is turned into this job's result below.
+      - name: Merge the runs into one
+        id: merge
+        run: |
+          runs=(downloaded/testfile-run-*)
+          echo "merging ${#runs[@]} runs: ${runs[*]}"
+          if node viewer-ts/dist/cli.js merge "${runs[@]}" --dir .; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+          fi
+          dir=$(ls -d .testfile/runs/*-merged | head -1)
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+          echo "id=$(basename "$dir")" >> "$GITHUB_OUTPUT"
+      - name: Show the merged run
+        run: node viewer-ts/dist/cli.js run "${{ steps.merge.outputs.id }}"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: testfile-run-merged
+          path: ${{ steps.merge.outputs.dir }}
+          if-no-files-found: error
+      # one verdict for the three platforms
+      - name: Fail when a platform failed
+        if: steps.merge.outputs.passed != 'true'
+        run: exit 1

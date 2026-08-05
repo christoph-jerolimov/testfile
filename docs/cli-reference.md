@@ -1,6 +1,6 @@
 ---
 title: CLI reference
-order: 10
+order: 11
 description: Every command and argument of the testfile runner and the testfile-viewer.
 ---
 
@@ -66,6 +66,7 @@ previews exactly what a filtered `run` would execute.
 | `--failed` | Only tests that failed (or were aborted) in the last recorded run. |
 | `--changed` | Only tests whose `inputs` match files [changed against the base branch](./writing-tests#change-based-selection), plus local changes. |
 | `--changed-since <ref>` | Base branch/ref for `--changed`, e.g. `origin/main` (implies `--changed`). |
+| `--variant <key=value>` | Record what distinguishes this run from a sibling run — e.g. `platform=linux` for one leg of a matrix. Recorded in `run.yaml` and used by [`testfile-viewer merge`](#testfile-viewer-merge). *(repeatable)* |
 | `--shard <i/n>` | Run only this shard of the selected tests, e.g. `2/4`. Time-balanced from the [run history](./cli#run-history) when it has durations, round-robin otherwise. |
 
 ### `testfile tags [path]`
@@ -148,6 +149,24 @@ Show one recorded run in detail — a unique id prefix is enough.
 Compare two recorded runs (older id first, unique prefixes are enough):
 newly failed, fixed, still failing, added/removed tests and significant
 duration changes. No options.
+
+### `testfile-viewer merge <run...>`
+
+Combine several runs into a single run — [shards](./cli#sharding) or one
+job per platform — and write it into a history. Each `<run>` is either a
+run folder (an unpacked CI artifact: `run.yaml` next to the logs) or an id
+(or unique prefix) in the target history.
+
+| Option | Description |
+| ------ | ----------- |
+| `--dir <path>` | History the merged run is written to (default `.`). |
+| `--id-suffix <suffix>` | Last part of the merged run's id (default `merged`). |
+
+The merged run is an ordinary run: one status, one duration, the union of
+the tests. Runs that recorded the same test path must carry distinct
+[`--variant`](#testfile-the-runner) values — see the
+[guided tour](./three-platforms). Exits non-zero when the merged verdict
+is not `passed`.
 
 ### `testfile-viewer tui [path]`
 

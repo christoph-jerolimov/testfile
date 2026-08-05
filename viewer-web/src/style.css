@@ -221,3 +221,36 @@ button.link {
   font: inherit;
   padding: 0;
 }
+
+/* Which leg of a matrix (or which merged run) a row belongs to. */
+.variant {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.merged {
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--dim);
+}
+.merged ul {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+}
+.merged li {
+  padding: 0.1rem 0;
+}
+/* the list pane is narrow: a long variant label wraps instead of clipping */
+.list .variant {
+  margin-left: 0;
+  white-space: normal;
+}

@@ -1,0 +1,61 @@
+# What `testfile-viewer merge` writes: one job per platform, combined into a
+# single run. Every test says which leg it came from.
+id: 20251231-080000-fx00
+name: e2e-fixture
+startedAt: 2025-12-31T08:00:00.000Z
+durationMs: 9500
+status: failed
+exitCode: 1
+cancelled: false
+merged:
+  runs:
+    - id: 20251231-075000-lnx1
+      variants:
+        platform: linux
+      machine: ci-linux
+      status: passed
+      startedAt: 2025-12-31T07:50:00.000Z
+      durationMs: 4200
+    - id: 20251231-075500-win2
+      variants:
+        platform: windows
+      machine: ci-windows
+      status: failed
+      startedAt: 2025-12-31T07:55:00.000Z
+      durationMs: 5300
+  variants:
+    platform:
+      - linux
+      - windows
+env:
+  CI: "1"
+ports: {}
+selected:
+  - ci
+tests:
+  - path: ci
+    status: passed
+    durationMs: 4150
+    variants:
+      platform: linux
+    origin: 20251231-075000-lnx1
+  - path: ci/unit
+    status: passed
+    durationMs: 1700
+    log: tests/20251231-075000-lnx1/ci-unit.log
+    variants:
+      platform: linux
+    origin: 20251231-075000-lnx1
+  - path: ci
+    status: failed
+    durationMs: 5250
+    variants:
+      platform: windows
+    origin: 20251231-075500-win2
+  - path: ci/unit
+    status: failed
+    durationMs: 2600
+    log: tests/20251231-075500-win2/ci-unit.log
+    variants:
+      platform: windows
+    origin: 20251231-075500-win2

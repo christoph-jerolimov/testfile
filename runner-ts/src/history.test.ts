@@ -230,3 +230,44 @@ test("run.yaml records the Testfile's tree, tags and matrix combinations", async
   const reloaded = new RunHistory(dir).runs[0];
   assert.deepEqual(reloaded.suite, suite);
 });
+
+test("variants are recorded when the run was given some", () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-history-"));
+  const history = new RunHistory(dir);
+  const record = history.saveRun(
+    {
+      startedAtMs: Date.parse("2026-01-01T10:00:00.000Z"),
+      durationMs: 5,
+      status: "passed",
+      exitCode: 0,
+      cancelled: false,
+      variants: { platform: "linux", node: "22" },
+      env: {},
+      ports: {},
+      selected: [],
+    },
+    [{ path: "all", status: "passed", lines: [] }],
+    []
+  );
+  assert.deepEqual(record.variants, { platform: "linux", node: "22" });
+  const written = parse(readFileSync(join(dir, ".testfile", "runs", record.id, "run.yaml"), "utf8"));
+  assert.deepEqual(written.variants, { platform: "linux", node: "22" });
+
+  // no variants, no field: a plain run's record stays as it was
+  const plain = history.saveRun(
+    {
+      startedAtMs: Date.parse("2026-01-01T10:00:01.000Z"),
+      durationMs: 5,
+      status: "passed",
+      exitCode: 0,
+      cancelled: false,
+      variants: {},
+      env: {},
+      ports: {},
+      selected: [],
+    },
+    [{ path: "all", status: "passed", lines: [] }],
+    []
+  );
+  assert.equal(plain.variants, undefined);
+});

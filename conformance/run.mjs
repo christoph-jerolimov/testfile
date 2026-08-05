@@ -34,7 +34,9 @@ function invoke(work, resultFile, env, expected, problems, label) {
   step(`${label || "run: "}invoking the runner`);
   rmSync(resultFile, { force: true });
   const started = Date.now();
-  const proc = spawnSync("sh", ["-c", `${runner} run "${work}" --reporter json --output "${resultFile}"`], {
+  // `args` lets a case exercise a flag that changes what is recorded.
+  const args = expected.args ? ` ${expected.args}` : "";
+  const proc = spawnSync("sh", ["-c", `${runner} run "${work}"${args} --reporter json --output "${resultFile}"`], {
     encoding: "utf8",
     env: { ...process.env, ...(env ?? {}) },
     timeout: 120_000,
@@ -56,6 +58,13 @@ function invoke(work, resultFile, env, expected, problems, label) {
 function checkReport(report, expected, problems, label) {
   if (report.status !== expected.status) {
     problems.push(`${label}run status: expected ${expected.status}, got ${report.status}`);
+  }
+  for (const [key, value] of Object.entries(expected.variants ?? {})) {
+    if (report.variants?.[key] !== value) {
+      problems.push(
+        `${label}variant "${key}": expected ${value}, got ${report.variants?.[key] ?? "(none)"}`
+      );
+    }
   }
   for (const want of expected.tests ?? []) {
     const got = report.tests.find((t) => t.path === want.path);

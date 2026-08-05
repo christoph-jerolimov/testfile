@@ -61,6 +61,8 @@ of every record, so editors validate and complete it.
 | `status`     | string  | yes      | `passed`, `failed` or `aborted` (user interrupt). |
 | `exitCode`   | integer | yes      | The runner's exit code for this run (`0`, `1`, `130`). |
 | `machine`    | string  | no       | Who ran the suite: a CI actor name (`GITHUB_ACTOR`, `GITLAB_USER_LOGIN`, `BUILDKITE_BUILD_CREATOR`), a GitHub login from an authenticated `gh`, or the hostname. Free-form identifier; consumers must not parse it. |
+| `variants`   | map     | no       | What distinguishes this run from a sibling run of the same suite, as string values — e.g. `{platform: linux}` for one leg of a matrix. Keys and values are free-form; consumers display them and compare them for equality. |
+| `merged`     | object  | no       | Present when this run was produced by merging others — see [merged runs](#merged-runs). |
 | `cancelled`  | boolean | yes      | True when the run was interrupted. |
 | `env`        | map     | yes      | The resolved top-level `env` of the Testfile (may be empty). Secret values are masked. |
 | `ports`      | map     | yes      | The resolved named ports (may be empty). |
@@ -83,6 +85,8 @@ unreadable.
 | `log`        | string  | no       | Relative path of the test's merged stdout+stderr log; absent when the test produced no output. |
 | `artifacts`  | array   | no       | Relative paths of collected artifact files. |
 | `cached`     | boolean | no       | True when the result was served from the runner's result cache. |
+| `variants`   | map     | no       | Merged runs only: the `variants` of the run this result came from. |
+| `origin`     | string  | no       | Merged runs only: the `id` of the run this result came from. |
 | `reason`     | string  | no       | Human-readable explanation of why a test with `inputs` ran or was reused — cache hit/miss detail (which pattern saw how many changed files) and/or the change-based selection that picked it. Free-form; consumers must not parse it. |
 
 Every path in a record — `log`, `artifacts`, service logs — is relative to
@@ -117,11 +121,73 @@ nesting from the `path` values.
 
 ### `services[]`
 
-| Field    | Type   | Required | Description |
-| -------- | ------ | -------- | ----------- |
-| `name`   | string | yes      | The service name from the Testfile. |
-| `status` | string | no       | Last observed status, e.g. `ready`, `stopped`, `failed`. |
-| `log`    | string | no       | Relative path of the service's log; absent without output. |
+| Field      | Type   | Required | Description |
+| ---------- | ------ | -------- | ----------- |
+| `name`     | string | yes      | The service name from the Testfile. |
+| `status`   | string | no       | Last observed status, e.g. `ready`, `stopped`, `failed`. |
+| `log`      | string | no       | Relative path of the service's log; absent without output. |
+| `variants` | map    | no       | Merged runs only: the `variants` of the run this service ran in. |
+| `origin`   | string | no       | Merged runs only: the `id` of that run. |
+
+## Merged runs
+
+Two things produce several run folders for what is conceptually one test
+run: **sharding** (each shard runs a disjoint part of the suite) and a
+**matrix of jobs** (every job runs the same suite somewhere else). A merged
+run combines them into a single record — one verdict, one duration, the
+union of the tests — so consumers show it like any other run.
+
+A merged run **is an ordinary run**: `id`, `startedAt`, `status` and the
+rest mean what they always mean, and a consumer that ignores `merged`
+still reads it correctly. What merging adds is recorded rather than
+hidden:
+
+| Field              | Type   | Required | Description |
+| ------------------ | ------ | -------- | ----------- |
+| `merged.runs`      | array  | yes      | The merged runs, in the order they were combined. |
+| `merged.runs[].id` | string | yes      | The merged run's id. |
+| `merged.runs[].variants` | map | no    | That run's `variants`. |
+| `merged.runs[].machine`  | string | no | That run's `machine`. |
+| `merged.runs[].status`   | string | yes | That run's own verdict. |
+| `merged.runs[].startedAt`| string | yes | That run's start time. |
+| `merged.runs[].durationMs` | integer | yes | That run's duration. |
+| `merged.variants`  | map    | no       | Every variant value the merged runs used, per key, e.g. `{platform: [linux, macos]}` — what a viewer shows as the run's header. |
+
+How the top-level fields are derived:
+
+| Field | Merged value |
+| ----- | ------------ |
+| `startedAt` | the earliest of the merged runs |
+| `durationMs` | the **sum** of the merged runs' durations (time spent, not wall-clock span — the runs usually overlap) |
+| `status` | `failed` if any merged run or test failed, else `aborted` if any was aborted, else `passed` |
+| `exitCode` | `0` when passed, `130` when aborted after a cancellation, else `1` |
+| `cancelled` | true when any merged run was cancelled |
+| `variants` | the entries **all** merged runs agree on (a matrix over platforms that all used `node=22` keeps `node: "22"` here) |
+| `env`, `ports` | the entries all merged runs agree on |
+| `selected` | the union, in the order first seen |
+| `suite` | the tree of the first merged run that recorded one |
+| `tests`, `services` | the concatenation, each entry tagged with its `variants` and `origin` |
+
+**A test path may only appear once per variant combination.** Shards merge
+without variants because no leaf appears twice; a matrix of jobs runs the
+same test everywhere, so those runs must carry distinct `variants` — that
+is what keeps `path` + `variants` unique and the merged run readable. A
+producer that finds a duplicate must fail rather than silently drop or
+overwrite a result.
+
+**Group nodes are the exception.** A group is scaffolding around the tests
+below it, and every shard records the groups its own leaves sit in, so the
+same group path legitimately appears in several runs. Merging folds those
+into one entry per `path` + `variants`: the worst status of the
+contributions and the sum of their durations, with no single `origin`.
+
+Copied logs and artifacts are namespaced by the run they came from —
+`tests/<origin-id>/<slug>.log` — so the same test's logs from different
+legs stay apart. As everywhere else, the authoritative paths are the ones
+recorded in `run.yaml`.
+
+In this repository `testfile-viewer merge <run…>` writes such a run; it
+takes run folders (an unpacked CI artifact) or ids from a local history.
 
 ## Log files
 

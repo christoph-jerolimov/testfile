@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { variantLabel } from "../merge.js";
 import { detectFlaky } from "../runrecord.js";
 import { color, formatMs, pad } from "../util.js";
 import { colorStatus, commandFailed, loadedHistory, summarizeTests, writeJson } from "./shared.js";
@@ -45,15 +46,33 @@ program
         return;
       }
 
+      // The variants column only appears when some run has variants, so a
+      // history without a matrix keeps the narrow table.
+      const label = (run: (typeof history.runs)[number]): string =>
+        run.merged
+          ? Object.entries(run.merged.variants ?? {})
+              .map(([key, values]) => `${key}=${values.join("|")}`)
+              .join(", ") || `merged (${run.merged.runs.length})`
+          : variantLabel(run.variants);
+      const anyVariants = history.runs.some((run) => label(run) !== "");
       const rows = history.runs.map((run) => [
         run.id,
         run.startedAt.replace("T", " ").slice(0, 19),
         run.status,
         formatMs(run.durationMs),
         String(run.exitCode),
+        ...(anyVariants ? [label(run) || "-"] : []),
         summarizeTests(run),
       ]);
-      const header = ["ID", "STARTED", "STATUS", "DURATION", "EXIT", "TESTS"];
+      const header = [
+        "ID",
+        "STARTED",
+        "STATUS",
+        "DURATION",
+        "EXIT",
+        ...(anyVariants ? ["VARIANTS"] : []),
+        "TESTS",
+      ];
       const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => pad(r[i], 0).length)));
       console.log(color(1, header.map((h, i) => pad(h, widths[i])).join("  ")));
       for (const row of rows) {

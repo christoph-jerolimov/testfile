@@ -4,7 +4,18 @@
   "title": "Testfile run record",
   "description": "The run.yaml a Testfile runner writes into .testfile/runs/<id>/. Describes one recorded test run: its outcome, the tests that executed, the services that were started, and the shape of the Testfile it came from. See spec/RESULTS.md for the normative description.",
   "type": "object",
-  "required": ["id", "startedAt", "durationMs", "status", "exitCode", "cancelled", "env", "ports", "selected", "tests"],
+  "required": [
+    "id",
+    "startedAt",
+    "durationMs",
+    "status",
+    "exitCode",
+    "cancelled",
+    "env",
+    "ports",
+    "selected",
+    "tests"
+  ],
   "properties": {
     "id": {
       "description": "The run id; equals the folder name. Starts with the UTC timestamp at second resolution plus a random suffix, e.g. 20260802-193731-4bdc.",
@@ -23,7 +34,11 @@
     },
     "status": {
       "description": "Outcome of the run: passed, failed, or aborted (interrupted).",
-      "enum": ["passed", "failed", "aborted"]
+      "enum": [
+        "passed",
+        "failed",
+        "aborted"
+      ]
     },
     "exitCode": {
       "description": "The runner's exit code for this run: 0 passed, 1 failed, 130 interrupted.",
@@ -38,6 +53,77 @@
       "type": "string",
       "minLength": 1
     },
+    "variants": {
+      "type": "object",
+      "description": "What distinguishes this run from a sibling run of the same suite, e.g. {\"platform\": \"linux\"} for one leg of a matrix. Set by the runner (--variant) and what merging uses to keep the legs apart.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "merged": {
+      "type": "object",
+      "description": "Present when this run was produced by merging others (testfile-viewer merge). The merged run is an ordinary run; this records what went into it.",
+      "required": [
+        "runs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "runs": {
+          "type": "array",
+          "description": "The merged runs, in the order they were combined.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "status",
+              "startedAt",
+              "durationMs"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "variants": {
+                "type": "object",
+                "description": "What distinguishes this run from a sibling run of the same suite, e.g. {\"platform\": \"linux\"} for one leg of a matrix. Set by the runner (--variant) and what merging uses to keep the legs apart.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "machine": {
+                "type": "string"
+              },
+              "status": {
+                "enum": [
+                  "passed",
+                  "failed",
+                  "aborted"
+                ]
+              },
+              "startedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "durationMs": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "variants": {
+          "type": "object",
+          "description": "Every variant value the merged runs used, per key, e.g. {\"platform\": [\"linux\", \"macos\"]}.",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
     "name": {
       "description": "Display name of the project, from the Testfile's `name`.",
       "type": "string"
@@ -45,17 +131,23 @@
     "env": {
       "description": "The resolved top-level `env` of the Testfile (may be empty). Secret values are masked.",
       "type": "object",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "ports": {
       "description": "The resolved named ports (may be empty).",
       "type": "object",
-      "additionalProperties": { "type": "integer" }
+      "additionalProperties": {
+        "type": "integer"
+      }
     },
     "selected": {
       "description": "Test paths the user selected for this run; empty means the whole suite.",
       "type": "array",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "suite": {
       "description": "The Testfile's test tree, including tests this run did not execute. Producers should record it; consumers must tolerate its absence.",
@@ -64,12 +156,16 @@
     "tests": {
       "description": "One entry per executed test, in execution order.",
       "type": "array",
-      "items": { "$ref": "#/$defs/test" }
+      "items": {
+        "$ref": "#/$defs/test"
+      }
     },
     "services": {
       "description": "One entry per service that was started during the run.",
       "type": "array",
-      "items": { "$ref": "#/$defs/service" }
+      "items": {
+        "$ref": "#/$defs/service"
+      }
     },
     "junit": {
       "description": "Relative path of the JUnit XML inside the run folder, usually junit.xml.",
@@ -80,7 +176,10 @@
   "$defs": {
     "test": {
       "type": "object",
-      "required": ["path", "status"],
+      "required": [
+        "path",
+        "status"
+      ],
       "properties": {
         "path": {
           "description": "The test's path: names joined with \"/\" from the root, e.g. ci/checks/schema.",
@@ -89,7 +188,12 @@
         },
         "status": {
           "description": "Outcome of this test.",
-          "enum": ["passed", "failed", "skipped", "aborted"]
+          "enum": [
+            "passed",
+            "failed",
+            "skipped",
+            "aborted"
+          ]
         },
         "durationMs": {
           "description": "Wall-clock duration; absent for tests that never started.",
@@ -104,7 +208,10 @@
         "artifacts": {
           "description": "Relative paths of collected artifact files.",
           "type": "array",
-          "items": { "type": "string", "minLength": 1 }
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
         },
         "cached": {
           "description": "True when the result was served from the runner's result cache.",
@@ -113,12 +220,25 @@
         "reason": {
           "description": "Why a test with `inputs` ran or was reused (cache hit/miss detail, change-based selection). Free-form; consumers must not parse it.",
           "type": "string"
+        },
+        "variants": {
+          "type": "object",
+          "description": "What distinguishes this run from a sibling run of the same suite, e.g. {\"platform\": \"linux\"} for one leg of a matrix. Set by the runner (--variant) and what merging uses to keep the legs apart.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "origin": {
+          "type": "string",
+          "description": "Merged runs only: the id of the run this result came from."
         }
       }
     },
     "service": {
       "type": "object",
-      "required": ["name"],
+      "required": [
+        "name"
+      ],
       "properties": {
         "name": {
           "description": "The service name from the Testfile.",
@@ -133,14 +253,32 @@
           "description": "Relative path of the service's log; absent without output.",
           "type": "string",
           "minLength": 1
+        },
+        "variants": {
+          "type": "object",
+          "description": "What distinguishes this run from a sibling run of the same suite, e.g. {\"platform\": \"linux\"} for one leg of a matrix. Set by the runner (--variant) and what merging uses to keep the legs apart.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "origin": {
+          "type": "string",
+          "description": "Merged runs only: the id of the run this result came from."
         }
       }
     },
     "suiteNode": {
       "type": "object",
-      "required": ["name", "path", "kind"],
+      "required": [
+        "name",
+        "path",
+        "kind"
+      ],
       "properties": {
-        "name": { "description": "The test's own name.", "type": "string" },
+        "name": {
+          "description": "The test's own name.",
+          "type": "string"
+        },
         "path": {
           "description": "Names joined with \"/\" from the root - the key tests[].path uses.",
           "type": "string",
@@ -148,27 +286,41 @@
         },
         "kind": {
           "description": "What this node is: a leaf (command/script), a group (sequence/parallel) or the wrapper a matrix expands from.",
-          "enum": ["command", "script", "sequence", "parallel", "matrix"]
+          "enum": [
+            "command",
+            "script",
+            "sequence",
+            "parallel",
+            "matrix"
+          ]
         },
         "tags": {
           "description": "Tags declared on this test; tags of ancestors apply as well.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "matrix": {
           "description": "The combination of an expanded matrix instance, e.g. {node: \"22\"}.",
           "type": "object",
-          "additionalProperties": { "type": "string" }
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "services": {
           "description": "Names of the services this test declares.",
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "children": {
           "description": "Nested nodes, in document order; absent on leaves.",
           "type": "array",
-          "items": { "$ref": "#/$defs/suiteNode" }
+          "items": {
+            "$ref": "#/$defs/suiteNode"
+          }
         }
       }
     }

@@ -1,0 +1,11 @@
+# A run can record what makes it different from a sibling run of the same
+# suite - one leg of a matrix, one shard. The values come from the runner's
+# --variant flag and end up in the run record, where merging reads them.
+version: 0
+test:
+  name: root
+  parallel:
+    - name: one
+      command: "true"
+    - name: two
+      command: "true"
