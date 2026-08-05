@@ -6,8 +6,14 @@
     "strict": true,
     "skipLibCheck": true,
     "outDir": "out",
-    "lib": ["ES2022", "DOM"],
-    "types": ["node"]
+    "rootDir": "src",
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "types": [
+      "node"
+    ]
   },
   "files": [
     "src/types.ts",
