@@ -85,7 +85,8 @@ test("artifacts are collected into the run folder and recorded", async () => {
     assert.ok(existsSync(join(runDir, artifact)), artifact);
   }
   assert.ok(entry.artifacts!.some((a) => a.endsWith("a.txt")));
-  assert.ok(entry.artifacts!.some((a) => a.endsWith(join("nested", "b.txt"))));
+  // recorded paths are "/"-separated on every platform, see spec/RESULTS.md
+  assert.ok(entry.artifacts!.some((a) => a.endsWith("nested/b.txt")));
   assert.ok(!entry.artifacts!.some((a) => a.endsWith("c.log")));
 });
 

@@ -352,6 +352,12 @@ testfile-viewer archive import testfile-run.zip # a downloaded GitHub run artifa
 Importing skips runs that already exist locally (same id), so repeated
 imports are safe.
 
+Packing and importing shell out to `tar`, and importing a zip (a CI
+artifact) additionally needs `unzip` on the `PATH`. Both are a given on
+Linux and macOS; on Windows `tar` ships with the system but `unzip` does
+not, so zip artifacts need it installed. Everything else in the viewer —
+`runs`, `run`, `diff`, `tui`, `serve` — is pure Node.
+
 With the [aws CLI](https://aws.amazon.com/cli/) configured, runs can be
 shared through S3 — for example a CI job pushes, developers pull:
 

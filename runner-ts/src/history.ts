@@ -1,5 +1,5 @@
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, sep } from "node:path";
 import { parse, stringify } from "yaml";
 import { junitFromRecord } from "./junit.js";
 import type { OutputLine } from "./output.js";
@@ -8,6 +8,14 @@ import type { Status } from "./runsuite.js";
 // Runs are persisted next to the Testfile in this folder: one self-contained
 // runs/<id>/ folder per run, holding run.yaml (the run's record) and the
 // merged stdout+stderr logs. The folder ignores itself via an own .gitignore.
+
+// Paths inside a run folder are recorded "/"-separated on every platform:
+// run.yaml travels (artifact, archive, S3) and is read by viewers that may
+// run somewhere else entirely.
+function toPosix(path: string): string {
+  return path.split(sep).join("/");
+}
+
 export const HISTORY_DIR = ".testfile";
 
 // Written as the first line of every run.yaml so editors validate and
@@ -267,14 +275,14 @@ export class RunHistory {
       if (test.cached) entry.cached = true;
       if (test.reason !== undefined) entry.reason = test.reason;
       if (test.lines.length > 0) {
-        entry.log = join("tests", `${slugify(test.path)}.log`);
+        entry.log = `tests/${slugify(test.path)}.log`;
         writeFileSync(join(runDir, entry.log), renderLines(test.lines));
       }
       if (test.artifacts && test.artifacts.length > 0) {
         entry.artifacts = [];
         const slug = slugify(test.path);
         for (const artifact of test.artifacts) {
-          const target = join("artifacts", slug, artifact.relative);
+          const target = `artifacts/${slug}/${toPosix(artifact.relative)}`;
           try {
             mkdirSync(join(runDir, dirname(target)), { recursive: true });
             cpSync(artifact.absolute, join(runDir, target));
@@ -290,7 +298,7 @@ export class RunHistory {
       const entry: RunRecordService = { name: service.name };
       if (service.status !== undefined) entry.status = service.status;
       if (service.lines.length > 0) {
-        entry.log = join("services", `${slugify(service.name)}.log`);
+        entry.log = `services/${slugify(service.name)}.log`;
         mkdirSync(join(runDir, "services"), { recursive: true });
         writeFileSync(join(runDir, entry.log), renderLines(service.lines));
       }

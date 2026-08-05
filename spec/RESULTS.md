@@ -85,6 +85,12 @@ unreadable.
 | `cached`     | boolean | no       | True when the result was served from the runner's result cache. |
 | `reason`     | string  | no       | Human-readable explanation of why a test with `inputs` ran or was reused — cache hit/miss detail (which pattern saw how many changed files) and/or the change-based selection that picked it. Free-form; consumers must not parse it. |
 
+Every path in a record — `log`, `artifacts`, service logs — is relative to
+the run folder and **`/`-separated on every platform**, including Windows.
+A run travels (as an archive, a CI artifact, an S3 object) and is read by
+viewers on other machines, so a producer must not write the local
+separator.
+
 ### `suite`
 
 The shape of the Testfile the run came from, so a `run.yaml` explains

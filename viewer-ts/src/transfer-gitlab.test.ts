@@ -4,6 +4,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { needs } from "./testtools.js";
 import { writeRun } from "./fixture.js";
 import { RunHistory } from "./runrecord.js";
 import { gitlabRunArchives, syncFromGitlab, type Exec } from "./transfer/index.js";
@@ -32,9 +33,9 @@ function fakeAws(
   onCall: (command: string, args: string[]) => { status: number; stdout: string } | undefined
 ): { exec: Exec; calls: string[][] } {
   const calls: string[][] = [];
-  const exec: Exec = (command, args) => {
+  const exec: Exec = (command, args, options) => {
     if (command === "tar" || command === "unzip") {
-      const result = spawnSync(command, args, { encoding: "utf8" });
+      const result = spawnSync(command, args, { encoding: "utf8", cwd: options?.cwd });
       return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
     }
     calls.push([command, ...args]);
@@ -110,15 +111,15 @@ test("gitlabRunArchives lists artifacts of the matching job in recent pipelines"
   );
 });
 
-test("syncFromGitlab imports the run folder from a job artifact zip", async () => {
+test("syncFromGitlab imports the run folder from a job artifact zip", { skip: needs("zip", "unzip") }, async () => {
   const source = tempDir();
   const id = recordRun(source);
   const staging = tempDir();
   // GitLab archives the paths as declared, so the zip holds .testfile/runs/<id>/
-  spawnSync("sh", [
-    "-c",
-    `cd ${source} && zip -q -r ${join(staging, "artifacts.zip")} .testfile/runs/${id}`,
-  ]);
+  // (zip runs in the source with a relative path, no shell involved)
+  spawnSync("zip", ["-q", "-r", join(staging, "artifacts.zip"), `.testfile/runs/${id}`], {
+    cwd: source,
+  });
   const zipBytes = readFileSync(join(staging, "artifacts.zip"));
 
   const base = "https://gitlab.example.com/api/v4/projects/17";

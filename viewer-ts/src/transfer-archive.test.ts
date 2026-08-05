@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { needs } from "./testtools.js";
 import { writeRun } from "./fixture.js";
 import { RunHistory } from "./runrecord.js";
 import { importRunArchive, packRun, type Exec } from "./transfer/index.js";
@@ -32,9 +33,9 @@ function fakeAws(
   onCall: (command: string, args: string[]) => { status: number; stdout: string } | undefined
 ): { exec: Exec; calls: string[][] } {
   const calls: string[][] = [];
-  const exec: Exec = (command, args) => {
+  const exec: Exec = (command, args, options) => {
     if (command === "tar" || command === "unzip") {
-      const result = spawnSync(command, args, { encoding: "utf8" });
+      const result = spawnSync(command, args, { encoding: "utf8", cwd: options?.cwd });
       return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
     }
     calls.push([command, ...args]);
@@ -44,7 +45,7 @@ function fakeAws(
   return { exec, calls };
 }
 
-test("packRun and importRunArchive round-trip a run between histories", () => {
+test("packRun and importRunArchive round-trip a run between histories", { skip: needs("tar") }, () => {
   const source = tempDir();
   const id = recordRun(source);
   const archive = join(tempDir(), "run.tgz");
@@ -63,16 +64,20 @@ test("packRun and importRunArchive round-trip a run between histories", () => {
   assert.deepEqual(importRunArchive(target, archive), { imported: [], skipped: [id] });
 });
 
-test("packRun rejects unknown runs, import rejects archives without runs", () => {
+test("packRun rejects unknown runs, import rejects archives without runs", { skip: needs("tar") }, () => {
   const dir = tempDir();
   assert.throws(() => packRun(dir, "nope", join(dir, "x.tgz")), /no recorded run "nope"/);
 
-  const stray = join(dir, "stray.tgz");
-  spawnSync("sh", ["-c", `mkdir -p ${dir}/junk/sub && tar -czf ${stray} -C ${dir}/junk sub`]);
-  assert.throws(() => importRunArchive(tempDir(), stray), /does not contain a recorded run/);
+  // an archive of something that is not a run - built without a shell, and
+  // with tar naming its files relative to its cwd, so this works anywhere
+  const junk = join(dir, "junk");
+  mkdirSync(join(junk, "sub"), { recursive: true });
+  writeFileSync(join(junk, "sub", "note.txt"), "not a run\n");
+  spawnSync("tar", ["-czf", "stray.tgz", "sub"], { cwd: junk });
+  assert.throws(() => importRunArchive(tempDir(), join(junk, "stray.tgz")), /does not contain a recorded run/);
 });
 
-test("importRunArchive accepts a zip of the run folder's contents", () => {
+test("importRunArchive accepts a zip of the run folder's contents", { skip: needs("zip", "unzip") }, () => {
   const source = tempDir();
   const id = recordRun(source);
   const staging = tempDir();

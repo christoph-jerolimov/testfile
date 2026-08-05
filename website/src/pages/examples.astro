@@ -1,6 +1,7 @@
 ---
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Code } from "astro:components";
 import { parse } from "yaml";
 import Layout from "../layouts/Layout.astro";
@@ -10,7 +11,9 @@ const repo = "https://github.com/christoph-jerolimov/testfile/blob/main/examples
 
 // The gallery renders the real Testfiles from the repository's examples/
 // folder (validated in CI), so the page can never drift from them.
-const examplesDir = new URL("../../../examples/", import.meta.url).pathname;
+// fileURLToPath, not .pathname: on Windows the latter keeps the URL's
+// leading slash ("/D:/...") and readdirSync cannot open that.
+const examplesDir = fileURLToPath(new URL("../../../examples/", import.meta.url));
 
 interface Meta {
   order: number;

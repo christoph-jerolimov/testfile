@@ -1,21 +1,35 @@
 import assert from "node:assert/strict";
+import { resolve } from "node:path";
 import { test } from "node:test";
 import { buildTestContainerArgs, DEFAULT_WORKDIR } from "./testcontainer.js";
 import type { Scopes } from "./template.js";
 
 const scopes: Scopes = { env: {}, ports: { web: 5001 }, matrix: {} };
 
-function plan(def: Parameters<typeof buildTestContainerArgs>[0], hostCwd = "/proj", env = {}) {
+// The mount source is a host path, so it is whatever the platform makes of
+// "/proj" - "/proj" on Linux and macOS, "D:\proj" on the Windows runner.
+const PROJECT = resolve("/proj");
+
+// The engine is named rather than detected: these tests are about the
+// arguments, and they must pass on a machine without podman or docker.
+function plan(def: Parameters<typeof buildTestContainerArgs>[0], hostCwd = PROJECT, env = {}) {
   return buildTestContainerArgs(
     def,
     hostCwd,
-    "/proj",
+    PROJECT,
     env,
     scopes,
     'test "x"',
-    ["sh", "-c", "npm test"]
+    ["sh", "-c", "npm test"],
+    () => "docker"
   );
 }
+
+test("without an engine the detected one is used", () => {
+  assert.equal(plan({ image: "node:22" }).engine, "docker");
+  assert.equal(plan({ image: "node:22", engine: "auto" }).engine, "docker");
+  assert.equal(plan({ image: "node:22", engine: "podman" }).engine, "podman");
+});
 
 test("the project is mounted and the shell runs inside the image", () => {
   const result = plan({ image: "golang:1.23", engine: "docker" });
@@ -24,19 +38,19 @@ test("the project is mounted and the shell runs inside the image", () => {
   const args = result.args.join(" ");
   assert.match(args, /^run --rm -i /);
   assert.match(args, /--network host/, "host networking keeps services reachable");
-  assert.match(args, new RegExp(`-v /proj:${DEFAULT_WORKDIR}`));
+  assert.ok(args.includes(`-v ${PROJECT}:${DEFAULT_WORKDIR}`));
   assert.match(args, new RegExp(`-w ${DEFAULT_WORKDIR}`));
   assert.match(args, /--entrypoint sh golang:1\.23 -c npm test$/);
 });
 
 test("a nested working directory maps into the mount", () => {
-  const result = plan({ image: "node:22" }, "/proj/packages/api");
+  const result = plan({ image: "node:22" }, resolve(PROJECT, "packages/api"));
   assert.equal(result.workdir, `${DEFAULT_WORKDIR}/packages/api`);
   assert.ok(result.args.includes(`${DEFAULT_WORKDIR}/packages/api`));
 });
 
 test("the test environment is passed through, host-specific variables are not", () => {
-  const result = plan({ image: "node:22" }, "/proj", {
+  const result = plan({ image: "node:22" }, PROJECT, {
     CI: "1",
     DATABASE_URL: "postgres://localhost:5432/app",
     PATH: "/usr/local/bin",
@@ -63,7 +77,7 @@ test("workdir, volumes, pull, network, options and env are honored", () => {
   assert.equal(result.workdir, "/src");
   assert.match(args, /--pull=never/);
   assert.match(args, /--network testnet/);
-  assert.match(args, /-v \/proj:\/src/);
+  assert.ok(args.includes(`-v ${PROJECT}:/src`));
   assert.match(args, /-v cache:\/root\/\.npm/);
   assert.match(args, /--user 1000:1000/, "extra options are split into separate arguments");
   assert.match(args, /-e EXTRA=yes/);

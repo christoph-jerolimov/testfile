@@ -4,6 +4,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { needs } from "./testtools.js";
 import { writeRun } from "./fixture.js";
 import { RunHistory } from "./runrecord.js";
 import { githubRunArchives, packRun, syncFromGithub, type Exec } from "./transfer/index.js";
@@ -32,9 +33,9 @@ function fakeAws(
   onCall: (command: string, args: string[]) => { status: number; stdout: string } | undefined
 ): { exec: Exec; calls: string[][] } {
   const calls: string[][] = [];
-  const exec: Exec = (command, args) => {
+  const exec: Exec = (command, args, options) => {
     if (command === "tar" || command === "unzip") {
-      const result = spawnSync(command, args, { encoding: "utf8" });
+      const result = spawnSync(command, args, { encoding: "utf8", cwd: options?.cwd });
       return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
     }
     calls.push([command, ...args]);
@@ -125,7 +126,7 @@ test("githubRunArchives lists matching, unexpired artifacts of recent runs", asy
   assert.ok(requests.every((request) => request.auth === "Bearer tok"), "every call authenticates");
 });
 
-test("syncFromGithub imports artifact zips holding the run contents directly", async () => {
+test("syncFromGithub imports artifact zips holding the run contents directly", { skip: needs("zip", "unzip") }, async () => {
   const source = tempDir();
   const id = recordRun(source);
   const staging = tempDir();
@@ -169,7 +170,7 @@ test("syncFromGithub imports artifact zips holding the run contents directly", a
   assert.deepEqual(again.skipped, [id]);
 });
 
-test("syncFromGithub still imports legacy artifacts wrapping a .tgz", async () => {
+test("syncFromGithub still imports legacy artifacts wrapping a .tgz", { skip: needs("zip", "unzip", "tar") }, async () => {
   const source = tempDir();
   const id = recordRun(source);
   const staging = tempDir();

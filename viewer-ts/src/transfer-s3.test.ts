@@ -4,6 +4,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { needs } from "./testtools.js";
 import { writeRun } from "./fixture.js";
 import { RunHistory } from "./runrecord.js";
 import { packRun, s3List, s3Pull, s3Push, type Exec } from "./transfer/index.js";
@@ -32,9 +33,9 @@ function fakeAws(
   onCall: (command: string, args: string[]) => { status: number; stdout: string } | undefined
 ): { exec: Exec; calls: string[][] } {
   const calls: string[][] = [];
-  const exec: Exec = (command, args) => {
+  const exec: Exec = (command, args, options) => {
     if (command === "tar" || command === "unzip") {
-      const result = spawnSync(command, args, { encoding: "utf8" });
+      const result = spawnSync(command, args, { encoding: "utf8", cwd: options?.cwd });
       return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
     }
     calls.push([command, ...args]);
@@ -44,7 +45,7 @@ function fakeAws(
   return { exec, calls };
 }
 
-test("s3Push packs and uploads to <prefix>/<run-id>.tgz", () => {
+test("s3Push packs and uploads to <prefix>/<run-id>.tgz", { skip: needs("tar") }, () => {
   const dir = tempDir();
   const id = recordRun(dir);
   const { exec, calls } = fakeAws(() => undefined);
@@ -56,7 +57,7 @@ test("s3Push packs and uploads to <prefix>/<run-id>.tgz", () => {
   assert.equal(calls[0][4], url);
 });
 
-test("s3List returns archives newest first, s3Pull imports the latest", () => {
+test("s3List returns archives newest first, s3Pull imports the latest", { skip: needs("tar") }, () => {
   const source = tempDir();
   const id = recordRun(source);
   const prepared = join(tempDir(), `${id}.tgz`);
