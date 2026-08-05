@@ -57,7 +57,7 @@ function fakeFetch(routes: Record<string, FakeResponseInit>): {
 
 test("githubRunArchives lists matching, unexpired artifacts of recent runs", async () => {
   const { fetchImpl, requests } = fakeFetch({
-    "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=2": {
+    "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=2&page=1": {
       json: {
         workflow_runs: [
           { id: 11, name: "CI", artifacts_url: "https://api.github.com/runs/11/artifacts" },
@@ -100,6 +100,7 @@ test("githubRunArchives lists matching, unexpired artifacts of recent runs", asy
       workflowRun: 11,
       workflowName: "CI",
       artifactId: 1,
+      name: "testfile-run",
       downloadUrl: "https://dl/1",
       createdAt: "2026-01-02T09:01:00Z",
       sizeBytes: 15692,
@@ -108,6 +109,120 @@ test("githubRunArchives lists matching, unexpired artifacts of recent runs", asy
   assert.ok(
     requests.every((request) => request.auth === "Bearer tok"),
     "every call authenticates",
+  );
+});
+
+test("the artifact name is a prefix, so every leg of a matrix comes along", async () => {
+  const routes = {
+    "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1&page=1": {
+      json: {
+        workflow_runs: [
+          { id: 20, name: "CI", artifacts_url: "https://api.github.com/runs/20/artifacts" },
+        ],
+      },
+    },
+    "https://api.github.com/runs/20/artifacts": {
+      json: {
+        artifacts: [
+          { id: 1, name: "testfile-run-ubuntu-latest", archive_download_url: "https://dl/1" },
+          { id: 2, name: "testfile-run-windows-latest", archive_download_url: "https://dl/2" },
+          { id: 3, name: "testfile-run-merged", archive_download_url: "https://dl/3" },
+          { id: 4, name: "testfile-run", archive_download_url: "https://dl/4" },
+          { id: 5, name: "coverage", archive_download_url: "https://dl/5" },
+        ],
+      },
+    },
+  };
+
+  const prefixed = await githubRunArchives({
+    repo: "o/r",
+    latest: 1,
+    artifact: "testfile-run",
+    token: "tok",
+    fetchImpl: fakeFetch(routes).fetchImpl,
+  });
+  assert.deepEqual(
+    prefixed.map((archive) => archive.name),
+    [
+      "testfile-run-ubuntu-latest",
+      "testfile-run-windows-latest",
+      "testfile-run-merged",
+      "testfile-run",
+    ],
+    "the platform legs, the merged run and the plain name - but not another artifact",
+  );
+
+  // ... unless the name has to match exactly
+  const exact = await githubRunArchives({
+    repo: "o/r",
+    latest: 1,
+    artifact: "testfile-run",
+    exact: true,
+    token: "tok",
+    fetchImpl: fakeFetch(routes).fetchImpl,
+  });
+  assert.deepEqual(
+    exact.map((archive) => archive.artifactId),
+    [4],
+  );
+
+  // a longer prefix picks one leg
+  const merged = await githubRunArchives({
+    repo: "o/r",
+    latest: 1,
+    artifact: "testfile-run-merged",
+    token: "tok",
+    fetchImpl: fakeFetch(routes).fetchImpl,
+  });
+  assert.deepEqual(
+    merged.map((archive) => archive.artifactId),
+    [3],
+  );
+});
+
+test("more than a page of workflow runs is fetched page by page", async () => {
+  const page = (from: number, count: number) => ({
+    workflow_runs: Array.from({ length: count }, (_, index) => ({
+      id: from + index,
+      name: "CI",
+      artifacts_url: `https://api.github.com/runs/${from + index}/artifacts`,
+    })),
+  });
+  const routes: Record<string, { json: unknown }> = {
+    "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=100&page=1": {
+      json: page(1000, 100),
+    },
+    "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=100&page=2": {
+      json: page(900, 20),
+    },
+  };
+  // only the last of the 120 runs carries an artifact
+  for (let id = 900; id < 1100; id++) {
+    routes[`https://api.github.com/runs/${id}/artifacts`] = {
+      json:
+        id === 919
+          ? { artifacts: [{ id: 77, name: "testfile-run-merged", archive_download_url: "u" }] }
+          : { artifacts: [] },
+    };
+  }
+  const { fetchImpl, requests } = fakeFetch(routes);
+
+  const archives = await githubRunArchives({
+    repo: "o/r",
+    latest: 120,
+    artifact: "testfile-run",
+    token: "tok",
+    fetchImpl,
+  });
+  assert.deepEqual(
+    archives.map((archive) => archive.artifactId),
+    [77],
+    "an artifact on the 120th run is still found",
+  );
+  assert.equal(
+    requests.filter((request) => request.url.includes("actions/runs?")).length,
+    2,
+    "two pages, because GitHub caps a page at 100",
   );
 });
 
@@ -124,7 +239,7 @@ test(
     const zipBytes = readFileSync(join(staging, "artifact.zip"));
 
     const { fetchImpl } = fakeFetch({
-      "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1": {
+      "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1&page=1": {
         json: {
           workflow_runs: [
             { id: 7, name: "CI", artifacts_url: "https://api.github.com/runs/7/artifacts" },
@@ -180,7 +295,7 @@ test(
     const zipBytes = readFileSync(join(staging, "artifact.zip"));
 
     const { fetchImpl } = fakeFetch({
-      "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1": {
+      "https://api.github.com/repos/o/r/actions/runs?status=completed&per_page=1&page=1": {
         json: {
           workflow_runs: [
             { id: 8, name: "CI", artifacts_url: "https://api.github.com/runs/8/artifacts" },

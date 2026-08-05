@@ -255,8 +255,9 @@ options:
 
 | Option | Description |
 | ------ | ----------- |
-| `--latest <n>` | Number of recent workflow runs to consider (default: `5`). |
-| `--artifact <name>` | Artifact name the action uploads (default: `testfile-run`). |
+| `--latest <n>` | Number of recent workflow runs to consider (default: `100`; more than 100 is fetched page by page). |
+| `--artifact <name>` | Artifact name the action uploads (default: `testfile-run`), matched as a **prefix** — a matrix job that uploads `testfile-run-ubuntu-latest` and a merge job uploading `testfile-run-merged` are both picked up. |
+| `--exact` | Require the artifact name to match exactly instead of as a prefix. |
 
 #### `github sync <owner/repo> [path]`
 
@@ -266,7 +267,8 @@ Download the run artifacts of recent workflow runs and import them
 #### `github list <owner/repo>`
 
 List the run artifacts available in recent workflow runs — workflow run
-id, workflow name, creation time and size — without downloading anything.
+id, artifact name, workflow name, creation time and size — without
+downloading anything.
 
 ### `testfile-viewer gitlab` subcommands
 
