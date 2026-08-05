@@ -1,3 +1,5 @@
+spec:
+  - Secrets
 env:
   CONFORMANCE_SECRET: top-secret-value
 exitCode: 0

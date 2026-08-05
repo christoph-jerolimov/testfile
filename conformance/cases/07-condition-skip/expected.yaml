@@ -1,3 +1,5 @@
+spec:
+  - Conditions
 exitCode: 0
 status: passed
 env:

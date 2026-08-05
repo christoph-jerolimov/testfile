@@ -1,0 +1,28 @@
+version: 0
+# Services are shut down gracefully when the run ends. `stop.command` is
+# what does it here, and its trace outlives the run: the marker it writes is
+# only visible to the *next* run in the same working copy.
+services:
+  keeper:
+    script: |
+      touch keeper-started
+      echo keeper-ready
+      sleep 60
+    ready:
+      log: keeper-ready
+      timeout: 30s
+    stop:
+      # the marker is the observable trace; the sleeping service itself is
+      # killed after the (short) grace period
+      command: touch stopped-marker
+      timeout: 1s
+test:
+  name: root
+  sequence:
+    - name: service-started
+      command: test -f keeper-started
+    - name: stopped-after-the-previous-run
+      # fails on the first run (nothing was stopped yet) and passes on every
+      # later one - the expectations below pin both
+      continueOnError: true
+      command: test -f stopped-marker

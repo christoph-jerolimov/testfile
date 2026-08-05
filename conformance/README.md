@@ -81,14 +81,40 @@ An optional argument filters cases by substring:
 
 | Field | Meaning |
 | ----- | ------- |
+| `spec` | The specification sections this case pins — see [coverage](#coverage) below. |
 | `exitCode` | Required process exit code. |
 | `status` | Required run status in the report (`passed`, `failed`, `aborted`). |
 | `env` | Extra environment variables set for the runner invocation. |
 | `tests` | List of `{path, status}`; each must appear in the report with that status. |
 | `absentTests` | Paths that must **not** appear in the report (tests that must not have run). |
 
-## Adding cases
+## Coverage
 
 Every change to the execution semantics in [`../spec/README.md`](../spec/README.md)
 must add or adjust a case here — the suite is the machine-checkable half of
-the specification.
+the specification. [`coverage.mjs`](coverage.mjs) makes that convention
+mechanical instead of merely written down:
+
+```sh
+npm run coverage --workspace conformance
+```
+
+Each case names the sections it pins, by their heading in the specification
+(backticks dropped):
+
+```yaml
+spec:
+  - Services
+  - Readiness (ready)
+```
+
+The check fails when a spec section has no case, when a case names a section
+that does not exist (a renamed heading), when a case declares no section at
+all, and when an exemption in `NOT_EXECUTABLE` names a section that is gone.
+Sections that describe rather than prescribe — the glossary, the file naming
+— are exempt there, each with its reason.
+
+A case may also point at the result format with a `RESULTS.md#` prefix (e.g.
+`RESULTS.md#run.yaml`). Those references are validated, but the result
+format's own coverage is not enforced here: the JSON schema and the viewer's
+tests check it.

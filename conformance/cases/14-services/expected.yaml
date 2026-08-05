@@ -1,3 +1,6 @@
+spec:
+  - Services
+  - Readiness (ready)
 # Services must be ready (log pattern / exec check) before dependent tests
 # run, and must not keep the run alive afterwards (they sleep 60 but the
 # runner stops them).

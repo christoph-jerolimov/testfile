@@ -1,3 +1,5 @@
+spec:
+  - Foreach
 exitCode: 0
 status: passed
 tests:

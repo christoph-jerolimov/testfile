@@ -1,3 +1,5 @@
+spec:
+  - Conditions
 env:
   CONFORMANCE_FLAG: yes
 exitCode: 0

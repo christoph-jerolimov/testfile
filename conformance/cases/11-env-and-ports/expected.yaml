@@ -1,3 +1,7 @@
+spec:
+  - Top level document
+  - Ports
+  - Environment and templates
 exitCode: 0
 status: passed
 tests:

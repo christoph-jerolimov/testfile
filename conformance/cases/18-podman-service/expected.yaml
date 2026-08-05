@@ -1,3 +1,6 @@
+spec:
+  - Containers
+  - Readiness (ready)
 # Container services via podman: a run-level service with a published
 # random port (tcp readiness + reachable from a test) and a test-scoped
 # container with a log readiness check. Skipped where podman is missing.

@@ -1,3 +1,5 @@
+spec:
+  - Containers
 requires: [podman]
 exitCode: 0
 status: passed

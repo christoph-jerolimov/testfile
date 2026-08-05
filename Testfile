@@ -102,6 +102,16 @@ test:
           if: ${{ env.TESTFILE_OS }} != win32
           needs: [build-runner]
           command: npm test --workspace conformance
+        # Runs nothing: it maps the specification's sections onto the case
+        # ids, so a new spec section cannot arrive without a case.
+        - name: conformance-coverage
+          tags: [fast, conformance]
+          command: npm run coverage --workspace conformance
+          inputs:
+            - conformance/coverage*.mjs
+            - conformance/cases/*/expected.yaml
+            - spec/README.md
+            - spec/RESULTS.md
         # The examples gallery on the website renders these files, so they
         # must stay valid.
         - name: examples

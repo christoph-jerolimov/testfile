@@ -1,3 +1,5 @@
+spec:
+  - Tests
 # Declared artifact globs are collected into the run record - also when the
 # test fails.
 exitCode: 0

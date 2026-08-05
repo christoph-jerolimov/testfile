@@ -1,3 +1,5 @@
+spec:
+  - Tests
 exitCode: 0
 status: passed
 tests:
