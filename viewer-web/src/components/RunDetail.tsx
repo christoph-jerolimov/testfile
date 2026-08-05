@@ -4,6 +4,7 @@ import { formatMs, mergedVariantLabel, startedLabel, variantLabel } from "../for
 import type { RunRecord } from "../types.js";
 import { Log } from "./Log.js";
 import { StatusCell } from "./StatusCell.js";
+import { SuiteTree } from "./SuiteTree.js";
 
 type LogChoice =
   | { kind: "run" }
@@ -60,79 +61,54 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
           </ul>
         </div>
       ) : null}
-      <table>
-        <thead>
-          <tr>
-            <th>Test</th>
-            <th>Status</th>
-            <th>Duration</th>
-            <th>Log</th>
-          </tr>
-        </thead>
-        <tbody>
-          {run.tests.map((test) => (
-            <tr
-              key={`${test.path} ${test.origin ?? ""}`}
-              className={
-                choice.kind === "test" && choice.path === test.path ? "selected" : undefined
-              }
-            >
-              <td className="mono">
-                {test.path}
-                {variantLabel(test.variants) ? (
-                  <span className="variant">{variantLabel(test.variants)}</span>
-                ) : null}
-                {test.reason ? <div className="muted small">{test.reason}</div> : null}
-              </td>
-              <td>
-                <StatusCell status={test.status} cached={test.cached} />
-              </td>
-              <td>{formatMs(test.durationMs)}</td>
-              <td>
-                {test.log ? (
-                  <button
-                    className="link"
-                    onClick={() => setChoice({ kind: "test", path: test.path })}
-                  >
-                    show
-                  </button>
-                ) : (
-                  <span className="status-skipped">-</span>
-                )}
-                {test.artifacts?.length ? (
-                  <span className="badge">{test.artifacts.length} artifacts</span>
-                ) : null}
-              </td>
+      <SuiteTree
+        run={run}
+        selectedPath={choice.kind === "test" ? choice.path : undefined}
+        onLog={(path) => setChoice({ kind: "test", path })}
+      />
+      {(run.services ?? []).length > 0 ? (
+        <table className="services">
+          <thead>
+            <tr>
+              <th>Service</th>
+              <th>Status</th>
+              <th>Log</th>
             </tr>
-          ))}
-          {(run.services ?? []).map((service) => (
-            <tr
-              key={`svc-${service.name}`}
-              className={
-                choice.kind === "service" && choice.name === service.name ? "selected" : undefined
-              }
-            >
-              <td className="mono">service {service.name}</td>
-              <td>
-                <StatusCell status={service.status ?? "stopped"} />
-              </td>
-              <td>-</td>
-              <td>
-                {service.log ? (
-                  <button
-                    className="link"
-                    onClick={() => setChoice({ kind: "service", name: service.name })}
-                  >
-                    show
-                  </button>
-                ) : (
-                  <span className="status-skipped">-</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {(run.services ?? []).map((service) => (
+              <tr
+                key={`svc-${service.name}`}
+                className={
+                  choice.kind === "service" && choice.name === service.name ? "selected" : undefined
+                }
+              >
+                <td className="mono">
+                  service {service.name}
+                  {variantLabel(service.variants) ? (
+                    <span className="variant">{variantLabel(service.variants)}</span>
+                  ) : null}
+                </td>
+                <td>
+                  <StatusCell status={service.status ?? "stopped"} />
+                </td>
+                <td>
+                  {service.log ? (
+                    <button
+                      className="link"
+                      onClick={() => setChoice({ kind: "service", name: service.name })}
+                    >
+                      show
+                    </button>
+                  ) : (
+                    <span className="status-skipped">-</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : null}
       <h2 style={{ marginTop: "1.2rem" }}>
         {choice.kind === "run" ? (
           "merged log"

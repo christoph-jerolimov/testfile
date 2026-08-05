@@ -329,3 +329,59 @@ button.link {
   color: var(--dim);
   padding: 0.8rem 0.4rem;
 }
+
+/* The suite tree: one row per node of the recorded Testfile, indented by
+   depth, with the results of this run on it. */
+.tree-controls {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.tree-name {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+}
+
+.twisty {
+  border: none;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  cursor: pointer;
+  padding: 0 0.15rem;
+  width: 1.1rem;
+}
+
+.twisty:hover {
+  color: var(--accent);
+}
+
+.twisty-spacer {
+  display: inline-block;
+  width: 1.1rem;
+}
+
+/* In the suite but never reached: still visible, visibly not a result. */
+.tree tr.not-run td {
+  color: var(--dim);
+  opacity: 0.65;
+}
+
+.badge.kind {
+  border-style: dashed;
+}
+
+.badge.service {
+  font-style: italic;
+}
+
+.link.on {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+table.services {
+  margin-top: 0.8rem;
+}

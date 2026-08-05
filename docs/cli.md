@@ -519,12 +519,22 @@ testfile-viewer serve --port 8080
 ```
 
 - **Runs**: a table of all recorded runs; selecting one shows its details,
-  per-test results and logs (merged or per test).
+  the suite tree with this run's results on it, and the logs (merged or per
+  test).
 - **Results**: every recorded test with aggregated pass/fail counts and
   its executions across all runs.
 - The server watches `.testfile/runs/` and pushes changes to the browser,
   so runs recorded elsewhere (another terminal, `testfile-viewer github sync`)
   appear live.
+
+The run detail draws the **suite tree** the record carries: every node of
+the Testfile with its kind, tags, matrix combination and declared services,
+indented, with the results of this run on it. Groups collapse (and
+`collapse all` / `expand all` do the lot), a merged run shows one line per
+leg under its node, and a test the run never reached — filtered out,
+skipped by a condition, or never started because something before it
+failed — keeps its place, greyed and marked `not run`. Records written
+before `suite` existed fall back to the tree their test paths imply.
 
 Both tables have a filter bar above them. Nothing is selected in the
 multi-selects to begin with, which shows everything; the only default that
