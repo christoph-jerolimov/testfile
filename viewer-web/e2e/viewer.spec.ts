@@ -44,8 +44,9 @@ test("runs view lists the history and opens the newest run", async ({ page }) =>
 
 test("a single test log opens from the run detail", async ({ page }) => {
   await page
-    .locator(".detail tr", { hasText: "ci/unit" })
+    .locator(".detail tr", { hasText: "unit" })
     .getByRole("button", { name: "show" })
+    .first()
     .click();
   const log = page.locator(".detail .log");
   await expect(log).toContainText("41 tests passed");
@@ -74,7 +75,7 @@ test("a merged run shows its legs and one row per variant", async ({ page }) => 
   await expect(detail).toContainText("ci-windows");
 
   // the same test once per platform, each tagged with its variant
-  const unit = detail.locator("tbody tr", { hasText: "ci/unit" });
+  const unit = detail.locator("tbody tr", { hasText: "unit" });
   await expect(unit).toHaveCount(2);
   await expect(unit.nth(0)).toContainText("platform=linux");
   await expect(unit.nth(1)).toContainText("platform=windows");
@@ -191,4 +192,44 @@ test("the results table filters by status, tag and text", async ({ page }) => {
   await page.getByPlaceholder("test path or tag").fill("build");
   await expect(page.locator(".list tbody tr")).toHaveCount(1);
   await expect(page.locator(".list tbody tr").first()).toContainText("ci/build");
+});
+
+test("the run detail is the suite tree, including what never ran", async ({ page }) => {
+  const detail = page.locator(".detail");
+
+  // the recorded suite, indented, with kinds, tags and declared services
+  const rows = detail.locator("table.tree tbody tr");
+  await expect(rows).toHaveCount(4);
+  await expect(rows.nth(0)).toContainText("ci");
+  await expect(rows.nth(0)).toContainText("sequence");
+  await expect(rows.nth(1)).toContainText("build");
+  await expect(rows.nth(2)).toContainText("unit");
+  await expect(rows.nth(2)).toContainText("fast");
+
+  // ci/e2e is in the Testfile but was not part of this run
+  const notRun = rows.nth(3);
+  await expect(notRun).toContainText("e2e");
+  await expect(notRun).toContainText("service db");
+  await expect(notRun).toContainText("not run");
+  await expect(notRun).toHaveClass(/not-run/);
+
+  // services keep their own table below the tree
+  await expect(detail.locator("table.services")).toContainText("service db");
+
+  await expect(page).toHaveScreenshot("suite-tree.png");
+});
+
+test("groups collapse and expand", async ({ page }) => {
+  const rows = page.locator(".detail table.tree tbody tr");
+  await expect(rows).toHaveCount(4);
+
+  await page.getByRole("button", { name: "collapse ci" }).click();
+  await expect(rows).toHaveCount(1);
+  await page.getByRole("button", { name: "expand ci" }).click();
+  await expect(rows).toHaveCount(4);
+
+  await page.getByRole("button", { name: "collapse all" }).click();
+  await expect(rows).toHaveCount(1);
+  await page.getByRole("button", { name: "expand all" }).click();
+  await expect(rows).toHaveCount(4);
 });
