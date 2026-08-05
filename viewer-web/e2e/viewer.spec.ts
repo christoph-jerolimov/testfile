@@ -12,6 +12,9 @@ test.beforeEach(async ({ page }) => {
   // same "● live" header state
   await expect(page.locator("header .live")).toContainText("3 runs");
   await expect(page.locator("header .live")).toContainText("live");
+  // The fixture is frozen in time, so the "last 30 days" default hides it;
+  // the default itself is asserted in its own test below.
+  await page.getByRole("button", { name: "all", exact: true }).click();
 });
 
 test("runs view lists the history and opens the newest run", async ({ page }) => {
@@ -101,7 +104,7 @@ test("results view aggregates tests across runs", async ({ page }) => {
 });
 
 test("every selection is a link that can be shared and reloaded", async ({ page }) => {
-  // a run deep link opens that run, not the newest one
+  // a run deep link opens that run, not the newest one - filters or not
   await page.goto("/runs/20260101-120000-fx01");
   await expect(page.locator(".detail")).toContainText("20260101-120000-fx01");
 
@@ -115,6 +118,8 @@ test("every selection is a link that can be shared and reloaded", async ({ page 
   // switching tabs and picking rows writes the URL ...
   await page.getByRole("button", { name: "Runs" }).click();
   await expect(page).toHaveURL("/runs");
+  // this navigation reloaded the app, so the frozen fixture needs "all" again
+  await page.getByRole("button", { name: "all", exact: true }).click();
   await page.locator(".list tbody tr").nth(2).click();
   await expect(page).toHaveURL("/runs/20251231-080000-fx00");
 
@@ -129,4 +134,61 @@ test("every selection is a link that can be shared and reloaded", async ({ page 
 test("an unknown run id falls back to the newest run", async ({ page }) => {
   await page.goto("/runs/does-not-exist");
   await expect(page.locator(".detail")).toContainText("20260102-090000-fx02");
+});
+
+test("the runs table opens on the last 30 days and can be widened", async ({ page }) => {
+  await page.reload();
+  await expect(page.locator("header .live")).toContainText("3 runs");
+
+  // the fixture runs are older than 30 days, so the default hides them ...
+  await expect(page.getByRole("button", { name: "30 days" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.locator(".filter-count")).toContainText("0 of 3 runs");
+  await expect(page.locator(".list tbody")).toContainText("no run matches the filters");
+  // ... but a linked run stays visible, filters or not
+  await expect(page.locator(".detail")).toContainText("20260102-090000-fx02");
+
+  await page.getByRole("button", { name: "all", exact: true }).click();
+  await expect(page.locator(".filter-count")).toContainText("3 runs");
+  await expect(page.locator(".list tbody tr")).toHaveCount(3);
+});
+
+test("status, variant and text filters narrow the runs", async ({ page }) => {
+  // the newest run failed, and so did the merged one (its windows leg did)
+  await page.getByRole("button", { name: "failed", exact: true }).click();
+  await expect(page.locator(".filter-count")).toContainText("2 of 3 runs");
+  await expect(page.locator(".list tbody tr")).toHaveCount(2);
+  await page.getByRole("button", { name: "failed", exact: true }).click(); // toggles off
+  await expect(page.locator(".filter-count")).toContainText("3 runs");
+
+  // a variant of one merged leg selects the run that contains it
+  await page.getByRole("button", { name: "platform=windows" }).click();
+  await expect(page.locator(".list tbody tr")).toHaveCount(1);
+  await expect(page.locator(".list tbody tr").first()).toContainText("platform=linux|windows");
+  // clearing goes back to the defaults, including the 30-day window
+  await page.getByRole("button", { name: "clear filters" }).click();
+  await expect(page.locator(".filter-count")).toContainText("0 of 3 runs");
+  await page.getByRole("button", { name: "all", exact: true }).click();
+
+  // free text matches ids and test paths
+  await page.getByPlaceholder("run id, test, variant").fill("fx01");
+  await expect(page.locator(".list tbody tr")).toHaveCount(1);
+  await expect(page.locator(".list tbody tr").first()).toContainText("2026-01-01 12:00:00");
+});
+
+test("the results table filters by status, tag and text", async ({ page }) => {
+  await page.getByRole("button", { name: "Results" }).click();
+  await expect(page.locator(".filter-count")).toContainText("3 tests");
+
+  // tags come from the recorded suite tree, not from the test results
+  await page.getByRole("button", { name: "unit", exact: true }).click();
+  await expect(page.locator(".list tbody tr")).toHaveCount(1);
+  await expect(page.locator(".list tbody tr").first()).toContainText("ci/unit");
+  await page.getByRole("button", { name: "clear filters" }).click();
+
+  await page.getByPlaceholder("test path or tag").fill("build");
+  await expect(page.locator(".list tbody tr")).toHaveCount(1);
+  await expect(page.locator(".list tbody tr").first()).toContainText("ci/build");
 });

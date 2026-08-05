@@ -526,6 +526,22 @@ testfile-viewer serve --port 8080
   so runs recorded elsewhere (another terminal, `testfile-viewer github sync`)
   appear live.
 
+Both tables have a filter bar above them. Nothing is selected in the
+multi-selects to begin with, which shows everything; the only default that
+narrows anything is the time window:
+
+| Filter | Applies to | Default |
+| ------ | ---------- | ------- |
+| **Started** | runs — `7 days`, `30 days`, `90 days`, `all` | last **30 days** |
+| **Status** | runs / tests, multi-select (several values are an OR) | everything |
+| **Variants** | runs, multi-select over `platform=linux`-style labels; a merged run matches when *any* of its legs does | everything |
+| **Tags** | tests, multi-select over the tags of the recorded [suite tree](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md) — nested tests inherit the tags of their groups | everything |
+| **Search** | free text over run ids, test paths, statuses and variant labels | empty |
+
+The count on the right says how much survived (`4 of 27 runs`) and clears
+the filters again. A run or test opened by link stays visible even when the
+filters would hide it — the link should not silently open something else.
+
 Every selection is in the URL, so a view can be linked, bookmarked and
 reloaded — and the browser's back button walks through it:
 

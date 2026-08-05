@@ -13,6 +13,9 @@ import { defineConfig } from "@playwright/test";
 // e2e/screenshot.css forces one font stack on top.
 const externalUrl = process.env.TESTFILE_E2E_URL;
 const port = 7365;
+// An escape hatch for machines that cannot download the browser Playwright
+// asks for (an offline box, a sandbox): point this at an existing Chromium.
+const chromium = process.env.TESTFILE_E2E_CHROMIUM;
 
 export default defineConfig({
   testDir: "e2e",
@@ -25,6 +28,7 @@ export default defineConfig({
     baseURL: externalUrl ?? `http://127.0.0.1:${port}`,
     viewport: { width: 1200, height: 800 },
     deviceScaleFactor: 1,
+    ...(chromium ? { launchOptions: { executablePath: chromium } } : {}),
   },
   expect: {
     toHaveScreenshot: {

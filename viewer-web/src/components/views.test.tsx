@@ -24,9 +24,12 @@ const run = (id: string, startedAt: string, status: RunRecord["status"]): RunRec
   ],
 });
 
+// recent, because the runs table opens on the last 30 days
+const hoursAgo = (hours: number): string => new Date(Date.now() - hours * 3_600_000).toISOString();
+
 const runs = [
-  run("20260102-090000-fx02", "2026-01-02T09:00:00.000Z", "failed"),
-  run("20260101-120000-fx01", "2026-01-01T12:00:00.000Z", "passed"),
+  run("20260102-090000-fx02", hoursAgo(1), "failed"),
+  run("20260101-120000-fx01", hoursAgo(26), "passed"),
 ];
 
 test("the run from the URL is the one shown, whatever its position", () => {
@@ -47,6 +50,17 @@ test("rows link to their own route", () => {
   const markup = renderToStaticMarkup(<RunsView runs={runs} />);
   // every run is a row; the detail names the selected one
   assert.equal(markup.match(/class="row/g)?.length, 2);
+});
+
+test("a run outside the default window is hidden, but a link still opens it", () => {
+  const old = run(
+    "20250101-000000-old0",
+    new Date(Date.now() - 120 * 86_400_000).toISOString(),
+    "passed",
+  );
+  const markup = renderToStaticMarkup(<RunsView runs={[...runs, old]} selected={old.id} />);
+  assert.match(markup, /2 of 3 runs/);
+  assert.match(markup, /run <span class="mono">20250101-000000-old0/);
 });
 
 test("the results view opens the test from the URL", () => {
