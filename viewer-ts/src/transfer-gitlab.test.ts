@@ -111,15 +111,15 @@ test("gitlabRunArchives lists artifacts of the matching job in recent pipelines"
   );
 });
 
-test("syncFromGitlab imports the run folder from a job artifact zip", { skip: needs("sh", "zip", "unzip") }, async () => {
+test("syncFromGitlab imports the run folder from a job artifact zip", { skip: needs("zip", "unzip") }, async () => {
   const source = tempDir();
   const id = recordRun(source);
   const staging = tempDir();
   // GitLab archives the paths as declared, so the zip holds .testfile/runs/<id>/
-  spawnSync("sh", [
-    "-c",
-    `cd ${source} && zip -q -r ${join(staging, "artifacts.zip")} .testfile/runs/${id}`,
-  ]);
+  // (zip runs in the source with a relative path, no shell involved)
+  spawnSync("zip", ["-q", "-r", join(staging, "artifacts.zip"), `.testfile/runs/${id}`], {
+    cwd: source,
+  });
   const zipBytes = readFileSync(join(staging, "artifacts.zip"));
 
   const base = "https://gitlab.example.com/api/v4/projects/17";
