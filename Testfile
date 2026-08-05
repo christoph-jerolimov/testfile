@@ -66,8 +66,12 @@ test:
           needs: [build-runner]
           workdir: runner-ts
           command: node --test "dist/**/*.test.js"
+        # The cases are written for a POSIX shell and some of them need a
+        # container engine, so they stay off Windows; what the runner does
+        # with paths and processes there is covered by the unit tests above.
         - name: conformance
           tags: [slow, conformance]
+          if: ${{ env.TESTFILE_OS }} != win32
           needs: [build-runner]
           command: npm test --workspace conformance
         # The examples gallery on the website renders these files, so they
@@ -85,8 +89,12 @@ test:
         # it. Locally the pre-installed Playwright browsers are used; on CI
         # the pinned chromium build is downloaded, so rendering matches the
         # committed screenshots everywhere.
+        # Linux only: the committed screenshots are rendered with the fonts of
+        # that platform, so comparing them elsewhere reports differences that
+        # say nothing about the viewer.
         - name: viewer-e2e
           tags: [slow, e2e, browser]
+          if: ${{ env.TESTFILE_OS }} == linux
           needs: [viewer-ts, viewer-web]
           workdir: viewer-web
           services:

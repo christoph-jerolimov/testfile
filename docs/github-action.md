@@ -115,3 +115,50 @@ commands and the S3 variant.
 
 Container services (postgres etc.) work out of the box on the standard
 `ubuntu-latest` runners, which ship with docker.
+
+## More than one platform
+
+The action runs on the Windows and macOS runners too, so one matrix job
+covers all three:
+
+```yaml
+jobs:
+  test:
+    name: Testfile CI (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: christoph-jerolimov/testfile@main
+        with:
+          # artifact names are unique per workflow run
+          artifact-name: testfile-run-${{ matrix.os }}
+```
+
+Two things to know before you do:
+
+- **Container tests are Linux-only.** The macOS runners have no container
+  engine at all, and the Windows runners only run Windows images, so a
+  `container:` or a containerised service cannot work there. Gate those
+  tests with [`if`](./writing-tests#conditions) on `TESTFILE_OS` instead of
+  splitting the suite across workflows — they are then reported as skipped
+  on the platforms that cannot run them:
+
+  ```yaml
+  - name: integration
+    if: ${{ env.TESTFILE_OS }} == linux
+    services:
+      db: { container: { image: postgres:16 } }
+    command: npm run test:integration
+  ```
+
+- **Commands still run in a POSIX shell.** On Windows that is the `sh` of
+  the Git installation every runner has, not `cmd` or PowerShell, so the
+  same `command:` works everywhere — but a test that shells out to
+  platform-specific tooling needs the same `if` treatment.
+
+This repository's own [CI](https://github.com/christoph-jerolimov/testfile/blob/main/.github/workflows/ci.yaml)
+is exactly that job: one Testfile, three platforms.
