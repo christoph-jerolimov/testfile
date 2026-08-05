@@ -4,6 +4,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { needs } from "./testtools.js";
 import { writeRun } from "./fixture.js";
 import { RunHistory } from "./runrecord.js";
 import { importRunArchive, packRun, type Exec } from "./transfer/index.js";
@@ -44,7 +45,7 @@ function fakeAws(
   return { exec, calls };
 }
 
-test("packRun and importRunArchive round-trip a run between histories", () => {
+test("packRun and importRunArchive round-trip a run between histories", { skip: needs("tar") }, () => {
   const source = tempDir();
   const id = recordRun(source);
   const archive = join(tempDir(), "run.tgz");
@@ -63,7 +64,7 @@ test("packRun and importRunArchive round-trip a run between histories", () => {
   assert.deepEqual(importRunArchive(target, archive), { imported: [], skipped: [id] });
 });
 
-test("packRun rejects unknown runs, import rejects archives without runs", () => {
+test("packRun rejects unknown runs, import rejects archives without runs", { skip: needs("sh", "tar") }, () => {
   const dir = tempDir();
   assert.throws(() => packRun(dir, "nope", join(dir, "x.tgz")), /no recorded run "nope"/);
 
@@ -72,7 +73,7 @@ test("packRun rejects unknown runs, import rejects archives without runs", () =>
   assert.throws(() => importRunArchive(tempDir(), stray), /does not contain a recorded run/);
 });
 
-test("importRunArchive accepts a zip of the run folder's contents", () => {
+test("importRunArchive accepts a zip of the run folder's contents", { skip: needs("zip", "unzip") }, () => {
   const source = tempDir();
   const id = recordRun(source);
   const staging = tempDir();

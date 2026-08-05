@@ -5,6 +5,8 @@ import type { Scopes } from "./template.js";
 
 const scopes: Scopes = { env: {}, ports: { web: 5001 }, matrix: {} };
 
+// The engine is named rather than detected: these tests are about the
+// arguments, and they must pass on a machine without podman or docker.
 function plan(def: Parameters<typeof buildTestContainerArgs>[0], hostCwd = "/proj", env = {}) {
   return buildTestContainerArgs(
     def,
@@ -13,9 +15,16 @@ function plan(def: Parameters<typeof buildTestContainerArgs>[0], hostCwd = "/pro
     env,
     scopes,
     'test "x"',
-    ["sh", "-c", "npm test"]
+    ["sh", "-c", "npm test"],
+    () => "docker"
   );
 }
+
+test("without an engine the detected one is used", () => {
+  assert.equal(plan({ image: "node:22" }).engine, "docker");
+  assert.equal(plan({ image: "node:22", engine: "auto" }).engine, "docker");
+  assert.equal(plan({ image: "node:22", engine: "podman" }).engine, "podman");
+});
 
 test("the project is mounted and the shell runs inside the image", () => {
   const result = plan({ image: "golang:1.23", engine: "docker" });

@@ -21,6 +21,8 @@ export interface TestContainerPlan {
 // Builds the `run` invocation for a test body. `hostCwd` is the directory
 // the test would have run in on the host; it becomes the mount source and
 // the container's working directory.
+// `detect` is a seam: building the arguments only needs the engine's name,
+// so the tests can name one instead of requiring an installed engine.
 export function buildTestContainerArgs(
   def: TestContainerDef,
   hostCwd: string,
@@ -28,10 +30,10 @@ export function buildTestContainerArgs(
   env: Record<string, string>,
   scopes: Scopes,
   where: string,
-  shellArgv: string[]
+  shellArgv: string[],
+  detect: () => string = detectEngine
 ): TestContainerPlan {
-  const engine =
-    def.engine && def.engine !== "auto" ? def.engine : detectEngine();
+  const engine = def.engine && def.engine !== "auto" ? def.engine : detect();
   if (engine === "kubernetes") {
     throw new Error(`${where}: container engine "kubernetes" is reserved for a future version`);
   }

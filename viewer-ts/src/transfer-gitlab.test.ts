@@ -4,6 +4,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { needs } from "./testtools.js";
 import { writeRun } from "./fixture.js";
 import { RunHistory } from "./runrecord.js";
 import { gitlabRunArchives, syncFromGitlab, type Exec } from "./transfer/index.js";
@@ -110,7 +111,7 @@ test("gitlabRunArchives lists artifacts of the matching job in recent pipelines"
   );
 });
 
-test("syncFromGitlab imports the run folder from a job artifact zip", async () => {
+test("syncFromGitlab imports the run folder from a job artifact zip", { skip: needs("sh", "zip", "unzip") }, async () => {
   const source = tempDir();
   const id = recordRun(source);
   const staging = tempDir();
