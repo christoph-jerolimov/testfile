@@ -20,7 +20,7 @@ Nothing in the format is platform-specific — the same file runs
 everywhere. What differs is what a platform *can* run: the macOS runners
 have no container engine, and the Windows runners only run Windows
 images, so containerised tests cannot work there. Say so in the Testfile
-with an [`if` condition](./writing-tests#conditions) on `TESTFILE_OS`
+with an [`if` condition](./writing-tests#conditional-tests) on `TESTFILE_OS`
 (`linux`, `darwin` or `win32`), and those tests are reported as skipped
 instead of failing:
 
@@ -172,7 +172,7 @@ pulls them — including the merged one — straight into your local history.
 
 ## Merging shards
 
-The same command merges [shards](./cli#sharding). Sharding splits the
+The same command merges [shards](./cli#sharding-across-machines). Sharding splits the
 suite, so no test appears twice and **no variants are needed**:
 
 ```sh

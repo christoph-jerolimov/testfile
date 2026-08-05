@@ -18,7 +18,17 @@ in the repository stay the single source; the relative links they use for
 GitHub are rewritten for the site by
 [`src/markdown-links.mjs`](src/markdown-links.mjs).
 
+Because the docs link each other by heading, renaming a page or a heading
+breaks links in files nobody touched.
+[`scripts/check-links.mjs`](scripts/check-links.mjs) resolves every internal
+`href` and `src` of the built site — anchors included — against `dist/`, and
+fails when one of them points nowhere. External links are not fetched, so the
+check works offline. It runs as the `links` test of the repository's
+[`Testfile`](../Testfile).
+
 ```sh
-npm run dev --workspace website     # local preview with live reload
-npm run build --workspace website   # build to dist/
+npm run dev --workspace website          # local preview with live reload
+npm run build --workspace website        # build to dist/
+npm run check:links --workspace website  # every internal link resolves
+npm test --workspace website             # the link checker's own tests
 ```

@@ -144,7 +144,7 @@ jobs:
 Three platforms means three recorded runs. A follow-up job combines them
 into a single run — one verdict, one duration, every test tagged with the
 platform it ran on — with
-[`testfile-viewer merge`](./cli-reference#testfile-viewer-merge). The
+[`testfile-viewer merge`](./cli-reference#testfile-viewer-merge-run). The
 [three-platform guided tour](./three-platforms) walks through the whole
 workflow, merge job included.
 
@@ -153,7 +153,7 @@ Two things to know before you do:
 - **Container tests are Linux-only.** The macOS runners have no container
   engine at all, and the Windows runners only run Windows images, so a
   `container:` or a containerised service cannot work there. Gate those
-  tests with [`if`](./writing-tests#conditions) on `TESTFILE_OS` instead of
+  tests with [`if`](./writing-tests#conditional-tests) on `TESTFILE_OS` instead of
   splitting the suite across workflows — they are then reported as skipped
   on the platforms that cannot run them:
 

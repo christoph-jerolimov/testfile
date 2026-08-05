@@ -50,6 +50,17 @@ test:
             - spec/**
             - examples/**
             - package-lock.json
+        # Every internal link of the built site has to point at a page and an
+        # anchor that exist - the docs link each other by heading.
+        - name: links
+          tags: [docs]
+          needs: [website]
+          command: npm run check:links --workspace website
+        - name: link-checker
+          tags: [fast, unit, docs]
+          command: npm test --workspace website
+          inputs:
+            - website/scripts/**
         - name: viewer-web
           tags: [fast, unit]
           command: npm test --workspace viewer-web
