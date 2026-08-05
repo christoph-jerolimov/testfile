@@ -5,6 +5,7 @@
 // the last 30 days of runs, every status, every tag. A multi-select with
 // nothing selected means "no opinion" - it shows everything rather than
 // nothing, which is what an empty filter should do.
+import { isFlaky } from "./format.js";
 import type { Aggregate, RunRecord, SuiteNode } from "./types.js";
 
 export interface RunFilter {
@@ -21,6 +22,8 @@ export interface TestFilter {
   statuses: string[];
   tags: string[];
   text: string;
+  // Only tests that both passed and failed across the recorded runs.
+  flakyOnly: boolean;
 }
 
 export const DEFAULT_DAYS = 30;
@@ -32,7 +35,12 @@ export const runFilterDefaults: RunFilter = {
   text: "",
 };
 
-export const testFilterDefaults: TestFilter = { statuses: [], tags: [], text: "" };
+export const testFilterDefaults: TestFilter = {
+  statuses: [],
+  tags: [],
+  text: "",
+  flakyOnly: false,
+};
 
 export function isDefaultRunFilter(filter: RunFilter): boolean {
   return (
@@ -44,7 +52,12 @@ export function isDefaultRunFilter(filter: RunFilter): boolean {
 }
 
 export function isDefaultTestFilter(filter: TestFilter): boolean {
-  return filter.statuses.length === 0 && filter.tags.length === 0 && filter.text === "";
+  return (
+    filter.statuses.length === 0 &&
+    filter.tags.length === 0 &&
+    filter.text === "" &&
+    !filter.flakyOnly
+  );
 }
 
 // "platform=linux, node=22" as separate labels, so each one can be picked.
@@ -147,6 +160,7 @@ export function filterTests(
   tags: Map<string, string[]> = new Map(),
 ): Aggregate[] {
   return tests.filter((test) => {
+    if (filter.flakyOnly && !isFlaky(test)) return false;
     if (!selected(filter.statuses, [test.lastStatus])) return false;
     if (!selected(filter.tags, tags.get(test.path) ?? [])) return false;
     return matches(filter.text, [test.path, test.lastStatus, ...(tags.get(test.path) ?? [])]);

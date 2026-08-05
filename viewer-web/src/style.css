@@ -385,3 +385,101 @@ button.link {
 table.services {
   margin-top: 0.8rem;
 }
+
+/* A test's recorded history, one block per run, newest on the right: a flaky
+   test alternates, a broken one ends in a run of red. */
+.spark {
+  display: inline-flex;
+  gap: 1px;
+  align-items: center;
+}
+
+.spark-block {
+  display: inline-block;
+  width: 4px;
+  height: 0.75rem;
+  border-radius: 1px;
+  background: var(--dim);
+}
+
+.spark-block.status-passed {
+  background: var(--green);
+}
+
+.spark-block.status-failed,
+.spark-block.status-aborted {
+  background: var(--red);
+}
+
+.spark-block.status-skipped {
+  background: var(--border);
+}
+
+.spark-block.status-running {
+  background: var(--yellow);
+}
+
+.badge.flaky {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+/* Comparing this run with another one, the `testfile-viewer diff` of the CLI. */
+.compare {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.6rem;
+  color: var(--dim);
+  font-size: 0.85rem;
+}
+
+.compare-pick {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.diff {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.85rem;
+}
+
+.diff-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.4rem 1.2rem;
+}
+
+.diff-title {
+  color: var(--dim);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.diff-section ul {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+}
+
+.diff-section li {
+  padding: 0.05rem 0;
+  font-size: 0.8rem;
+}
+
+.slower {
+  color: var(--red);
+}
+
+.faster {
+  color: var(--green);
+}

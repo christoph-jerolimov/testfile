@@ -8,10 +8,11 @@ import {
   testStatusOptions,
   type TestFilter,
 } from "../filters.js";
-import { aggregate, formatMs, startedLabel, variantLabel } from "../format.js";
+import { aggregate, formatMs, isFlaky, startedLabel, variantLabel } from "../format.js";
 import { navigate } from "../router.js";
 import type { RunRecord, RunTest } from "../types.js";
-import { FilterBar, MultiSelect, SearchInput } from "./FilterBar.js";
+import { FilterBar, MultiSelect, SearchInput, Toggle } from "./FilterBar.js";
+import { Sparkline } from "./Sparkline.js";
 import { StatusCell } from "./StatusCell.js";
 
 export function ResultsView({
@@ -55,6 +56,11 @@ export function ResultsView({
             selected={filter.tags}
             onChange={(values) => setFilter({ ...filter, tags: values })}
           />
+          <Toggle
+            label="flaky only"
+            on={filter.flakyOnly}
+            onChange={(flakyOnly) => setFilter({ ...filter, flakyOnly })}
+          />
           <SearchInput
             value={filter.text}
             placeholder="test path or tag"
@@ -66,6 +72,7 @@ export function ResultsView({
             <tr>
               <th>Test</th>
               <th>Last</th>
+              <th>History</th>
               <th>Passed</th>
               <th>Failed</th>
               <th>Runs</th>
@@ -78,9 +85,15 @@ export function ResultsView({
                 className={`row ${t.path === current.path ? "selected" : ""}`}
                 onClick={() => navigate({ view: "results", testPath: t.path })}
               >
-                <td className="mono">{t.path}</td>
+                <td className="mono">
+                  {t.path}
+                  {isFlaky(t) ? <span className="badge flaky">flaky</span> : null}
+                </td>
                 <td>
                   <StatusCell status={t.lastStatus} />
+                </td>
+                <td>
+                  <Sparkline history={t.history} />
                 </td>
                 <td>{t.passes}</td>
                 <td>{t.fails}</td>
@@ -89,7 +102,7 @@ export function ResultsView({
             ))}
             {shown.length === 0 ? (
               <tr>
-                <td className="empty-row" colSpan={5}>
+                <td className="empty-row" colSpan={6}>
                   no test matches the filters
                 </td>
               </tr>
@@ -100,6 +113,7 @@ export function ResultsView({
       <div className="detail">
         <h2>
           executions of <span className="mono">{current.path}</span>
+          {isFlaky(current) ? <span className="badge flaky">flaky</span> : null}
           {(tags.get(current.path) ?? []).map((tag) => (
             <span key={tag} className="badge">
               {tag}

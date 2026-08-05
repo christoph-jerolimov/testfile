@@ -4,6 +4,7 @@ import {
   filterRuns,
   filterTests,
   isDefaultRunFilter,
+  isDefaultTestFilter,
   runFilterDefaults,
   runVariantLabels,
   statusOptions,
@@ -150,8 +151,22 @@ test("tags come from the recorded suite tree and are inherited by nested tests",
 
 test("tests filter by last status, tag and text", () => {
   const tests: Aggregate[] = [
-    { path: "ci/unit", occurrences: 4, passes: 2, fails: 2, lastStatus: "failed" },
-    { path: "ci/build", occurrences: 4, passes: 4, fails: 0, lastStatus: "passed" },
+    {
+      path: "ci/unit",
+      occurrences: 4,
+      passes: 2,
+      fails: 2,
+      lastStatus: "failed",
+      history: ["failed", "passed", "failed", "passed"],
+    },
+    {
+      path: "ci/build",
+      occurrences: 4,
+      passes: 4,
+      fails: 0,
+      lastStatus: "passed",
+      history: ["passed", "passed", "passed", "passed"],
+    },
   ];
   const tags = new Map([
     ["ci/unit", ["fast", "unit"]],
@@ -172,4 +187,11 @@ test("tests filter by last status, tag and text", () => {
   );
   // without tags a tag filter matches nothing, the others still work
   assert.equal(filterTests(tests, { ...testFilterDefaults, tags: ["fast"] }).length, 0);
+
+  assert.deepEqual(
+    filterTests(tests, { ...testFilterDefaults, flakyOnly: true }, tags).map((t) => t.path),
+    ["ci/unit"],
+    "only the test that both passed and failed",
+  );
+  assert.equal(isDefaultTestFilter({ ...testFilterDefaults, flakyOnly: true }), false);
 });
