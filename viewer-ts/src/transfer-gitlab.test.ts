@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { needs } from "./testtools.js";
 import { writeRun } from "./fixture.js";
 import { RunHistory } from "./runrecord.js";
-import { gitlabRunArchives, syncFromGitlab, type Exec } from "./transfer/index.js";
+import { gitlabRunArchives, syncFromGitlab } from "./transfer/index.js";
 
 function tempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "testfile-transfer-"));
@@ -26,23 +26,6 @@ function recordRun(baseDir: string): string {
     `2026-01-${stamp}T10:00:00.000Z`,
     [{ path: "all/one", status: "passed", durationMs: 3, log: "out\n" }]
   ).id;
-}
-
-// A real exec for tar, recording (and faking) everything else.
-function fakeAws(
-  onCall: (command: string, args: string[]) => { status: number; stdout: string } | undefined
-): { exec: Exec; calls: string[][] } {
-  const calls: string[][] = [];
-  const exec: Exec = (command, args, options) => {
-    if (command === "tar" || command === "unzip") {
-      const result = spawnSync(command, args, { encoding: "utf8", cwd: options?.cwd });
-      return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
-    }
-    calls.push([command, ...args]);
-    const faked = onCall(command, args);
-    return { status: faked?.status ?? 0, stdout: faked?.stdout ?? "", stderr: "" };
-  };
-  return { exec, calls };
 }
 
 interface FakeResponseInit {

@@ -1,5 +1,5 @@
 import { globSync, statSync } from "node:fs";
-import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, relative, resolve, sep } from "node:path";
 import { matchesPathPattern } from "./gitchanges.js";
 import type { ForeachDef, TestDef } from "./model.js";
 
@@ -74,7 +74,7 @@ export function matchPaths(def: ForeachDef | string, baseDir: string): EachValue
 // later, at run time.
 export function applyEach<T>(template: T, values: EachValues): T {
   const substitute = (text: string): string =>
-    text.replace(/\$\{\{\s*each\.(\w+)\s*\}\}/g, (whole, key: string) => {
+    text.replace(/\$\{\{\s*each\.(\w+)\s*\}\}/g, (_match, key: string) => {
       const value = (values as unknown as Record<string, string>)[key];
       if (value === undefined) {
         throw new Error(`unknown reference "each.${key}" (known: path, name, dir, absolute)`);
@@ -128,9 +128,4 @@ export function expandForeach(def: TestDef, baseDir: string): TestDef[] {
   def.name = def.name ?? spec.glob;
   def.parallel = children;
   return children;
-}
-
-// Resolves a workdir declared in a template against the Testfile.
-export function joinPath(baseDir: string, path: string): string {
-  return join(baseDir, path);
 }
