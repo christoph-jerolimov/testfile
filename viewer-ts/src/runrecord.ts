@@ -154,6 +154,12 @@ export class RunHistory {
     return undefined;
   }
 
+  // The folder a run was recorded in - everything it kept (logs, artifacts,
+  // junit.xml, the run.yaml itself) lives under it.
+  runDir(run: RunRecord): string {
+    return join(this.dir, "runs", run.id);
+  }
+
   readLog(run: RunRecord, test: RunRecordTest): string | undefined {
     if (!test.log) return undefined;
     try {

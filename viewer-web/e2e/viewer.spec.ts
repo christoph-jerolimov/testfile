@@ -108,6 +108,45 @@ test("the log can be searched, wrapped and followed", async ({ page }) => {
   await expect(follow).toHaveAttribute("aria-pressed", "true");
 });
 
+test("what a run kept can be opened from the page", async ({ page }) => {
+  const detail = page.locator(".detail");
+
+  // the record the page was built from, and the JUnit report next to it
+  const runYaml = detail.locator(".files a", { hasText: "run.yaml" });
+  await expect(runYaml).toHaveAttribute(
+    "href",
+    "/api/runs/20260102-090000-fx02/artifacts/run.yaml",
+  );
+  await expect(detail.locator(".files a", { hasText: "junit.xml" })).toHaveAttribute(
+    "href",
+    "/api/runs/20260102-090000-fx02/artifacts/junit.xml",
+  );
+
+  // the artifact badge is a link now, named after the file
+  const report = detail.locator("table.tree a.file");
+  await expect(report).toHaveCount(1);
+  await expect(report).toHaveText("report.txt");
+  await expect(report).toHaveAttribute("title", "artifacts/ci-unit/report.txt");
+
+  // and each of them is really served
+  for (const link of [runYaml, report]) {
+    const href = (await link.getAttribute("href")) ?? "";
+    const response = await page.request.get(href);
+    expect(response.status(), href).toBe(200);
+    expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+  }
+  const body = await page.request.get((await report.getAttribute("href")) ?? "");
+  expect(await body.text()).toContain("1 failure: math.test.ts");
+
+  // nothing outside the run folder is reachable
+  const escaped = await page.request.get(
+    "/api/runs/20260102-090000-fx02/artifacts/..%2f..%2frun.yaml",
+  );
+  expect(escaped.status()).toBe(400);
+
+  await expect(page).toHaveScreenshot("artifacts.png");
+});
+
 test("older runs can be selected", async ({ page }) => {
   await page.locator(".list tbody tr").nth(1).click();
   const detail = page.locator(".detail");
