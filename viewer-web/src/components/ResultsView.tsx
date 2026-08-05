@@ -1,11 +1,18 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { aggregate, formatMs, startedLabel, variantLabel } from "../format.js";
+import { navigate } from "../router.js";
 import type { RunRecord, RunTest } from "../types.js";
 import { StatusCell } from "./StatusCell.js";
 
-export function ResultsView({ runs }: { runs: RunRecord[] }): React.ReactElement {
+export function ResultsView({
+  runs,
+  selected,
+}: {
+  runs: RunRecord[];
+  // The test path from the URL; the first test stands in until one is picked.
+  selected?: string;
+}): React.ReactElement {
   const tests = useMemo(() => aggregate(runs), [runs]);
-  const [selected, setSelected] = useState<string | undefined>();
   const current = tests.find((t) => t.path === selected) ?? tests[0];
   if (!current) return <div className="empty">no recorded runs yet — run some tests first</div>;
   // A merged run holds one result per leg, so a run can contribute more
@@ -31,7 +38,7 @@ export function ResultsView({ runs }: { runs: RunRecord[] }): React.ReactElement
               <tr
                 key={t.path}
                 className={`row ${t.path === current.path ? "selected" : ""}`}
-                onClick={() => setSelected(t.path)}
+                onClick={() => navigate({ view: "results", testPath: t.path })}
               >
                 <td className="mono">{t.path}</td>
                 <td>
