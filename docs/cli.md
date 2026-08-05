@@ -488,16 +488,20 @@ testfile-viewer s3 pull s3://my-bucket/testfile-runs --run <full-id>
 
 And when CI is the [GitHub Action](./github-action) (which uploads every
 recorded run as a `testfile-run` artifact), `sync` pulls the artifacts of
-the latest *n* workflow runs straight into the local history:
+the latest *n* workflow runs straight into the local history. The artifact
+name is a **prefix**, so a [matrix over platforms](./three-platforms) —
+`testfile-run-ubuntu-latest`, `testfile-run-macos-latest`,
+`testfile-run-merged` — comes along without naming each leg:
 
 ```sh
 export GITHUB_TOKEN=...                  # a token with actions:read
                                          # (GH_TOKEN works too)
 export GITHUB_TOKEN=$(gh auth token)     # ... or reuse the gh CLI's login
 testfile-viewer github list owner/repo          # available run artifacts
-testfile-viewer github sync owner/repo          # latest 5 workflow runs
+testfile-viewer github sync owner/repo          # latest 100 workflow runs
 testfile-viewer github sync owner/repo --latest 20
-testfile-viewer github sync owner/repo --artifact my-artifact-name
+testfile-viewer github sync owner/repo --artifact testfile-run-merged
+testfile-viewer github sync owner/repo --artifact testfile-run --exact
 ```
 
 Already-imported runs are skipped, so `sync` is incremental — run it again

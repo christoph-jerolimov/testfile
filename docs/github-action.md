@@ -99,7 +99,9 @@ Every action run uploads the recorded run folder as a `testfile-run`
 artifact — GitHub wraps it in a zip, so the artifact is a single zip with
 `run.yaml` and the logs at its root. A manually downloaded artifact
 imports with `testfile-viewer archive import testfile-run.zip`. `testfile-viewer github sync` downloads the artifacts of the latest
-workflow runs and imports them into your local
+workflow runs — every artifact whose name *starts with* `testfile-run`, so
+the per-platform legs and the merged run all arrive — and imports them into
+your local
 [run history](./cli#run-history), where `testfile-viewer runs`, `run`,
 `diff`, `--flaky` and the TUI's runs/results views treat them like local
 runs:

@@ -15,6 +15,8 @@ export interface GithubArchive {
   workflowRun: number;
   workflowName: string;
   artifactId: number;
+  // The artifact's own name, e.g. testfile-run-ubuntu-latest.
+  name: string;
   downloadUrl: string;
   createdAt?: string;
   sizeBytes?: number;
@@ -23,11 +25,23 @@ export interface GithubArchive {
 export interface GithubOptions {
   repo: string; // owner/repo
   latest: number; // how many recent workflow runs to consider
-  artifact: string; // artifact name the action uploads (default testfile-run)
+  // Artifact name the action uploads (default testfile-run). A matrix job
+  // suffixes it per platform and the merge job adds "-merged", so this is a
+  // prefix unless `exact` says otherwise.
+  artifact: string;
+  exact?: boolean;
   token: string;
   fetchImpl?: typeof fetch;
   apiBase?: string;
 }
+
+// Whether an artifact of this name is one of ours.
+export function artifactMatches(name: string, options: Pick<GithubOptions, "artifact" | "exact">) {
+  return options.exact ? name === options.artifact : name.startsWith(options.artifact);
+}
+
+// GitHub caps a page at 100, so more than that takes several requests.
+const MAX_PER_PAGE = 100;
 
 async function githubApi(url: string, options: GithubOptions): Promise<unknown> {
   const doFetch = options.fetchImpl ?? fetch;
@@ -44,15 +58,29 @@ async function githubApi(url: string, options: GithubOptions): Promise<unknown> 
   return response.json();
 }
 
+// The latest n completed workflow runs, newest first.
+async function recentRuns(
+  options: GithubOptions,
+): Promise<{ id: number; name?: string; artifacts_url: string }[]> {
+  const base = options.apiBase ?? "https://api.github.com";
+  const perPage = Math.min(options.latest, MAX_PER_PAGE);
+  const runs: { id: number; name?: string; artifacts_url: string }[] = [];
+  for (let page = 1; runs.length < options.latest; page++) {
+    const body = (await githubApi(
+      `${base}/repos/${options.repo}/actions/runs?status=completed&per_page=${perPage}&page=${page}`,
+      options,
+    )) as { workflow_runs?: { id: number; name?: string; artifacts_url: string }[] };
+    const batch = body.workflow_runs ?? [];
+    runs.push(...batch);
+    if (batch.length < perPage) break; // the last page
+  }
+  return runs.slice(0, options.latest);
+}
+
 // The run artifacts of the latest n completed workflow runs, newest first.
 export async function githubRunArchives(options: GithubOptions): Promise<GithubArchive[]> {
-  const base = options.apiBase ?? "https://api.github.com";
-  const runs = (await githubApi(
-    `${base}/repos/${options.repo}/actions/runs?status=completed&per_page=${options.latest}`,
-    options,
-  )) as { workflow_runs?: { id: number; name?: string; artifacts_url: string }[] };
   const archives: GithubArchive[] = [];
-  for (const run of runs.workflow_runs ?? []) {
+  for (const run of await recentRuns(options)) {
     const artifacts = (await githubApi(run.artifacts_url, options)) as {
       artifacts?: {
         id: number;
@@ -64,11 +92,12 @@ export async function githubRunArchives(options: GithubOptions): Promise<GithubA
       }[];
     };
     for (const artifact of artifacts.artifacts ?? []) {
-      if (artifact.name !== options.artifact || artifact.expired) continue;
+      if (!artifactMatches(artifact.name, options) || artifact.expired) continue;
       const entry: GithubArchive = {
         workflowRun: run.id,
         workflowName: run.name ?? "",
         artifactId: artifact.id,
+        name: artifact.name,
         downloadUrl: artifact.archive_download_url,
       };
       if (artifact.created_at !== undefined) entry.createdAt = artifact.created_at;
