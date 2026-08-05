@@ -42,6 +42,11 @@ function runsDir(baseDir: string): string {
   return join(baseDir, HISTORY_DIR, "runs");
 }
 
+// tar reads "C:\path" as host:path and tries to reach a machine called C,
+// so every absolute path on Windows needs this. GNU tar (the one Git for
+// Windows ships) understands it; on Linux and macOS it is not needed.
+const tarLocal = process.platform === "win32" ? ["--force-local"] : [];
+
 // Packs one recorded run (the whole runs/<id>/ folder) into a .tgz whose
 // single top-level entry is the run id.
 export function packRun(baseDir: string, runId: string, outFile: string, exec: Exec = defaultExec): void {
@@ -49,7 +54,7 @@ export function packRun(baseDir: string, runId: string, outFile: string, exec: E
   if (!existsSync(join(dir, "run.yaml"))) {
     throw new Error(`no recorded run "${runId}" in ${HISTORY_DIR}/runs/`);
   }
-  const result = exec("tar", ["-czf", outFile, "-C", runsDir(baseDir), runId]);
+  const result = exec("tar", [...tarLocal, "-czf", outFile, "-C", runsDir(baseDir), runId]);
   if (result.status !== 0) {
     throw new Error(`tar failed: ${(result.stderr || result.stdout).trim()}`);
   }
@@ -120,7 +125,7 @@ export function importRunArchive(
   try {
     const result = archive.endsWith(".zip")
       ? exec("unzip", ["-o", "-q", archive, "-d", tmp])
-      : exec("tar", ["-xzf", archive, "-C", tmp]);
+      : exec("tar", [...tarLocal, "-xzf", archive, "-C", tmp]);
     if (result.status !== 0) {
       throw new Error(`extracting ${archive} failed: ${(result.stderr || result.stdout).trim()}`);
     }
