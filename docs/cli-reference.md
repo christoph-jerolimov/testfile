@@ -7,8 +7,8 @@ description: Every command and argument of the testfile runner and the testfile-
 # CLI reference
 
 The complete list of commands, arguments and options of the two binaries:
-[`testfile`](#testfile-the-runner) (the runner — executes suites and writes
-run records) and [`testfile-viewer`](#testfile-viewer-the-viewer) (read-only
+[`testfile`](#testfile--the-runner) (the runner — executes suites and writes
+run records) and [`testfile-viewer`](#testfile-viewer--the-viewer) (read-only
 over the recorded runs in `.testfile/`). For guides and examples see
 [CLI & TUI](./cli); this page is the dry inventory.
 
@@ -47,12 +47,12 @@ Run the test suite (the default command).
 | `--reporter <kind>` | Write [machine-readable results](./cli#machine-readable-reports) after the run: `junit` or `json`. |
 | `--output <file>` | Report target file, or `-` for stdout (the default). |
 
-Plus the shared [filter options](#shared-filter-options) below.
+Plus the shared [filter options](#shared-filter-options-run-and-list) below.
 
 ### `testfile list [path]`
 
 Print the expanded test suite — matrix instances, tags and services
-included. Takes the shared [filter options](#shared-filter-options), so it
+included. Takes the shared [filter options](#shared-filter-options-run-and-list), so it
 previews exactly what a filtered `run` would execute.
 
 ### Shared filter options (`run` and `list`)
@@ -66,7 +66,7 @@ previews exactly what a filtered `run` would execute.
 | `--failed` | Only tests that failed (or were aborted) in the last recorded run. |
 | `--changed` | Only tests whose `inputs` match files [changed against the base branch](./writing-tests#change-based-selection), plus local changes. |
 | `--changed-since <ref>` | Base branch/ref for `--changed`, e.g. `origin/main` (implies `--changed`). |
-| `--variant <key=value>` | Record what distinguishes this run from a sibling run — e.g. `platform=linux` for one leg of a matrix. Recorded in `run.yaml` and used by [`testfile-viewer merge`](#testfile-viewer-merge). *(repeatable)* |
+| `--variant <key=value>` | Record what distinguishes this run from a sibling run — e.g. `platform=linux` for one leg of a matrix. Recorded in `run.yaml` and used by [`testfile-viewer merge`](#testfile-viewer-merge-run). *(repeatable)* |
 | `--shard <i/n>` | Run only this shard of the selected tests, e.g. `2/4`. Time-balanced from the [run history](./cli#run-history) when it has durations, round-robin otherwise. |
 
 ### `testfile tags [path]`
@@ -152,7 +152,7 @@ duration changes. No options.
 
 ### `testfile-viewer merge <run...>`
 
-Combine several runs into a single run — [shards](./cli#sharding) or one
+Combine several runs into a single run — [shards](./cli#sharding-across-machines) or one
 job per platform — and write it into a history. Each `<run>` is either a
 run folder (an unpacked CI artifact: `run.yaml` next to the logs) or an id
 (or unique prefix) in the target history.
@@ -164,7 +164,7 @@ run folder (an unpacked CI artifact: `run.yaml` next to the logs) or an id
 
 The merged run is an ordinary run: one status, one duration, the union of
 the tests. Runs that recorded the same test path must carry distinct
-[`--variant`](#testfile-the-runner) values — see the
+[`--variant`](#testfile--the-runner) values — see the
 [guided tour](./three-platforms). Exits non-zero when the merged verdict
 is not `passed`.
 

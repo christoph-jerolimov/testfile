@@ -156,7 +156,7 @@ a filter will run.
 ## Tags
 
 `testfile tags` inventories every tag of the full expanded suite —
-[included Testfiles](./writing-tests#including-other-testfiles) and matrix
+[included Testfiles](./writing-tests#composing-testfiles) and matrix
 instances included — so you know what `-t` can filter on:
 
 ```sh
@@ -436,7 +436,7 @@ testfile-viewer github sync owner/repo --artifact my-artifact-name
 
 Already-imported runs are skipped, so `sync` is incremental — run it again
 any time to top up the local history with the newest CI results. The TUI's
-[runs and results views](#runs-view) pick imported runs up live.
+[runs and results views](#the-tui) pick imported runs up live.
 
 ## The web viewer
 

@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "check:links": "node scripts/check-links.mjs dist /testfile ..",
+    "test": "node --test scripts/*.test.mjs"
   },
   "dependencies": {
     "astro": "^5.7.0",
