@@ -91,9 +91,10 @@ test("results view aggregates tests across runs", async ({ page }) => {
 
   const unit = rows.filter({ hasText: "ci/unit" });
   await expect(unit.locator("td").nth(1)).toContainText("failed"); // last status
-  await expect(unit.locator("td").nth(2)).toHaveText("2"); // passes
-  await expect(unit.locator("td").nth(3)).toHaveText("2"); // fails
-  await expect(unit.locator("td").nth(4)).toHaveText("4"); // runs (merged legs count)
+  await expect(unit.locator("td").nth(2).locator(".spark-block")).toHaveCount(4); // history
+  await expect(unit.locator("td").nth(3)).toHaveText("2"); // passes
+  await expect(unit.locator("td").nth(4)).toHaveText("2"); // fails
+  await expect(unit.locator("td").nth(5)).toHaveText("4"); // runs (merged legs count)
 
   await unit.click();
   const detail = page.locator(".detail");
@@ -192,6 +193,52 @@ test("the results table filters by status, tag and text", async ({ page }) => {
   await page.getByPlaceholder("test path or tag").fill("build");
   await expect(page.locator(".list tbody tr")).toHaveCount(1);
   await expect(page.locator(".list tbody tr").first()).toContainText("ci/build");
+});
+
+test("the results table can be narrowed to the flaky tests", async ({ page }) => {
+  await page.getByRole("button", { name: "Results" }).click();
+  await expect(page.locator(".filter-count")).toContainText("3 tests");
+
+  // ci/build passed in every run, so it is not flaky; ci and ci/unit are
+  await page.getByRole("button", { name: "flaky only" }).click();
+  const rows = page.locator(".list tbody tr");
+  await expect(rows).toHaveCount(2);
+  await expect(page.locator(".filter-count")).toContainText("2 of 3 tests");
+  await expect(rows.filter({ hasText: "ci/build" })).toHaveCount(0);
+  await expect(rows.first().locator(".badge.flaky")).toBeVisible();
+
+  await expect(page).toHaveScreenshot("flaky.png");
+
+  await page.getByRole("button", { name: "clear filters" }).click();
+  await expect(page.locator(".list tbody tr")).toHaveCount(3);
+});
+
+test("a run can be compared with the one before it", async ({ page }) => {
+  const detail = page.locator(".detail");
+  // nothing is compared until asked
+  await expect(detail.locator(".diff")).toHaveCount(0);
+
+  await detail.getByRole("button", { name: "previous run" }).click();
+  const diff = detail.locator(".diff");
+  await expect(diff).toContainText("newly failed (2)");
+  await expect(diff).toContainText("ci/unit");
+  // ci/build was cached this time: 2.2s down to 40ms
+  await expect(diff).toContainText("duration (1)");
+  await expect(diff).toContainText("2.2s → 40ms");
+  await expect(diff.locator(".faster")).toBeVisible();
+
+  await expect(page).toHaveScreenshot("run-diff.png");
+
+  // comparing a run with itself is not offered, and picking another run
+  // drops the comparison
+  await page.locator(".list tbody tr").nth(1).click();
+  await expect(detail).toContainText("20260101-120000-fx01");
+  await expect(detail.locator(".diff")).toHaveCount(0);
+
+  // the merged run is the oldest one, so it has nothing before it
+  await page.locator(".list tbody tr").nth(2).click();
+  await expect(detail.getByRole("button", { name: "previous run" })).toHaveCount(0);
+  await expect(detail.getByLabel("compare with")).toBeVisible();
 });
 
 test("the run detail is the suite tree, including what never ran", async ({ page }) => {

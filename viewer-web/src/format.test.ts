@@ -4,6 +4,7 @@ import {
   aggregate,
   countSummary,
   formatMs,
+  isFlaky,
   mergedVariantLabel,
   startedLabel,
   variantLabel,
@@ -71,6 +72,7 @@ test("aggregate folds runs per test path, newest run first", () => {
     passes: 1,
     fails: 1,
     lastStatus: "failed",
+    history: ["failed", "passed"],
   });
   const build = rows.find((row) => row.path === "ci/build")!;
   assert.deepEqual(build, {
@@ -79,6 +81,7 @@ test("aggregate folds runs per test path, newest run first", () => {
     passes: 2,
     fails: 0,
     lastStatus: "passed",
+    history: ["passed", "passed"],
   });
   const old = rows.find((row) => row.path === "ci/old")!;
   assert.equal(old.fails, 1, "aborted counts as a failure");
@@ -87,6 +90,23 @@ test("aggregate folds runs per test path, newest run first", () => {
 
 test("aggregate of no runs is empty", () => {
   assert.deepEqual(aggregate([]), []);
+});
+
+test("a test is flaky when it both passed and failed", () => {
+  const rows = aggregate([
+    run("r2", "2026-01-02T00:00:00.000Z", [
+      { path: "ci/unit", status: "failed" },
+      { path: "ci/build", status: "passed" },
+      { path: "ci/broken", status: "failed" },
+    ]),
+    run("r1", "2026-01-01T00:00:00.000Z", [
+      { path: "ci/unit", status: "passed" },
+      { path: "ci/build", status: "passed" },
+      { path: "ci/broken", status: "aborted" },
+    ]),
+  ]);
+  const flaky = rows.filter(isFlaky).map((row) => row.path);
+  assert.deepEqual(flaky, ["ci/unit"], "always green or always red is not flaky");
 });
 
 test("variantLabel is sorted by key and empty without variants", () => {

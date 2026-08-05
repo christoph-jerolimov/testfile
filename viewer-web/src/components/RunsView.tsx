@@ -112,7 +112,7 @@ export function RunsView({
         </table>
       </div>
       <div className="detail">
-        <RunDetail run={run} />
+        <RunDetail run={run} runs={runs} />
       </div>
     </main>
   );

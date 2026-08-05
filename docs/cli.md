@@ -546,11 +546,25 @@ narrows anything is the time window:
 | **Status** | runs / tests, multi-select (several values are an OR) | everything |
 | **Variants** | runs, multi-select over `platform=linux`-style labels; a merged run matches when *any* of its legs does | everything |
 | **Tags** | tests, multi-select over the tags of the recorded [suite tree](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md) — nested tests inherit the tags of their groups | everything |
+| **flaky only** | tests, an on/off chip: keeps only tests that both passed *and* failed across the recorded runs | off |
 | **Search** | free text over run ids, test paths, statuses and variant labels | empty |
 
 The count on the right says how much survived (`4 of 27 runs`) and clears
 the filters again. A run or test opened by link stays visible even when the
 filters would hide it — the link should not silently open something else.
+
+The two views the CLI already had are on the same pages. In **Results**,
+each test carries a **history sparkline** — one block per recorded run,
+newest on the right, so a test that alternates green and red looks
+different from one that simply broke — and a `flaky` badge next to the
+tests `testfile-viewer runs --flaky` would list; the `flaky only` chip
+narrows the table to them. In **Runs**, a run detail has a *compare with*
+picker: choose another recorded run (or press `previous run` for the one
+recorded before this one) and the same six sections
+`testfile-viewer diff a b` prints appear above the suite tree — newly
+failed, still failing, fixed, added, removed, and durations that moved by
+more than 100ms *and* more than a fifth. In a merged run the worst leg of a
+path decides, exactly as the run's own verdict does.
 
 Every selection is in the URL, so a view can be linked, bookmarked and
 reloaded — and the browser's back button walks through it:

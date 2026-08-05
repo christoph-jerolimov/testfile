@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { runLogUrl, serviceLogUrl, testLogUrl } from "../api.js";
+import { previousRun } from "../diff.js";
 import { formatMs, mergedVariantLabel, startedLabel, variantLabel } from "../format.js";
 import type { RunRecord } from "../types.js";
+import { DiffPanel } from "./DiffPanel.js";
 import { Log } from "./Log.js";
 import { StatusCell } from "./StatusCell.js";
 import { SuiteTree } from "./SuiteTree.js";
@@ -11,9 +13,25 @@ type LogChoice =
   | { kind: "test"; path: string }
   | { kind: "service"; name: string };
 
-export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
+export function RunDetail({
+  run,
+  runs = [],
+}: {
+  run: RunRecord;
+  // Every recorded run, so this one can be compared against another.
+  runs?: RunRecord[];
+}): React.ReactElement {
   const [choice, setChoice] = useState<LogChoice>({ kind: "run" });
-  useEffect(() => setChoice({ kind: "run" }), [run.id]);
+  // A comparison belongs to the run it was opened on; picking another run
+  // starts from no comparison again.
+  const [baseId, setBaseId] = useState<string>("");
+  useEffect(() => {
+    setChoice({ kind: "run" });
+    setBaseId("");
+  }, [run.id]);
+  const others = runs.filter((candidate) => candidate.id !== run.id);
+  const previous = previousRun(runs, run);
+  const base = others.find((candidate) => candidate.id === baseId);
   const logUrl =
     choice.kind === "test"
       ? testLogUrl(run.id, choice.path)
@@ -61,6 +79,32 @@ export function RunDetail({ run }: { run: RunRecord }): React.ReactElement {
           </ul>
         </div>
       ) : null}
+      {others.length > 0 ? (
+        <div className="compare">
+          <label>
+            compare with{" "}
+            <select
+              className="compare-pick"
+              aria-label="compare with"
+              value={baseId}
+              onChange={(event) => setBaseId(event.target.value)}
+            >
+              <option value="">nothing</option>
+              {others.map((candidate) => (
+                <option key={candidate.id} value={candidate.id}>
+                  {startedLabel(candidate.startedAt)} · {candidate.status} · {candidate.id}
+                </option>
+              ))}
+            </select>
+          </label>
+          {previous && baseId !== previous.id ? (
+            <button className="link" onClick={() => setBaseId(previous.id)}>
+              previous run
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {base ? <DiffPanel base={base} compare={run} /> : null}
       <SuiteTree
         run={run}
         selectedPath={choice.kind === "test" ? choice.path : undefined}

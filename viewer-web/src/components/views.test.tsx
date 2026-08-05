@@ -70,6 +70,29 @@ test("the results view opens the test from the URL", () => {
   assert.match(first, /executions of <span class="mono">ci</);
 });
 
+test("the results table carries a history sparkline and marks flaky tests", () => {
+  const markup = renderToStaticMarkup(<ResultsView runs={runs} />);
+  assert.match(markup, /class="spark"/);
+  // ci and ci/unit each failed once and passed once
+  assert.equal(markup.match(/class="badge flaky"/g)?.length, 3, "two rows plus the heading");
+  assert.match(markup, /aria-pressed="false">flaky only/);
+});
+
+test("a run detail offers the runs it can be compared with", () => {
+  const markup = renderToStaticMarkup(<RunsView runs={runs} />);
+  assert.match(markup, /aria-label="compare with"/);
+  // the other run is offered, this one is not
+  assert.match(markup, /<option value="20260101-120000-fx01"/);
+  assert.doesNotMatch(markup, /<option value="20260102-090000-fx02"/);
+  // nothing is compared until one is picked
+  assert.doesNotMatch(markup, /class="diff"/);
+});
+
+test("a lone run has nothing to compare against", () => {
+  const markup = renderToStaticMarkup(<RunsView runs={[runs[0]]} />);
+  assert.doesNotMatch(markup, /aria-label="compare with"/);
+});
+
 test("without runs both views say so instead of crashing", () => {
   assert.match(renderToStaticMarkup(<RunsView runs={[]} />), /no recorded runs yet/);
   assert.match(renderToStaticMarkup(<ResultsView runs={[]} />), /no recorded runs yet/);

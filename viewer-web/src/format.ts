@@ -48,13 +48,21 @@ export function aggregate(runs: RunRecord[]): Aggregate[] {
             passes: 0,
             fails: 0,
             lastStatus: test.status,
+            history: [],
           }),
         );
       }
       entry.occurrences++;
+      entry.history.push(test.status);
       if (test.status === "passed") entry.passes++;
       if (test.status === "failed" || test.status === "aborted") entry.fails++;
     }
   }
   return [...byPath.values()];
+}
+
+// A test that both passed and failed across the recorded runs - the same
+// rule `testfile-viewer runs --flaky` uses.
+export function isFlaky(test: Aggregate): boolean {
+  return test.passes > 0 && test.fails > 0;
 }

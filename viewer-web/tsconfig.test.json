@@ -35,6 +35,10 @@
     "src/components/views.test.tsx",
     "src/suite.ts",
     "src/suite.test.ts",
-    "src/components/SuiteTree.tsx"
+    "src/components/SuiteTree.tsx",
+    "src/diff.ts",
+    "src/diff.test.ts",
+    "src/components/Sparkline.tsx",
+    "src/components/DiffPanel.tsx"
   ]
 }

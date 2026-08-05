@@ -80,4 +80,6 @@ export interface Aggregate {
   passes: number;
   fails: number;
   lastStatus: string;
+  // Every recorded status, newest first - what the sparkline draws.
+  history: string[];
 }

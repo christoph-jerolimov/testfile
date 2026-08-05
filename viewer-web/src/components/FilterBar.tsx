@@ -37,6 +37,25 @@ export function MultiSelect({
   );
 }
 
+// A single on/off chip, for filters that are a yes/no rather than a choice.
+export function Toggle({
+  label,
+  on,
+  onChange,
+}: {
+  label: string;
+  on: boolean;
+  onChange: (on: boolean) => void;
+}): React.ReactElement {
+  return (
+    <div className="filter-group">
+      <button className={`chip ${on ? "on" : ""}`} aria-pressed={on} onClick={() => onChange(!on)}>
+        {label}
+      </button>
+    </div>
+  );
+}
+
 export function SearchInput({
   value,
   onChange,
