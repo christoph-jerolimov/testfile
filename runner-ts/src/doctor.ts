@@ -10,10 +10,10 @@
 // command, binding a port, writing a file), so the tests can describe a
 // machine instead of requiring one.
 import { spawnSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { join } from "node:path";
-import type { ServiceDef, TestDef, TestfileDoc } from "./model.js";
+import { delimiter, isAbsolute, join, resolve } from "node:path";
+import type { ReadyDef, ServiceDef, TestDef, TestfileDoc } from "./model.js";
 
 export type CheckStatus = "ok" | "warn" | "fail";
 
@@ -37,6 +37,10 @@ export interface DoctorEnv {
   // Undefined when the folder could be created and written to, the reason
   // otherwise.
   writeTest(dir: string): string | undefined;
+  // Where a bare command name resolves on PATH, or undefined.
+  onPath(command: string): string | undefined;
+  // Whether that absolute path is a file this user can execute.
+  executableAt(path: string): boolean;
   nodeVersion: string;
   platform: string;
 }
@@ -77,6 +81,31 @@ export const realEnv: DoctorEnv = {
       return undefined;
     } catch (err) {
       return err instanceof Error ? err.message : String(err);
+    }
+  },
+  onPath(command) {
+    const entries = (process.env.PATH ?? "").split(delimiter).filter(Boolean);
+    // Windows decides by extension, and only PATHEXT ones are executable.
+    const suffixes =
+      process.platform === "win32"
+        ? ["", ...(process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean)]
+        : [""];
+    for (const entry of entries) {
+      for (const suffix of suffixes) {
+        const candidate = join(entry, `${command}${suffix}`);
+        if (realEnv.executableAt(candidate)) return candidate;
+      }
+    }
+    return undefined;
+  },
+  executableAt(path) {
+    try {
+      const stats = statSync(path);
+      if (!stats.isFile()) return false;
+      // on Windows the extension decides, and PATHEXT already did the filtering
+      return process.platform === "win32" || (stats.mode & 0o111) !== 0;
+    } catch {
+      return false;
     }
   },
   nodeVersion: process.version,
@@ -131,6 +160,199 @@ export function shellsUsed(doc: TestfileDoc): string[] {
   if (usesDefault) shells.add("sh");
   // a templated shell (${{ ... }}) is only known at run time
   return [...shells].filter((shell) => !shell.includes("${{")).sort();
+}
+
+// Shell builtins and keywords: the shell runs them itself, so looking for a
+// file of that name says nothing.
+const SHELL_WORDS = new Set([
+  ":",
+  ".",
+  "[",
+  "[[",
+  "alias",
+  "bg",
+  "break",
+  "builtin",
+  "case",
+  "cd",
+  "command",
+  "continue",
+  "declare",
+  "do",
+  "done",
+  "echo",
+  "elif",
+  "else",
+  "esac",
+  "eval",
+  "exec",
+  "exit",
+  "export",
+  "false",
+  "fg",
+  "fi",
+  "for",
+  "function",
+  "getopts",
+  "hash",
+  "if",
+  "in",
+  "jobs",
+  "kill",
+  "let",
+  "local",
+  "printf",
+  "pwd",
+  "read",
+  "readonly",
+  "return",
+  "set",
+  "shift",
+  "source",
+  "test",
+  "then",
+  "time",
+  "times",
+  "trap",
+  "true",
+  "type",
+  "ulimit",
+  "umask",
+  "unalias",
+  "unset",
+  "until",
+  "wait",
+  "while",
+]);
+
+// One executable a Testfile expects, and where it was asked for.
+export interface CommandUse {
+  // As written: "npm", "./scripts/build.sh", "/usr/local/bin/tool".
+  token: string;
+  // Directory a relative path resolves against.
+  dir: string;
+  // Test or service path, for the message.
+  where: string;
+}
+
+// The executables a shell line starts with. Not a shell parser: it splits on
+// the operators that begin a new command and takes the first word of each
+// part, which is what a `command:` looks like in practice.
+export function commandTokens(line: string): string[] {
+  const tokens: string[] = [];
+  for (const part of line.split(/\|\||&&|[;|&\n]/)) {
+    let words = part
+      .trim()
+      .replace(/^[({]\s*/, "")
+      .split(/\s+/)
+      .filter(Boolean);
+    // "FOO=bar cmd" runs cmd with FOO set
+    while (words.length > 0 && /^[A-Za-z_][A-Za-z0-9_]*=/.test(words[0])) words = words.slice(1);
+    const token = words[0];
+    if (!token || SHELL_WORDS.has(token)) continue;
+    // "${{ ... }}", "$VAR", "$(...)" and quoted words are only known at run time
+    if (/[$`"'*?]/.test(token)) continue;
+    tokens.push(token);
+  }
+  return tokens;
+}
+
+// Anything with a separator names a file, not something to look up on PATH.
+function isPathLike(token: string): boolean {
+  return token.includes("/") || token.includes("\\");
+}
+
+function readyExec(ready: ReadyDef | undefined): string | undefined {
+  if (!ready?.exec) return undefined;
+  return typeof ready.exec === "string" ? ready.exec : ready.exec.command;
+}
+
+// Every executable the Testfile names, with the directory a relative path
+// resolves against. Bodies that run inside a container are left out - their
+// commands live in the image, not on this machine - and `script:` blocks are
+// shell programs rather than a command, so they are not guessed at either.
+export function commandsUsed(doc: TestfileDoc, baseDir: string): CommandUse[] {
+  const uses: CommandUse[] = [];
+  const add = (line: string | undefined, dir: string, where: string): void => {
+    for (const token of commandTokens(line ?? "")) uses.push({ token, dir, where });
+  };
+  const serviceUses = (services: Record<string, ServiceDef> | undefined, dir: string): void => {
+    for (const [name, service] of Object.entries(services ?? {})) {
+      const where = `service ${name}`;
+      const serviceDir = service.workdir ? resolve(dir, service.workdir) : dir;
+      if (!service.container) add(service.command, serviceDir, where);
+      // the readiness probe runs on the host even for a container service
+      add(readyExec(service.ready), serviceDir, where);
+      add(service.stop?.command, serviceDir, where);
+    }
+  };
+
+  serviceUses(doc.services, baseDir);
+
+  const walk = (test: TestDef, dir: string, path: string, inContainer: boolean): void => {
+    const here = test.workdir ? resolve(dir, test.workdir) : dir;
+    const name = test.name ?? "test";
+    const where = path ? `${path}/${name}` : name;
+    const contained = inContainer || test.container !== undefined;
+    serviceUses(test.services, here);
+    // A custom `shell:` interprets the line its own way - a PowerShell cmdlet
+    // is no file on PATH - so only the default sh commands are looked up.
+    if (!contained && !test.shell) {
+      add(test.command, here, where);
+      add(test.setup?.command, here, where);
+      add(test.teardown?.command, here, where);
+    }
+    for (const child of [...(test.sequence ?? []), ...(test.parallel ?? [])]) {
+      walk(child, here, where, contained);
+    }
+    if (test.template) walk(test.template, here, where, contained);
+  };
+  if (doc.test) walk(doc.test, baseDir, "", false);
+
+  // One entry per executable, listing every place it is used. A bare name is
+  // looked up on PATH, so the directory only distinguishes path-like tokens.
+  const seen = new Map<string, CommandUse>();
+  for (const use of uses) {
+    const key = isPathLike(use.token) ? `${use.token}\0${use.dir}` : use.token;
+    const known = seen.get(key);
+    if (known) {
+      if (!known.where.split(", ").includes(use.where)) known.where += `, ${use.where}`;
+    } else {
+      seen.set(key, { ...use });
+    }
+  }
+  return [...seen.values()].sort((a, b) => a.token.localeCompare(b.token));
+}
+
+function commandChecks(env: DoctorEnv, doc: TestfileDoc | undefined, baseDir: string): Check[] {
+  if (!doc) return [];
+  const uses = commandsUsed(doc, baseDir);
+  if (uses.length === 0) {
+    return [{ name: "commands", status: "ok", detail: "no plain commands to look up" }];
+  }
+  return uses.map(({ token, dir, where }) => {
+    const name = `command (${token})`;
+    if (isPathLike(token)) {
+      const path = isAbsolute(token) ? token : resolve(dir, token);
+      return env.executableAt(path)
+        ? { name, status: "ok" as const, detail: path }
+        : {
+            name,
+            status: "fail" as const,
+            detail: `${path} is missing or not executable`,
+            hint: `used by ${where} - check the path, or chmod +x it`,
+          };
+    }
+    const found = env.onPath(token);
+    return found
+      ? { name, status: "ok" as const, detail: found }
+      : {
+          name,
+          status: "fail" as const,
+          detail: "not found on PATH",
+          hint: `used by ${where} - install it, or use a path to it`,
+        };
+  });
 }
 
 function nodeCheck(env: DoctorEnv): Check {
@@ -286,6 +508,7 @@ export async function runChecks(
     nodeCheck(env),
     ...gitChecks(env, baseDir),
     ...shellChecks(env, doc),
+    ...commandChecks(env, doc, baseDir),
     ...containerChecks(env, doc),
     ...(await portChecks(env, doc)),
     historyCheck(env, baseDir),

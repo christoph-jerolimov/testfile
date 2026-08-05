@@ -68,10 +68,11 @@ summary.
 
 ## Checking the machine
 
-A Testfile says what a run needs: a container engine, fixed ports, a shell,
-git for [change-based selection](./writing-tests#change-based-selection) —
-and a run that finds one of them missing says so halfway through, in the log
-of whichever test happened to need it first. `testfile doctor` asks the same
+A Testfile says what a run needs: the tools its commands call, a container
+engine, fixed ports, a shell, git for
+[change-based selection](./writing-tests#change-based-selection) — and a run
+that finds one of them missing says so halfway through, in the log of
+whichever test happened to need it first. `testfile doctor` asks the same
 questions up front, and only the ones this file actually raises:
 
 ```sh
@@ -80,13 +81,18 @@ $ testfile doctor
 ✔ node                       v22.14.0
 ✔ git                        git version 2.43.0
 ✔ shell (sh)                 on PATH
+✔ command (npm)              /usr/local/bin/npm
+✘ command (pytest)           not found on PATH
+  ↳ used by app/tests/unit - install it, or use a path to it
+✘ command (./scripts/e2e.sh) /home/me/app/scripts/e2e.sh is missing or not executable
+  ↳ used by app/tests/e2e - check the path, or chmod +x it
 ✘ container engine (docker)  installed, but "docker info" failed: Cannot connect to the Docker daemon
   ↳ is the Docker daemon running?
 ✘ port web                   8080 is already in use
   ↳ stop what listens on 8080, or declare "web: random" and template the value
 ✔ .testfile/                 /home/me/app/.testfile is writable
 
-2 failed, 0 warning(s), 8 checks
+4 failed, 0 warning(s), 11 checks
 ```
 
 What it looks at:
@@ -96,9 +102,30 @@ What it looks at:
 | `node` | the Node.js running the CLI is older than 20 |
 | `git` | *warns* when git is missing or the folder is not inside a work tree — only `--changed` and `testfile changes` need it |
 | `shell (…)` | a shell a test invokes (`sh` by default, or its `shell:`) cannot be started |
+| `command (…)` | an executable a `command:` starts is not on `PATH`, or the path it names is missing or not executable — see below |
 | `container engine` | the file starts containers and no engine is installed, or the engine is installed but not responding. Files without containers only get a note |
 | `port …` | a fixed `ports:` entry is already taken. `random` ports are allocated per run and never clash |
 | `.testfile/` | recorded runs cannot be written |
+
+### Which commands are looked up
+
+Every `command:` in the file — tests, `setup`/`teardown` hooks, services and
+their `ready.exec` probe — contributes the executable it starts. A line is
+split at `&&`, `||`, `;` and `|`, so `cd app && pytest -q` looks for `pytest`,
+and a leading `FOO=bar` assignment is stepped over. A name without a
+separator is looked up on `PATH`; anything with one is resolved against the
+test's `workdir` and must be an executable file.
+
+Four things are deliberately *not* looked up, because the answer would say
+nothing about whether the run works:
+
+- **shell builtins and keywords** (`cd`, `echo`, `test`, `for`, …),
+- **commands that only exist at run time** — a first word containing a
+  `${{ … }}` template, a `$VAR`, a substitution or quotes,
+- **bodies that run in a container** (a `container:` on the test or an
+  ancestor): those executables live in the image, not on this machine,
+- **`script:` blocks and tests with a custom `shell:`** — a shell program is
+  not a command, and another shell has its own builtins.
 
 `--json` writes the same as `{status, checks: […]}` for scripts, and the
 exit code is `1` when a check failed — warnings alone keep it `0`, so
