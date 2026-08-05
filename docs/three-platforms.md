@@ -94,7 +94,7 @@ them into a single run folder, which it uploads like any other run:
       - run: npm run build --workspace viewer-ts
       # every artifact unpacks into its own folder, and each of those IS a
       # run folder (run.yaml next to the logs)
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@v8
         with:
           pattern: testfile-run-*
           path: downloaded
