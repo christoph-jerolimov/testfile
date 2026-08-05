@@ -113,7 +113,8 @@ GitHub workflow steps and Make/Task/just targets.
 
 Check this machine against what the Testfile needs, before a run finds out
 the hard way: Node.js version, git (and whether the folder is inside a work
-tree), every `shell:` the tests invoke, a container engine when the file
+tree), every `shell:` the tests invoke, every executable a `command:` starts
+(on `PATH`, or as a relative/absolute path), a container engine when the file
 starts containers, the fixed `ports:` and a writable `.testfile/`. Exits `1`
 when a check fails; warnings (a missing git, for instance) do not.
 
