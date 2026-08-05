@@ -1,0 +1,11 @@
+{
+  "printWidth": 100,
+  "ignorePatterns": [
+    "**/*.md",
+    "**/*.json",
+    "**/dist/**",
+    "**/.astro/**",
+    "conformance/cases/**",
+    "viewer-web/e2e/fixture/**"
+  ]
+}

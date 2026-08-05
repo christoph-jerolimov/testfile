@@ -16,6 +16,23 @@ test:
       command: npm ci --no-audit --no-fund
     - name: checks
       parallel:
+        # oxlint and oxfmt over every JavaScript and TypeScript workspace;
+        # `npm run lint:fix` and `npm run format` fix what they report.
+        - name: lint
+          tags: [fast, lint]
+          command: npm run lint
+          inputs: &sources
+            # every workspace's own sources - a "**/*.ts" from the root would
+            # walk node_modules
+            - "*/src/**/*.{ts,tsx,mjs,cjs}"
+            - "*/*.mjs"
+            - action/*.mjs
+            - .oxlintrc.json
+            - .oxfmtrc.json
+        - name: format
+          tags: [fast, lint]
+          command: npm run format:check
+          inputs: *sources
         - name: schema
           tags: [fast, schema]
           command: npm test --workspace schema
