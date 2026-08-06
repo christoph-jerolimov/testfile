@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { githubRunArchives, syncFromGithub } from "../transfer/index.js";
 import { color, pad } from "../util.js";
-import { commandFailed, reportImport, resolveHistoryBase } from "./shared.js";
+import { commandFailed, reportImport, resolveHistoryBase, wantsJson, writeJson } from "./shared.js";
 
 interface GithubCliOptions {
   latest: number;
@@ -74,8 +74,9 @@ export function registerGithub(program: Command): void {
     githubCommand
       .command("list")
       .argument("<owner/repo>", "GitHub repository whose workflow runs to list")
+      .option("--json [file]", "write the artifacts as JSON, to a file or (without a value) stdout")
       .description("List the run artifacts available in recent workflow runs"),
-  ).action(async (repo: string, options: GithubCliOptions) => {
+  ).action(async (repo: string, options: GithubCliOptions & { json?: string | boolean }) => {
     try {
       if (!(options.latest >= 1)) throw new Error("--latest must be a positive integer");
       const archives = await githubRunArchives({
@@ -85,6 +86,10 @@ export function registerGithub(program: Command): void {
         exact: options.exact,
         token: githubToken(),
       });
+      if (wantsJson(options.json)) {
+        writeJson({ repo, artifacts: archives }, options.json);
+        return;
+      }
       if (archives.length === 0) {
         console.log(color(90, nothingFound(options)));
         return;

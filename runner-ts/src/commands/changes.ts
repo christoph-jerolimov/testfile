@@ -1,8 +1,9 @@
-import { existsSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { Command } from "commander";
 import { collectGitChanges } from "../gitchanges.js";
 import { color } from "../util.js";
+import { wantsJson, writeJson } from "./shared.js";
 
 export function registerChanges(program: Command): void {
   program
@@ -25,14 +26,8 @@ export function registerChanges(program: Command): void {
             existsSync(target) && statSync(target).isDirectory() ? target : dirname(target);
           const changes = collectGitChanges(dir, options.changedSince);
 
-          if (options.json !== undefined && options.json !== false) {
-            const json = `${JSON.stringify(changes, null, 2)}\n`;
-            if (typeof options.json === "string") {
-              writeFileSync(options.json, json);
-              console.log(color(90, `changes written to ${options.json}`));
-            } else {
-              process.stdout.write(json);
-            }
+          if (wantsJson(options.json)) {
+            writeJson(changes, options.json, "changes");
             return;
           }
           if (options.files) {

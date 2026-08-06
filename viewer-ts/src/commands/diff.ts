@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { diffRuns } from "../runrecord.js";
 import { color, formatMs, pad } from "../util.js";
-import { commandFailed, findRun, loadedHistory } from "./shared.js";
+import { commandFailed, findRun, loadedHistory, wantsJson, writeJson } from "./shared.js";
 
 export function registerDiff(program: Command): void {
   program
@@ -9,13 +9,18 @@ export function registerDiff(program: Command): void {
     .argument("<older>", "run id to compare from (a unique prefix is enough)")
     .argument("<newer>", "run id to compare to")
     .argument("[path]", "directory containing a .testfile folder", ".")
+    .option("--json [file]", "write the diff as JSON, to a file or (without a value) stdout")
     .description("Compare two recorded runs")
-    .action((older: string, newer: string, path: string) => {
+    .action((older: string, newer: string, path: string, options: { json?: string | boolean }) => {
       try {
         const history = loadedHistory(path);
         const base = findRun(history, older);
         const compare = findRun(history, newer);
         const diff = diffRuns(base, compare);
+        if (wantsJson(options.json)) {
+          writeJson({ base: base.id, compare: compare.id, ...diff }, options.json);
+          return;
+        }
         console.log(color(1, `${base.id} -> ${compare.id}`));
         const section = (label: string, code: number, paths: string[]): void => {
           for (const p of paths) console.log(`  ${pad(color(code, label), 13)} ${p}`);

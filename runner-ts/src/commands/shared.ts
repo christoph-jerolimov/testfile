@@ -1,5 +1,6 @@
 // Helpers shared by the runner's commands: the filter flags, turning them
 // into a selection, sharding it, and printing an expanded suite.
+import { writeFileSync } from "node:fs";
 import { Command } from "commander";
 import { gitChangedSelection, predictCacheHits } from "../cache-predict.js";
 import {
@@ -18,6 +19,24 @@ import { durationsFrom, parseShard, selectShard } from "../shard.js";
 import { color, formatMs } from "../util.js";
 
 export { predictCacheHits };
+
+// Machine-readable output for the commands that offer --json: a named file,
+// or stdout when the flag is given without a value. `noun` names what was
+// written, so the confirmation reads "tags written to file.json".
+export function writeJson(data: unknown, target: string | true, noun: string): void {
+  const json = `${JSON.stringify(data, null, 2)}\n`;
+  if (typeof target === "string") {
+    writeFileSync(target, json);
+    console.log(color(90, `${noun} written to ${target}`));
+  } else {
+    process.stdout.write(json);
+  }
+}
+
+// `--json` without a value is `true`; absent is `undefined` or `false`.
+export function wantsJson(value: string | boolean | undefined): value is string | true {
+  return value !== undefined && value !== false;
+}
 
 export const collect = (value: string, previous: string[]) => [...previous, value];
 
@@ -141,6 +160,34 @@ export function resolveFilters(
 }
 
 // Shared by `list` and `run --dry-run`.
+// What `list --json` writes: the selected tests in execution order, flat,
+// with the path carrying the nesting - the same key `run.yaml`'s tests[]
+// uses, so the two read alike.
+export interface SuiteEntry {
+  path: string;
+  name: string;
+  kind: string;
+  tags?: string[];
+  matrix?: Record<string, string>;
+  services?: string[];
+}
+
+export function suiteJson(session: Session, active: Set<number>): SuiteEntry[] {
+  const entries: SuiteEntry[] = [];
+  walk(session.suite, (test: RunTest) => {
+    if (!active.has(test.id)) return;
+    const entry: SuiteEntry = { path: test.path, name: test.name, kind: test.kind };
+    // Matrix instances share their wrapper's definition; its tags and
+    // services are listed once, on the wrapper.
+    if (test.def.tags?.length && test.parent?.def !== test.def) entry.tags = [...test.def.tags];
+    if (Object.keys(test.matrix).length > 0) entry.matrix = { ...test.matrix };
+    const services = Object.keys(test.def.services ?? {});
+    if (services.length > 0 && !test.isMatrixWrapper) entry.services = services;
+    entries.push(entry);
+  });
+  return entries;
+}
+
 export function printSuite(
   session: Session,
   active: Set<number>,

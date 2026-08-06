@@ -1,10 +1,11 @@
-import { existsSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { Command } from "commander";
 import { runChecks, worstOf, type Check } from "../doctor.js";
 import { loadTestfile } from "../loader.js";
 import type { TestfileDoc } from "../model.js";
 import { color } from "../util.js";
+import { wantsJson, writeJson } from "./shared.js";
 
 const MARK: Record<Check["status"], string> = {
   ok: color(32, "✔"),
@@ -43,14 +44,8 @@ export function registerDoctor(program: Command): void {
       const checks = [testfile, ...(await runChecks(doc, baseDir))];
       const worst = worstOf(checks);
 
-      if (options.json !== undefined && options.json !== false) {
-        const json = `${JSON.stringify({ status: worst, checks }, null, 2)}\n`;
-        if (typeof options.json === "string") {
-          writeFileSync(options.json, json);
-          console.log(color(90, `checks written to ${options.json}`));
-        } else {
-          process.stdout.write(json);
-        }
+      if (wantsJson(options.json)) {
+        writeJson({ status: worst, checks }, options.json, "checks");
       } else {
         const width = Math.max(...checks.map((check) => check.name.length));
         for (const check of checks) {
