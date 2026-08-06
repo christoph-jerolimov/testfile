@@ -260,6 +260,47 @@ export function diffRuns(base: RunRecord, compare: RunRecord): RunDiff {
   return diff;
 }
 
+// How flakiness is decided, everywhere it is shown. A verdict is only worth
+// anything while it is current, and a test that was rewritten last month
+// should not be judged on how it behaved before that - so the evidence is
+// bounded twice: by age, and by how many results are looked at.
+export const FLAKY_DAYS = 14;
+export const FLAKY_SAMPLE = 20;
+export const FLAKY_FAIL_RATE = 0.25;
+
+// The results a flaky verdict is based on, per test path: the passed and
+// failed outcomes recorded in the last FLAKY_DAYS days, newest first, at
+// most FLAKY_SAMPLE of them.
+//
+// `skipped` and `aborted` are not evidence: a skip says the test never ran,
+// and one Ctrl+C aborts everything in flight, which would otherwise make a
+// whole suite look flaky at once.
+export function flakyWindows(
+  runs: readonly RunRecord[],
+  now: number = Date.now(),
+): Map<string, ("passed" | "failed")[]> {
+  const since = now - FLAKY_DAYS * 24 * 60 * 60 * 1000;
+  const byPath = new Map<string, ("passed" | "failed")[]>();
+  // runs are newest first, so the first results seen are the recent ones
+  for (const run of runs) {
+    if (Date.parse(run.startedAt) < since) continue;
+    for (const test of run.tests) {
+      if (test.status !== "passed" && test.status !== "failed") continue;
+      let statuses = byPath.get(test.path);
+      if (!statuses) byPath.set(test.path, (statuses = []));
+      if (statuses.length < FLAKY_SAMPLE) statuses.push(test.status);
+    }
+  }
+  return byPath;
+}
+
+// More than a quarter of the sampled results failed.
+export function isFlaky(statuses: readonly string[]): boolean {
+  if (statuses.length === 0) return false;
+  const fails = statuses.filter((status) => status === "failed").length;
+  return fails / statuses.length > FLAKY_FAIL_RATE;
+}
+
 export interface FlakyReport {
   path: string;
   occurrences: number;
@@ -270,23 +311,20 @@ export interface FlakyReport {
   lastStatus: "passed" | "failed";
 }
 
-// Scans recorded runs (newest first) for tests that both passed and failed.
-export function detectFlaky(runs: readonly RunRecord[], lastN?: number): FlakyReport[] {
+// Scans recorded runs (newest first) for tests that fail too often to trust.
+// Every count reported is over the sampled window, not the whole history.
+export function detectFlaky(
+  runs: readonly RunRecord[],
+  lastN?: number,
+  now: number = Date.now(),
+): FlakyReport[] {
   const considered = lastN !== undefined ? runs.slice(0, lastN) : runs;
-  const byPath = new Map<string, ("passed" | "failed")[]>();
-  for (const run of [...considered].reverse()) {
-    for (const test of run.tests) {
-      if (test.status !== "passed" && test.status !== "failed") continue;
-      let statuses = byPath.get(test.path);
-      if (!statuses) byPath.set(test.path, (statuses = []));
-      statuses.push(test.status);
-    }
-  }
   const reports: FlakyReport[] = [];
-  for (const [path, statuses] of byPath) {
-    const passes = statuses.filter((s) => s === "passed").length;
-    const fails = statuses.length - passes;
-    if (passes === 0 || fails === 0) continue;
+  for (const [path, recent] of flakyWindows(considered, now)) {
+    if (!isFlaky(recent)) continue;
+    // oldest first, so flips read in the order the results happened
+    const statuses = [...recent].reverse();
+    const passes = statuses.filter((status) => status === "passed").length;
     let flips = 0;
     for (let i = 1; i < statuses.length; i++) {
       if (statuses[i] !== statuses[i - 1]) flips++;
@@ -295,9 +333,9 @@ export function detectFlaky(runs: readonly RunRecord[], lastN?: number): FlakyRe
       path,
       occurrences: statuses.length,
       passes,
-      fails,
+      fails: statuses.length - passes,
       flips,
-      lastStatus: statuses[statuses.length - 1],
+      lastStatus: recent[0],
     });
   }
   return reports.sort(

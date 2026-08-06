@@ -158,6 +158,7 @@ test("tests filter by last status, tag and text", () => {
       fails: 2,
       lastStatus: "failed",
       history: ["failed", "passed", "failed", "passed"],
+      recent: ["failed", "passed", "failed", "passed"],
     },
     {
       path: "ci/build",
@@ -166,6 +167,7 @@ test("tests filter by last status, tag and text", () => {
       fails: 0,
       lastStatus: "passed",
       history: ["passed", "passed", "passed", "passed"],
+      recent: ["passed", "passed", "passed", "passed"],
     },
   ];
   const tags = new Map([
@@ -191,7 +193,7 @@ test("tests filter by last status, tag and text", () => {
   assert.deepEqual(
     filterTests(tests, { ...testFilterDefaults, flakyOnly: true }, tags).map((t) => t.path),
     ["ci/unit"],
-    "only the test that both passed and failed",
+    "only the test whose recent results failed too often",
   );
   assert.equal(isDefaultTestFilter({ ...testFilterDefaults, flakyOnly: true }), false);
 });

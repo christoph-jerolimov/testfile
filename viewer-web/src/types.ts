@@ -85,4 +85,7 @@ export interface Aggregate {
   lastStatus: string;
   // Every recorded status, newest first - what the sparkline draws.
   history: string[];
+  // The subset a flaky verdict is based on: passed/failed results from the
+  // last FLAKY_DAYS days, newest first, at most FLAKY_SAMPLE of them.
+  recent: string[];
 }

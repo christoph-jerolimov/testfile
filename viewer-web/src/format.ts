@@ -33,9 +33,19 @@ export function countSummary(run: RunRecord): string {
   return [...counts.entries()].map(([status, n]) => `${n} ${status}`).join(", ");
 }
 
-export function aggregate(runs: RunRecord[]): Aggregate[] {
+// How flakiness is decided, the same rule `testfile-viewer runs --flaky`
+// uses (viewer-ts/src/runrecord.ts). A verdict is only worth anything while
+// it is current, so the evidence is bounded twice: by age, and by how many
+// results are looked at.
+export const FLAKY_DAYS = 14;
+export const FLAKY_SAMPLE = 20;
+export const FLAKY_FAIL_RATE = 0.25;
+
+export function aggregate(runs: RunRecord[], now: number = Date.now()): Aggregate[] {
+  const since = now - FLAKY_DAYS * 24 * 60 * 60 * 1000;
   const byPath = new Map<string, Aggregate>();
   for (const run of runs) {
+    const recent = Date.parse(run.startedAt) >= since;
     for (const test of run.tests) {
       let entry = byPath.get(test.path);
       if (!entry) {
@@ -49,6 +59,7 @@ export function aggregate(runs: RunRecord[]): Aggregate[] {
             fails: 0,
             lastStatus: test.status,
             history: [],
+            recent: [],
           }),
         );
       }
@@ -56,13 +67,23 @@ export function aggregate(runs: RunRecord[]): Aggregate[] {
       entry.history.push(test.status);
       if (test.status === "passed") entry.passes++;
       if (test.status === "failed" || test.status === "aborted") entry.fails++;
+      // `skipped` and `aborted` are not evidence of flakiness: a skip says
+      // the test never ran, and one Ctrl+C aborts everything in flight.
+      if (
+        recent &&
+        entry.recent.length < FLAKY_SAMPLE &&
+        (test.status === "passed" || test.status === "failed")
+      ) {
+        entry.recent.push(test.status);
+      }
     }
   }
   return [...byPath.values()];
 }
 
-// A test that both passed and failed across the recorded runs - the same
-// rule `testfile-viewer runs --flaky` uses.
+// More than a quarter of the sampled results failed.
 export function isFlaky(test: Aggregate): boolean {
-  return test.passes > 0 && test.fails > 0;
+  if (test.recent.length === 0) return false;
+  const fails = test.recent.filter((status) => status === "failed").length;
+  return fails / test.recent.length > FLAKY_FAIL_RATE;
 }

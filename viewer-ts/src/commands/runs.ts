@@ -9,9 +9,11 @@ export function registerRuns(program: Command): void {
     .command("runs", { isDefault: true })
     .argument("[path]", "directory containing a .testfile folder", ".")
     .option("--json [file]", "write the runs as JSON, to a file or (without a value) stdout")
-    .option("--flaky", "find tests that both passed and failed across recorded runs", false)
-    .option("--last <n>", "with --flaky: only consider the most recent n runs", (v: string) =>
-      Number.parseInt(v, 10),
+    .option("--flaky", "find tests that fail too often in their recent runs to trust", false)
+    .option(
+      "--last <n>",
+      "with --flaky: narrow the history to the most recent n runs",
+      (v: string) => Number.parseInt(v, 10),
     )
     .description("List recorded runs (the default command)")
     .action((path: string, options: { json?: string | boolean; flaky: boolean; last?: number }) => {
