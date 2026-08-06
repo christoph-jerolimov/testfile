@@ -65,8 +65,12 @@ suite:
 tests:
   - path: root
     status: passed
+    startedAt: 2026-08-03T23:16:17.065Z
+    startedAfterMs: 1
     durationMs: 10
   - path: root/unit
     status: passed
+    startedAt: 2026-08-03T23:16:17.067Z
+    startedAfterMs: 3
     durationMs: 8
 junit: junit.xml

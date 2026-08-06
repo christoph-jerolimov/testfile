@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { variantLabel } from "../merge.js";
 import { color, formatMs, pad } from "../util.js";
 import type { RunRecordSuiteNode } from "../runrecord.js";
+import { timelineRows } from "../tui/model.js";
 import { colorStatus, commandFailed, findRun, loadedHistory } from "./shared.js";
 
 export function registerRun(program: Command): void {
@@ -76,6 +77,10 @@ export function registerRun(program: Command): void {
 
         console.log("tests:");
         for (const test of run.tests) {
+          const started =
+            test.startedAfterMs !== undefined
+              ? color(90, ` +${formatMs(test.startedAfterMs)}`)
+              : "";
           const duration = test.durationMs !== undefined ? ` (${formatMs(test.durationMs)})` : "";
           const log = test.log ? color(90, "  [log]") : "";
           const artifacts = test.artifacts?.length
@@ -91,9 +96,18 @@ export function registerRun(program: Command): void {
             ? color(90, `  [${tagsByPath.get(test.path)!.join(", ")}]`)
             : "";
           console.log(
-            `  ${pad(colorStatus(test.status), 7)} ${test.path}${variant}${duration}${tags}${log}${artifacts}${cached}`,
+            `  ${pad(colorStatus(test.status), 7)} ${test.path}${variant}${started}${duration}${tags}${log}${artifacts}${cached}`,
           );
           if (test.reason) console.log(color(90, `          ${test.reason}`));
+        }
+        // when each test ran, on one axis - the shape of the run
+        const timeline = timelineRows(run);
+        if (timeline.length > 0) {
+          const width = Math.max(...timeline.map((row) => row.path.length));
+          console.log("timeline:");
+          for (const row of timeline) {
+            console.log(`  ${pad(row.path, width)} |${row.bar}| ${color(90, row.label)}`);
+          }
         }
         if (run.services?.length) {
           console.log("services:");

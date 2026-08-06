@@ -341,7 +341,7 @@ test("every column sorts, both ways", async ({ page }) => {
   await expect(rows.first()).toContainText("2026-01-02 09:00:00");
   await started.click();
   await expect(page.locator(".list th").first()).toHaveAttribute("aria-sort", "ascending");
-  await expect(rows.first()).toContainText("2025-12-31 08:00:00");
+  await expect(rows.first()).toContainText("2025-12-31 07:50:00");
 
   // another column takes over, and the first one goes back to unsorted
   await page.locator(".list th button", { hasText: "Duration" }).click();
@@ -366,6 +366,37 @@ test("every column sorts, both ways", async ({ page }) => {
   const durations = page.locator(".detail tbody tr");
   await expect(durations.first()).toContainText("3.1s");
   await expect(durations.last()).toContainText("5.3s");
+});
+
+test("a run lays its tests out on a timeline", async ({ page }) => {
+  const timeline = page.locator(".detail .timeline");
+  const bars = timeline.locator(".timeline-bar");
+  await expect(bars).toHaveCount(3);
+
+  // the axis runs from the start of the run to its end
+  await expect(timeline.locator(".timeline-tick").first()).toHaveText("0ms");
+  await expect(timeline.locator(".timeline-tick").last()).toHaveText("3.2s");
+
+  // ci covers the run; ci/build is a sliver at the front, ci/unit the rest
+  await expect(bars.nth(1)).toHaveAttribute("aria-label", "ci/build at 60ms");
+  await expect(bars.nth(2)).toHaveAttribute("aria-label", "ci/unit at 120ms");
+  await expect(bars.nth(2)).toHaveClass(/status-failed/);
+
+  // a bar opens that test's log, like its row in the tree does
+  await bars.nth(2).click();
+  await expect(page.locator(".detail .log")).toContainText("boom: expected 4 to equal 5");
+  await expect(page.locator(".detail .log")).not.toContainText("===", { timeout: 1000 });
+
+  await expect(page).toHaveScreenshot("timeline.png");
+
+  // a merged run puts every leg on one axis: windows started 5 minutes in
+  await page.locator("nav button", { hasText: "Runs" }).click();
+  await page.getByRole("button", { name: "all", exact: true }).click();
+  await page.locator(".list tbody tr").nth(2).click();
+  const merged = page.locator(".detail .timeline .timeline-bar");
+  await expect(merged).toHaveCount(4);
+  await expect(merged.nth(0)).toHaveAttribute("aria-label", "ci at 100ms");
+  await expect(merged.nth(2)).toHaveAttribute("aria-label", "ci at 5m0s");
 });
 
 test("the run detail is the suite tree, including what never ran", async ({ page }) => {

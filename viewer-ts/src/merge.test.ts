@@ -195,3 +195,75 @@ test("variantLabel sorts by key and merging needs two runs", () => {
   ]);
   assert.throws(() => mergeRuns([source(dir, "20260101-100000-ee01")], "x"), /at least two runs/);
 });
+
+test("merging puts every leg's tests on one timeline", () => {
+  const dir = tempDir();
+  // two jobs that overlap in wall-clock time, each timing itself from its
+  // own start
+  writeRun(
+    dir,
+    "20260101-100000-tt01",
+    "2026-01-01T10:00:00.000Z",
+    [
+      {
+        path: "ci/unit",
+        status: "passed",
+        startedAt: "2026-01-01T10:00:02.000Z",
+        durationMs: 1000,
+      },
+    ],
+    { variants: { platform: "linux" } },
+  );
+  writeRun(
+    dir,
+    "20260101-100010-tt02",
+    "2026-01-01T10:00:10.000Z",
+    [
+      {
+        path: "ci/unit",
+        status: "passed",
+        startedAt: "2026-01-01T10:00:11.000Z",
+        durationMs: 1000,
+      },
+    ],
+    { variants: { platform: "windows" } },
+  );
+
+  const sources = [source(dir, "20260101-100000-tt01"), source(dir, "20260101-100010-tt02")];
+  // each leg recorded its own offset ...
+  assert.deepEqual(
+    sources.map((s) => s.record.tests[0].startedAfterMs),
+    [2000, 1000],
+  );
+
+  const { record } = mergeRuns(sources, "merged-timeline");
+  assert.equal(record.startedAt, "2026-01-01T10:00:00.000Z");
+  // ... and against the merged start they read as what really happened
+  assert.deepEqual(
+    record.tests.map((t) => t.startedAfterMs),
+    [2000, 11_000],
+  );
+  assert.deepEqual(
+    record.tests.map((t) => t.startedAt),
+    ["2026-01-01T10:00:02.000Z", "2026-01-01T10:00:11.000Z"],
+    "the absolute times are left alone",
+  );
+});
+
+test("a merged test without a recorded start keeps no offset", () => {
+  const dir = tempDir();
+  writeRun(dir, "20260101-100000-uu01", "2026-01-01T10:00:00.000Z", [
+    { path: "ci/unit", status: "passed" },
+  ]);
+  writeRun(dir, "20260101-100010-uu02", "2026-01-01T10:00:10.000Z", [
+    { path: "ci/e2e", status: "passed", startedAt: "2026-01-01T10:00:12.000Z" },
+  ]);
+  const { record } = mergeRuns(
+    [source(dir, "20260101-100000-uu01"), source(dir, "20260101-100010-uu02")],
+    "merged-partial",
+  );
+  assert.deepEqual(
+    record.tests.map((t) => t.startedAfterMs),
+    [undefined, 12_000],
+  );
+});

@@ -10,6 +10,9 @@ export interface FixtureTest {
   status: RunRecord["tests"][number]["status"];
   durationMs?: number;
   log?: string; // log content; stored under tests/<n>.log
+  // When the test started; the offset into the run is derived from it, as a
+  // runner would record the pair.
+  startedAt?: string;
 }
 
 export function writeRun(
@@ -40,6 +43,10 @@ export function writeRun(
   };
   tests.forEach((test, index) => {
     const entry: RunRecord["tests"][number] = { path: test.path, status: test.status };
+    if (test.startedAt !== undefined) {
+      entry.startedAt = test.startedAt;
+      entry.startedAfterMs = Math.max(0, Date.parse(test.startedAt) - Date.parse(startedAt));
+    }
     if (test.durationMs !== undefined) entry.durationMs = test.durationMs;
     if (test.log !== undefined) {
       entry.log = `tests/${index}.log`;

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { RunRecord } from "../runrecord.js";
-import { describeRun, runsTable } from "./model.js";
+import { describeRun, runsTable, timelineRows } from "./model.js";
 
 function run(overrides: Partial<RunRecord> = {}): RunRecord {
   return {
@@ -78,4 +78,45 @@ test("a merged run describes its legs and tags every test", () => {
   assert.ok(lines.some((line) => line.includes("20260101-095500-win2") && line.includes("failed")));
   assert.ok(lines.some((line) => line.startsWith("passed") && line.includes("[platform=linux]")));
   assert.ok(lines.some((line) => line.startsWith("failed") && line.includes("[platform=windows]")));
+});
+
+test("a run with recorded start times lays out on a timeline", () => {
+  const record = run({
+    durationMs: 1000,
+    tests: [
+      { path: "ci", status: "passed", startedAfterMs: 0, durationMs: 1000 },
+      { path: "ci/build", status: "passed", startedAfterMs: 0, durationMs: 250 },
+      { path: "ci/unit", status: "passed", startedAfterMs: 500, durationMs: 500 },
+    ],
+  });
+  const rows = timelineRows(record, 8);
+  assert.deepEqual(
+    rows.map((row) => `${row.path}|${row.bar}|`),
+    ["ci|████████|", "ci/build|██      |", "ci/unit|    ████|"],
+  );
+  assert.equal(rows[2].label, "500ms+500ms");
+
+  // the pane shows the bars, and every test says when it started
+  const lines = describeRun(record).map((line) => line.text);
+  assert.ok(lines.includes("timeline:"));
+  assert.ok(lines.some((line) => line.includes("ci/unit ") && line.includes("+500ms")));
+});
+
+test("a test with no recorded start gets no bar rather than one at zero", () => {
+  assert.deepEqual(timelineRows(run({ tests: [{ path: "ci", status: "passed" }] })), []);
+  // and a record without any of them prints no timeline block
+  assert.ok(!describeRun(run()).some((line) => line.text === "timeline:"));
+});
+
+test("a test shorter than one cell still gets a visible bar", () => {
+  const rows = timelineRows(
+    run({
+      tests: [
+        { path: "long", status: "passed", startedAfterMs: 0, durationMs: 10_000 },
+        { path: "blink", status: "passed", startedAfterMs: 9_990, durationMs: 1 },
+      ],
+    }),
+    10,
+  );
+  assert.equal(rows[1].bar, "         █");
 });

@@ -414,6 +414,92 @@ button.link {
   padding: 0.8rem 0.4rem;
 }
 
+/* When each test ran, on one axis: the shape of the run rather than a list
+   of durations. A sequence reads as a staircase, a parallel group stacks. */
+.timeline {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem 0.6rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.8rem;
+}
+
+.timeline-axis {
+  position: relative;
+  height: 1rem;
+  /* the same two columns the rows use, so the ticks line up with the bars */
+  margin: 0 3.5rem 0.2rem 13rem;
+  color: var(--dim);
+  font-size: 0.7rem;
+}
+
+.timeline-tick {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.timeline-row {
+  display: grid;
+  grid-template-columns: 13rem 1fr 3.5rem;
+  align-items: center;
+  gap: 0;
+  padding: 0.06rem 0;
+}
+
+.timeline-row.selected {
+  background: var(--panel-2);
+}
+
+.timeline-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.timeline-track {
+  position: relative;
+  display: block;
+  height: 0.85rem;
+  background: color-mix(in srgb, var(--border) 40%, transparent);
+  border-radius: 2px;
+}
+
+.timeline-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  min-width: 2px;
+  border: none;
+  border-radius: 2px;
+  padding: 0;
+  cursor: pointer;
+  background: var(--dim);
+}
+
+.timeline-bar.status-passed {
+  background: var(--green);
+}
+
+.timeline-bar.status-failed,
+.timeline-bar.status-aborted {
+  background: var(--red);
+}
+
+.timeline-bar.status-skipped {
+  background: var(--border);
+}
+
+.timeline-label {
+  padding-left: 0.5rem;
+  color: var(--dim);
+  font-size: 0.7rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
 /* The suite tree: one row per node of the recorded Testfile, indented by
    depth, with the results of this run on it. */
 .tree-controls {

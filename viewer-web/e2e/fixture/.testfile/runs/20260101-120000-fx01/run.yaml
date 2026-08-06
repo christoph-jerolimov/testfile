@@ -40,13 +40,19 @@ suite:
 tests:
   - path: ci
     status: passed
+    startedAt: 2026-01-01T12:00:00.020Z
+    startedAfterMs: 20
     durationMs: 4050
   - path: ci/build
     status: passed
+    startedAt: 2026-01-01T12:00:00.050Z
+    startedAfterMs: 50
     durationMs: 2200
     reason: "cache miss: no stored passing result for this configuration"
     log: tests/ci-build.log
   - path: ci/unit
     status: passed
+    startedAt: 2026-01-01T12:00:02.260Z
+    startedAfterMs: 2260
     durationMs: 1800
     log: tests/ci-unit.log
