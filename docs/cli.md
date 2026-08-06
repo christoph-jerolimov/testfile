@@ -160,7 +160,9 @@ the first one wins, because what actually differs between the legs of a
 matrix belongs in [`--variant`](#merging-runs).
 
 Viewers show them (`testfile-viewer run <id>`, the TUI's run detail, the
-web viewer's run detail) and the web viewer filters by them. The
+web viewer's run detail) and both filter by them —
+[`runs --filter-label`](#run-history) on the command line, a Labels chip
+row in the browser. The
 [GitHub Action](./github-action#what-a-ci-run-is-labelled-with) labels
 every run it records with its branch, pull request, actor and how it was
 triggered.
@@ -461,6 +463,27 @@ testfile-viewer run 20260801-1046         # one run in detail (id prefix is ok)
 testfile-viewer run <id> --log            # merged stdout+stderr of the run
 testfile-viewer run <id> --log all/e2e    # ... of a single test
 ```
+
+A history that collects runs from every branch and every CI job gets long,
+so `runs` narrows it:
+
+```sh
+testfile-viewer runs --filter-status failed
+testfile-viewer runs --filter-label branch=main --filter-label branch=release
+testfile-viewer runs --filter-label pr            # any run that has a pr label
+testfile-viewer runs --filter-variant platform=windows
+```
+
+Several values of one filter are an **OR** (`branch=main` *or*
+`branch=release` above), different filters an **AND**, and an unused
+filter narrows nothing. `--filter-label` takes a whole
+[label](#labelling-runs) or just its key — the key alone asks whether the
+run carries that label at all, which is how you find every pull-request
+run. `--filter-variant` also matches the legs of a
+[merged run](#merging-runs), so a merged matrix is found by any platform
+that went into it. The filters apply to the table, to `--json` and to the
+`--flaky` report alike, and the footer says how much survived
+(`3 of 12 runs`).
 
 The detail view lists every recorded test with status, when it started
 (`+2.3s` into the run), duration and whether a log is available, and ends

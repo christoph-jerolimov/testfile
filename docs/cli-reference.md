@@ -147,8 +147,16 @@ Sharing lives under its own commands: [`archive`](#testfile-viewer-archive-subco
 | Option | Description |
 | ------ | ----------- |
 | `--json [file]` | Write the full run records as JSON, to a file or (without a value) stdout. Combines with `--flaky` for a JSON flakiness report. |
-| `--flaky` | Instead of the table: find tests that both passed and failed across recorded runs. |
+| `--flaky` | Instead of the table: find tests that [fail too often to trust](./cli#run-history) across recorded runs. |
 | `--last <n>` | With `--flaky`: only consider the most recent `n` runs. |
+| `--filter-status <status>` | Only runs with this status: `passed`, `failed` or `aborted`. *(repeatable)* |
+| `--filter-label <key=value>` | Only runs carrying this [label](./cli#labelling-runs); a bare `key` asks whether it is set at all. *(repeatable)* |
+| `--filter-variant <key=value>` | Only runs with this variant, including the legs of a [merged run](#testfile-viewer-merge-run). *(repeatable)* |
+
+Several values of one filter are an **OR**, different filters an **AND**,
+and an unused filter narrows nothing. The filters apply to everything the
+command produces — the table, `--json` and the `--flaky` report all see
+the same runs.
 
 ### `testfile-viewer run <id> [path]`
 
