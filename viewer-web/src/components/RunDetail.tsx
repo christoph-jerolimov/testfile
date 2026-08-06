@@ -7,6 +7,7 @@ import { DiffPanel } from "./DiffPanel.js";
 import { Log } from "./Log.js";
 import { StatusCell } from "./StatusCell.js";
 import { SuiteTree } from "./SuiteTree.js";
+import { Timeline } from "./Timeline.js";
 
 type LogChoice =
   | { kind: "run" }
@@ -130,6 +131,11 @@ export function RunDetail({
         </div>
       ) : null}
       {base ? <DiffPanel base={base} compare={run} /> : null}
+      <Timeline
+        run={run}
+        selectedPath={choice.kind === "test" ? choice.path : undefined}
+        onLog={(path) => setChoice({ kind: "test", path })}
+      />
       <SuiteTree
         run={run}
         selectedPath={choice.kind === "test" ? choice.path : undefined}

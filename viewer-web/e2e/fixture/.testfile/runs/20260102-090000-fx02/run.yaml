@@ -41,14 +41,20 @@ suite:
 tests:
   - path: ci
     status: failed
+    startedAt: 2026-01-02T09:00:00.030Z
+    startedAfterMs: 30
     durationMs: 3150
   - path: ci/build
     status: passed
+    startedAt: 2026-01-02T09:00:00.060Z
+    startedAfterMs: 60
     durationMs: 40
     cached: true
     reason: "cache hit: inputs unchanged (last passed 2026-01-01T12:00:02.000Z)"
   - path: ci/unit
     status: failed
+    startedAt: 2026-01-02T09:00:00.120Z
+    startedAfterMs: 120
     durationMs: 2900
     reason: "cache miss: src/**: 1 changed file (src/math.ts)"
     log: tests/ci-unit.log

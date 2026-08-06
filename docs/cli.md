@@ -408,7 +408,10 @@ run is a self-contained folder:
 `run.yaml` stores the run's start time, duration, status
 (passed/failed/aborted), exit code, whether it was cancelled, the env
 variables and ports provided by the Testfile, which tests were selected, and
-the status/duration/log of every test that ran. Run ids start with the run's
+the status/duration/log of every test that ran. Each test also records
+**when** it started — `startedAt` as a timestamp and `startedAfterMs` as
+the distance from the start of the run — so a run can be laid out on a
+timeline without guessing. Run ids start with the run's
 UTC timestamp, so folders sort chronologically; the last 50 runs are kept
 and older run folders are pruned automatically. (Histories written by older
 runners as one `runs.yaml` index are migrated to per-run files on first
@@ -425,9 +428,20 @@ testfile-viewer run <id> --log            # merged stdout+stderr of the run
 testfile-viewer run <id> --log all/e2e    # ... of a single test
 ```
 
-The detail view lists every recorded test with status, duration and whether
-a log is available. `testfile-viewer` only needs the `.testfile/` folder, so it also
-works when the Testfile itself has moved or changed.
+The detail view lists every recorded test with status, when it started
+(`+2.3s` into the run), duration and whether a log is available, and ends
+with a `timeline:` block — one fixed-width bar per test, so a sequence
+reads as a staircase and a parallel group as a stack:
+
+```
+timeline:
+  ci        |████████████████████████| 0ms+3.2s
+  ci/build  |█                       | 60ms+40ms
+  ci/unit   | ███████████████████████| 120ms+2.9s
+```
+
+`testfile-viewer` only needs the `.testfile/` folder, so it also works when
+the Testfile itself has moved or changed.
 
 Compare two runs (older id first, unique prefixes are enough):
 
@@ -532,6 +546,15 @@ testfile-viewer serve --port 8080
 - The server watches `.testfile/runs/` and pushes changes to the browser,
   so runs recorded elsewhere (another terminal, `testfile-viewer github sync`)
   appear live.
+
+Above the tree, the run detail draws a **timeline**: one bar per test on a
+single axis, from the start of the run to its end, coloured by outcome —
+the shape of the run rather than a list of durations. A sequence reads as
+a staircase, a parallel group as a stack, and a merged run shows what its
+legs did at the same moment (`merge` recomputes each leg's offsets against
+the merged start, so one axis holds them all). Clicking a bar opens that
+test's log. Records written before the runner timed its tests simply have
+no timeline.
 
 The run detail draws the **suite tree** the record carries: every node of
 the Testfile with its kind, tags, matrix combination and declared services,

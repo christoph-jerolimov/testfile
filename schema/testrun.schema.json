@@ -195,6 +195,16 @@
             "aborted"
           ]
         },
+        "startedAt": {
+          "description": "Start time of this test, ISO 8601 with milliseconds, UTC; absent for tests that never started.",
+          "type": "string",
+          "format": "date-time"
+        },
+        "startedAfterMs": {
+          "description": "Milliseconds between the run's startedAt and this test's - how far into the run it began. Absent exactly when startedAt is.",
+          "type": "integer",
+          "minimum": 0
+        },
         "durationMs": {
           "description": "Wall-clock duration; absent for tests that never started.",
           "type": "integer",

@@ -81,6 +81,8 @@ unreadable.
 | ------------ | ------- | -------- | ----------- |
 | `path`       | string  | yes      | The test's path: names joined with `/` from the root, e.g. `ci/checks/schema`. Group nodes appear next to their leaves; a test is a group iff another test's path nests below it. |
 | `status`     | string  | yes      | `passed`, `failed`, `skipped` or `aborted`. |
+| `startedAt`  | string  | no       | Start time, ISO 8601 with milliseconds, UTC; absent for tests that never started. |
+| `startedAfterMs` | integer | no   | Milliseconds between the run's `startedAt` and this test's — how far into the run it began. Never negative. Absent exactly when `startedAt` is. |
 | `durationMs` | integer | no       | Wall-clock duration; absent for tests that never started. |
 | `log`        | string  | no       | Relative path of the test's merged stdout+stderr log; absent when the test produced no output. |
 | `artifacts`  | array   | no       | Relative paths of collected artifact files. |
@@ -167,6 +169,7 @@ How the top-level fields are derived:
 | `selected` | the union, in the order first seen |
 | `suite` | the tree of the first merged run that recorded one |
 | `tests`, `services` | the concatenation, each entry tagged with its `variants` and `origin` |
+| `tests[].startedAfterMs` | recomputed against the merged `startedAt`, so one timeline holds every leg; `startedAt` is untouched. A test whose record has no `startedAt` keeps no offset either. |
 
 **A test path may only appear once per variant combination.** Shards merge
 without variants because no leaf appears twice; a matrix of jobs runs the

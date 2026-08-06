@@ -34,6 +34,10 @@ const RUN_SCHEMA_MODELINE =
 export interface RunRecordTest {
   path: string;
   status: Status;
+  // When the test started: absolute, and relative to the start of the run
+  // so a viewer can lay the run out on a timeline without parsing dates.
+  startedAt?: string;
+  startedAfterMs?: number;
   durationMs?: number;
   // Log file relative to the run's folder, when the test produced output.
   log?: string;
@@ -118,6 +122,7 @@ export interface RunMeta {
 export interface RunLogInput {
   path: string;
   status: Status;
+  startedAtMs?: number;
   durationMs?: number;
   lines: OutputLine[];
   // Files to copy into the run's artifacts folder.
@@ -288,6 +293,11 @@ export class RunHistory {
 
     for (const test of tests) {
       const entry: RunRecordTest = { path: test.path, status: test.status };
+      if (test.startedAtMs !== undefined) {
+        entry.startedAt = new Date(test.startedAtMs).toISOString();
+        // a test cannot start before the run it belongs to
+        entry.startedAfterMs = Math.max(0, test.startedAtMs - meta.startedAtMs);
+      }
       if (test.durationMs !== undefined) entry.durationMs = test.durationMs;
       if (test.cached) entry.cached = true;
       if (test.reason !== undefined) entry.reason = test.reason;

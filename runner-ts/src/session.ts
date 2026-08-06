@@ -142,6 +142,7 @@ export class Session extends EventEmitter {
       tests.push({
         path: test.path,
         status: test.status,
+        startedAtMs: test.startedAt,
         durationMs:
           test.startedAt !== undefined && test.endedAt !== undefined
             ? test.endedAt - test.startedAt

@@ -27,6 +27,34 @@ function mergedVariantLabel(variants: Record<string, string[]> | undefined): str
     .join(", ");
 }
 
+export interface TimelineRow {
+  path: string;
+  // A fixed-width bar: where in the run this test ran.
+  bar: string;
+  label: string;
+}
+
+// The run laid out on one axis, from its start to the end of whatever
+// finished last. Fixed width, so it reads the same in any terminal.
+// Tests whose record has no start (older runners, tests that never ran)
+// are left out - a bar at zero would be a lie.
+export function timelineRows(run: RunRecord, cells = 24): TimelineRow[] {
+  const timed = run.tests.filter((test) => test.startedAfterMs !== undefined);
+  if (timed.length === 0) return [];
+  const end = (test: (typeof timed)[number]): number =>
+    (test.startedAfterMs ?? 0) + (test.durationMs ?? 0);
+  const span = Math.max(1, ...timed.map(end));
+  return timed.map((test) => {
+    const from = Math.min(cells - 1, Math.floor(((test.startedAfterMs ?? 0) / span) * cells));
+    const to = Math.min(cells, Math.max(from + 1, Math.ceil((end(test) / span) * cells)));
+    return {
+      path: test.path,
+      bar: " ".repeat(from) + "█".repeat(to - from) + " ".repeat(cells - to),
+      label: `${formatMs(test.startedAfterMs ?? 0)}+${formatMs(test.durationMs ?? 0)}`,
+    };
+  });
+}
+
 // A recorded run rendered as pane lines: metadata, then one line per test
 // (failures on the stderr stream so they stand out).
 export function describeRun(run: RunRecord): OutputLine[] {
@@ -66,13 +94,26 @@ export function describeRun(run: RunRecord): OutputLine[] {
   if (ports) lines.push({ text: `ports:     ${ports}`, stream: "system" });
   lines.push({ text: "", stream: "system" });
   for (const test of run.tests) {
+    const started = test.startedAfterMs !== undefined ? ` +${formatMs(test.startedAfterMs)}` : "";
     const duration = test.durationMs !== undefined ? ` (${formatMs(test.durationMs)})` : "";
     const artifacts = test.artifacts?.length ? `  [${test.artifacts.length} artifacts]` : "";
     const where = variantLabel(test.variants);
     lines.push({
-      text: `${test.status.padEnd(8)} ${test.path}${where ? `  [${where}]` : ""}${duration}${artifacts}`,
+      text: `${test.status.padEnd(8)} ${test.path}${where ? `  [${where}]` : ""}${started}${duration}${artifacts}`,
       stream: test.status === "failed" || test.status === "aborted" ? "stderr" : "stdout",
     });
+  }
+  const timeline = timelineRows(run);
+  if (timeline.length > 0) {
+    const width = Math.max(...timeline.map((row) => row.path.length));
+    lines.push({ text: "", stream: "system" });
+    lines.push({ text: "timeline:", stream: "system" });
+    for (const row of timeline) {
+      lines.push({
+        text: `  ${pad(row.path, width)} |${row.bar}| ${row.label}`,
+        stream: "system",
+      });
+    }
   }
   for (const service of run.services ?? []) {
     lines.push({

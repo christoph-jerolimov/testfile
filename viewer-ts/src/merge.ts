@@ -167,6 +167,10 @@ export function mergeRuns(sources: readonly MergeSource[], id: string): MergeRes
           if (test.durationMs !== undefined) {
             group.durationMs = (group.durationMs ?? 0) + test.durationMs;
           }
+          // a group starts when the first of its legs did
+          if (test.startedAt && (!group.startedAt || test.startedAt < group.startedAt)) {
+            group.startedAt = test.startedAt;
+          }
         }
         continue;
       }
@@ -225,9 +229,20 @@ export function mergeRuns(sources: readonly MergeSource[], id: string): MergeRes
   if (Object.keys(allVariants).length > 0) merged.variants = allVariants;
 
   const common = commonEntries(records.map((record) => record.variants ?? {}));
+  const startedAt = records.map((r) => r.startedAt).sort()[0];
+  // Each leg recorded its offsets against its own start; against the merged
+  // start they all land on one timeline, which is what the legs really did.
+  const mergedFrom = Date.parse(startedAt);
+  for (const test of tests) {
+    if (!test.startedAt || Number.isNaN(mergedFrom)) {
+      delete test.startedAfterMs;
+      continue;
+    }
+    test.startedAfterMs = Math.max(0, Date.parse(test.startedAt) - mergedFrom);
+  }
   const record: RunRecord = {
     id,
-    startedAt: records.map((r) => r.startedAt).sort()[0],
+    startedAt,
     // total time spent across the merged runs, not their wall-clock span
     durationMs: records.reduce((sum, r) => sum + (r.durationMs ?? 0), 0),
     status,

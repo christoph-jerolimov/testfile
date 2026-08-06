@@ -12,6 +12,10 @@ export type Status = "pending" | "running" | "passed" | "failed" | "skipped" | "
 export interface RunRecordTest {
   path: string;
   status: Status;
+  // When the test started: absolute, and relative to the start of the run,
+  // so a run lays out on a timeline without parsing dates.
+  startedAt?: string;
+  startedAfterMs?: number;
   durationMs?: number;
   log?: string;
   artifacts?: string[];

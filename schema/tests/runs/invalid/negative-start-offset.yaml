@@ -1,0 +1,16 @@
+# startedAfterMs is how far into the run a test began, so it cannot be
+# negative, and startedAt has to be a timestamp.
+id: 20260101-120000-cccc
+startedAt: 2026-01-01T12:00:00.000Z
+durationMs: 42
+status: passed
+exitCode: 0
+cancelled: false
+env: {}
+ports: {}
+selected: []
+tests:
+  - path: ci/unit
+    status: passed
+    startedAt: half past twelve
+    startedAfterMs: -5

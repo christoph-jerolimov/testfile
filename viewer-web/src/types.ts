@@ -3,6 +3,9 @@
 export interface RunTest {
   path: string;
   status: string;
+  // When the test started: absolute, and how far into the run it began.
+  startedAt?: string;
+  startedAfterMs?: number;
   durationMs?: number;
   log?: string;
   artifacts?: string[];
