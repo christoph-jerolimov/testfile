@@ -460,27 +460,30 @@ testfile-viewer runs --flaky               # across the recorded history
 testfile-viewer runs --flaky --last 10     # narrowed to the 10 most recent runs
 ```
 
-A verdict is only worth anything while it is current, so the evidence is
-bounded twice, the same way in the CLI, the TUI and the web viewer:
+What a test did fifty runs ago says nothing about it now, so the verdict is
+decided on the **20 most recent** results per test — and below **10** there
+is not enough evidence to say anything at all. The same rule runs in the
+CLI, the TUI and the web viewer:
 
-| | |
+| Failure rate of the sample | Verdict |
 | --- | --- |
-| **Age** | only results from runs started in the **last 14 days** |
-| **Sample** | of those, only the **20 most recent** results per test |
-| **Threshold** | flagged when **more than 25%** of that sample failed |
+| fewer than 10 results | *no verdict* |
+| below 25% | healthy |
+| 25% to 75% | **flaky** |
+| above 75% | **broken** |
+
+Both verdicts are reported: a broken test is not flaky — it fails almost
+every time — but it is just as untrustworthy, and the report's flip count
+(how often the outcome changed between consecutive results) tells the two
+apart at a glance. The report also shows the failure rate over the sample
+and the latest status. Flagged tests are good candidates for a `flaky` tag
+and a [`retry`](./writing-tests#retries).
 
 `skipped` and `aborted` results are not evidence and never enter the
 sample: a skip says the test never ran, and one Ctrl+C aborts everything
-in flight, which would otherwise make a whole suite look flaky at once. A
-test with no results inside the window is not flagged either way.
-
-Because the threshold counts failures rather than *changes* of outcome, a
-test that fails every time is flagged too — it is equally untrustworthy,
-and the report's flip count (how often the outcome changed between
-consecutive results) separates the two at a glance. The report also shows
-the failure rate over the sample and the latest status. Flagged tests are
-good candidates for a `flaky` tag and a
-[`retry`](./writing-tests#retries).
+in flight, which would otherwise make a whole suite look flaky at once.
+Age is not a criterion — a long-untouched project keeps its verdicts, and
+`--last <n>` narrows the history when you only care about recent runs.
 
 ## Sharing runs
 
@@ -591,7 +594,7 @@ narrows anything is the time window:
 | **Status** | runs / tests, multi-select (several values are an OR) | everything |
 | **Variants** | runs, multi-select over `platform=linux`-style labels; a merged run matches when *any* of its legs does | everything |
 | **Tags** | tests, multi-select over the tags of the recorded [suite tree](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md) — nested tests inherit the tags of their groups | everything |
-| **flaky only** | tests, an on/off chip: keeps only tests flagged by the [flaky rule](#run-history) — more than 25% of their last 20 results in the last 14 days failed | off |
+| **flaky only** | tests, an on/off chip: keeps only tests the [flaky rule](#run-history) calls flaky — 25% to 75% of their last 20 results failed. Broken tests are badged but not matched by this chip | off |
 | **Search** | free text over run ids, test paths, statuses and variant labels | empty |
 
 Every column of every table sorts: the header is a button, clicking it
@@ -607,12 +610,12 @@ filters would hide it — the link should not silently open something else.
 The two views the CLI already had are on the same pages. In **Results**,
 each test carries a **history sparkline** — one block per recorded run,
 newest on the right, so a test that alternates green and red looks
-different from one that simply broke — and a `flaky` badge next to the
-tests `testfile-viewer runs --flaky` would list, decided by exactly the
-same rule: more than 25% of the last 20 results from the last 14 days.
-The sparkline still draws the whole history, so the badge and the blocks
-can legitimately disagree about an old bad patch. The `flaky only` chip
-narrows the table to the flagged tests. In **Runs**, a run detail has a *compare with*
+different from one that simply broke — and a `flaky` or `broken` badge
+next to the tests `testfile-viewer runs --flaky` would list, decided by
+exactly the same rule. A test with fewer than 10 results gets no badge at
+all. The sparkline still draws the whole history, so the badge and the
+blocks can legitimately disagree about an old bad patch. The `flaky only`
+chip narrows the table to the flaky ones. In **Runs**, a run detail has a *compare with*
 picker: choose another recorded run (or press `previous run` for the one
 recorded before this one) and the same six sections
 `testfile-viewer diff a b` prints appear above the suite tree — newly

@@ -121,43 +121,25 @@ test("a test shorter than one cell still gets a visible bar", () => {
   assert.equal(rows[1].bar, "         █");
 });
 
-test("the recorded-tests view marks the flaky ones, on the recent window", () => {
-  const now = Date.parse("2026-08-01T12:00:00.000Z");
-  const at = (days: number): string => new Date(now - days * 86_400_000).toISOString();
-  const history = {
-    runs: [
-      run({
-        id: "new",
-        startedAt: at(1),
-        tests: [
-          { path: "ci/flaky", status: "failed" },
-          { path: "ci/stable", status: "passed" },
-          { path: "ci/was-bad", status: "passed" },
-        ],
-      }),
-      run({
-        id: "mid",
-        startedAt: at(2),
-        tests: [
-          { path: "ci/flaky", status: "passed" },
-          { path: "ci/stable", status: "passed" },
-          { path: "ci/was-bad", status: "passed" },
-        ],
-      }),
-      // an old bad patch: it still counts towards the totals, never the verdict
-      run({
-        id: "old",
-        startedAt: at(40),
-        tests: [{ path: "ci/was-bad", status: "failed" }],
-      }),
-    ],
-  } as unknown as Parameters<typeof recordedTests>[0];
-
-  const tests = recordedTests(history, now);
-  assert.deepEqual(
-    tests.map((t) => `${t.path}:${t.flaky}`),
-    ["ci/flaky:true", "ci/stable:false", "ci/was-bad:false"],
+test("the recorded-tests view carries each test's verdict", () => {
+  // 12 results per test, newest first
+  const runs = Array.from({ length: 12 }, (_, i) =>
+    run({
+      id: `r${i}`,
+      tests: [
+        { path: "ci/flaky", status: i % 2 === 0 ? "failed" : "passed" },
+        { path: "ci/stable", status: "passed" },
+        { path: "ci/broken", status: i === 0 ? "passed" : "failed" },
+      ],
+    }),
   );
-  assert.equal(tests[2].fails, 1, "the old failure is still counted");
-  assert.equal(tests[2].occurrences, 3);
+  // ... plus a test that has only ever run twice
+  runs[0].tests.push({ path: "ci/new", status: "failed" });
+  runs[1].tests.push({ path: "ci/new", status: "failed" });
+
+  const history = { runs } as unknown as Parameters<typeof recordedTests>[0];
+  assert.deepEqual(
+    recordedTests(history).map((t) => `${t.path}:${t.verdict}`),
+    ["ci/flaky:flaky", "ci/stable:healthy", "ci/broken:broken", "ci/new:unknown"],
+  );
 });

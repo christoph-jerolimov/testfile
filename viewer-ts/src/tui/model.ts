@@ -1,10 +1,11 @@
 import { variantLabel } from "../merge.js";
 import {
   flakyWindows,
-  isFlaky,
+  verdictOf,
   type RunHistory,
   type RunRecord,
   type Status,
+  type Verdict,
 } from "../runrecord.js";
 import { formatMs } from "../util.js";
 
@@ -165,12 +166,12 @@ export interface RecordedTest {
   passes: number;
   fails: number;
   lastStatus: Status;
-  // Judged on the recent window only - see flakyWindows in runrecord.ts.
-  flaky: boolean;
+  // Judged on the sampled results only - see flakyWindows in runrecord.ts.
+  verdict: Verdict;
 }
 
-export function recordedTests(history: RunHistory, now?: number): RecordedTest[] {
-  const windows = flakyWindows(history.runs, now);
+export function recordedTests(history: RunHistory): RecordedTest[] {
+  const windows = flakyWindows(history.runs);
   const byPath = new Map<string, RecordedTest>();
   for (const run of history.runs) {
     for (const test of run.tests) {
@@ -185,7 +186,7 @@ export function recordedTests(history: RunHistory, now?: number): RecordedTest[]
             passes: 0,
             fails: 0,
             lastStatus: test.status,
-            flaky: isFlaky(windows.get(test.path) ?? []),
+            verdict: verdictOf(windows.get(test.path) ?? []),
           }),
         );
       }
