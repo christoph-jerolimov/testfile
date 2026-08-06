@@ -27,6 +27,7 @@
     "src/filters.ts",
     "src/filters.test.ts",
     "src/components/FilterBar.tsx",
+    "src/components/DataTable.tsx",
     "src/components/StatusCell.tsx",
     "src/components/Log.tsx",
     "src/components/RunDetail.tsx",

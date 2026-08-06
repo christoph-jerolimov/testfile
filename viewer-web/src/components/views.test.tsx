@@ -93,6 +93,19 @@ test("a lone run has nothing to compare against", () => {
   assert.doesNotMatch(markup, /aria-label="compare with"/);
 });
 
+test("every column of both tables is a sort button", () => {
+  const runsMarkup = renderToStaticMarkup(<RunsView runs={runs} />);
+  // Started, Status, Duration, Tests - no variants in this fixture
+  assert.equal(runsMarkup.match(/class="sort /g)?.length, 4);
+  assert.match(runsMarkup, /aria-sort="descending"/, "newest run first to begin with");
+  assert.match(runsMarkup, /title="sort by startedAt"/);
+
+  const resultsMarkup = renderToStaticMarkup(<ResultsView runs={runs} />);
+  // the list table (6) plus the executions table (5)
+  assert.equal(resultsMarkup.match(/class="sort /g)?.length, 11);
+  assert.match(resultsMarkup, /aria-sort="ascending"/, "tests read by path to begin with");
+});
+
 test("without runs both views say so instead of crashing", () => {
   assert.match(renderToStaticMarkup(<RunsView runs={[]} />), /no recorded runs yet/);
   assert.match(renderToStaticMarkup(<ResultsView runs={[]} />), /no recorded runs yet/);

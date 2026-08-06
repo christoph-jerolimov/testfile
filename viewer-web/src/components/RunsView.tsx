@@ -16,6 +16,7 @@ import {
 } from "../format.js";
 import { navigate } from "../router.js";
 import type { RunRecord } from "../types.js";
+import { columnHelper, DataTable, type Column } from "./DataTable.js";
 import { DayRange, FilterBar, MultiSelect, SearchInput } from "./FilterBar.js";
 import { RunDetail } from "./RunDetail.js";
 import { StatusCell } from "./StatusCell.js";
@@ -25,6 +26,57 @@ function runVariants(run: RunRecord): string {
   return run.merged
     ? mergedVariantLabel(run.merged.variants) || `merged (${run.merged.runs.length} runs)`
     : variantLabel(run.variants);
+}
+
+const helper = columnHelper<RunRecord>();
+
+// The number of tests a run recorded, so "Tests" sorts by size rather than
+// by the text of its summary.
+function testCount(run: RunRecord): number {
+  return run.tests.length;
+}
+
+function runColumns(showVariants: boolean): Column<RunRecord>[] {
+  const columns: Column<RunRecord>[] = [
+    helper.accessor("startedAt", {
+      header: "Started",
+      sortFn: "datetime",
+      meta: { className: "mono" },
+      cell: (info) => startedLabel(info.getValue()),
+    }),
+    helper.accessor("status", {
+      header: "Status",
+      sortFn: "alphanumeric",
+      cell: (info) => <StatusCell status={info.getValue()} />,
+    }),
+    helper.accessor((run) => run.durationMs ?? 0, {
+      id: "duration",
+      header: "Duration",
+      sortFn: "basic",
+      cell: (info) => formatMs(info.row.original.durationMs),
+    }),
+  ];
+  // the column only earns its width when some run has variants
+  if (showVariants) {
+    columns.push(
+      helper.accessor(runVariants, {
+        id: "variants",
+        header: "Variants",
+        sortFn: "alphanumeric",
+        cell: (info) =>
+          info.getValue() ? <span className="variant">{info.getValue()}</span> : null,
+      }),
+    );
+  }
+  columns.push(
+    helper.accessor(testCount, {
+      id: "tests",
+      header: "Tests",
+      sortFn: "basic",
+      cell: (info) => countSummary(info.row.original),
+    }),
+  );
+  return columns;
 }
 
 export function RunsView({
@@ -40,12 +92,12 @@ export function RunsView({
 }): React.ReactElement {
   const [filter, setFilter] = useState<RunFilter>(runFilterDefaults);
   const shown = useMemo(() => filterRuns(runs, filter), [runs, filter]);
+  const showVariants = runs.some((r) => runVariants(r) !== "");
+  const columns = useMemo(() => runColumns(showVariants), [showVariants]);
   // A linked run is shown even when the filters hide it from the list -
   // the link should not silently open something else.
   const run = runs.find((r) => r.id === selected) ?? shown[0] ?? runs[0];
   if (!run) return <div className="empty">no recorded runs yet — run some tests first</div>;
-  // the column only earns its width when some run has variants
-  const showVariants = runs.some((r) => runVariants(r) !== "");
   return (
     <main>
       <div className="list">
@@ -74,45 +126,16 @@ export function RunsView({
             onChange={(text) => setFilter({ ...filter, text })}
           />
         </FilterBar>
-        <table>
-          <thead>
-            <tr>
-              <th>Started</th>
-              <th>Status</th>
-              <th>Duration</th>
-              {showVariants ? <th>Variants</th> : null}
-              <th>Tests</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((r) => (
-              <tr
-                key={r.id}
-                className={`row ${r.id === run.id ? "selected" : ""}`}
-                onClick={() => navigate({ view: "runs", runId: r.id })}
-              >
-                <td className="mono">{startedLabel(r.startedAt)}</td>
-                <td>
-                  <StatusCell status={r.status} />
-                </td>
-                <td>{formatMs(r.durationMs)}</td>
-                {showVariants ? (
-                  <td>
-                    {runVariants(r) ? <span className="variant">{runVariants(r)}</span> : null}
-                  </td>
-                ) : null}
-                <td>{countSummary(r)}</td>
-              </tr>
-            ))}
-            {shown.length === 0 ? (
-              <tr>
-                <td className="empty-row" colSpan={showVariants ? 5 : 4}>
-                  no run matches the filters
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+        <DataTable
+          columns={columns}
+          data={shown}
+          // newest first, the order the history is written in
+          initialSorting={[{ id: "startedAt", desc: true }]}
+          rowKey={(r) => r.id}
+          rowClassName={(r) => `row ${r.id === run.id ? "selected" : ""}`}
+          onRowClick={(r) => navigate({ view: "runs", runId: r.id })}
+          empty="no run matches the filters"
+        />
       </div>
       <div className="detail">
         <RunDetail run={run} runs={runs} revision={revision} />

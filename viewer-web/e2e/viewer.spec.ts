@@ -175,7 +175,7 @@ test("a merged run shows its legs and one row per variant", async ({ page }) => 
 });
 
 test("results view aggregates tests across runs", async ({ page }) => {
-  await page.getByRole("button", { name: "Results" }).click();
+  await page.locator("nav button", { hasText: "Results" }).click();
 
   const rows = page.locator(".list tbody tr");
   await expect(rows).toHaveCount(3); // ci, ci/build, ci/unit
@@ -203,13 +203,13 @@ test("every selection is a link that can be shared and reloaded", async ({ page 
 
   // a test path keeps its slashes, so the URL reads like the test does
   await page.goto("/results/ci/unit");
-  await expect(page.getByRole("button", { name: "Results" })).toHaveClass(/active/);
+  await expect(page.locator("nav button", { hasText: "Results" })).toHaveClass(/active/);
   const detail = page.locator(".detail");
   await expect(detail).toContainText("executions of");
   await expect(detail).toContainText("ci/unit");
 
   // switching tabs and picking rows writes the URL ...
-  await page.getByRole("button", { name: "Runs" }).click();
+  await page.locator("nav button", { hasText: "Runs" }).click();
   await expect(page).toHaveURL("/runs");
   // this navigation reloaded the app, so the frozen fixture needs "all" again
   await page.getByRole("button", { name: "all", exact: true }).click();
@@ -272,7 +272,7 @@ test("status, variant and text filters narrow the runs", async ({ page }) => {
 });
 
 test("the results table filters by status, tag and text", async ({ page }) => {
-  await page.getByRole("button", { name: "Results" }).click();
+  await page.locator("nav button", { hasText: "Results" }).click();
   await expect(page.locator(".filter-count")).toContainText("3 tests");
 
   // tags come from the recorded suite tree, not from the test results
@@ -287,7 +287,7 @@ test("the results table filters by status, tag and text", async ({ page }) => {
 });
 
 test("the results table can be narrowed to the flaky tests", async ({ page }) => {
-  await page.getByRole("button", { name: "Results" }).click();
+  await page.locator("nav button", { hasText: "Results" }).click();
   await expect(page.locator(".filter-count")).toContainText("3 tests");
 
   // ci/build passed in every run, so it is not flaky; ci and ci/unit are
@@ -330,6 +330,42 @@ test("a run can be compared with the one before it", async ({ page }) => {
   await page.locator(".list tbody tr").nth(2).click();
   await expect(detail.getByRole("button", { name: "previous run" })).toHaveCount(0);
   await expect(detail.getByLabel("compare with")).toBeVisible();
+});
+
+test("every column sorts, both ways", async ({ page }) => {
+  const started = page.locator(".list th button", { hasText: "Started" });
+  const rows = page.locator(".list tbody tr");
+
+  // the runs table opens newest first
+  await expect(page.locator(".list th").first()).toHaveAttribute("aria-sort", "descending");
+  await expect(rows.first()).toContainText("2026-01-02 09:00:00");
+  await started.click();
+  await expect(page.locator(".list th").first()).toHaveAttribute("aria-sort", "ascending");
+  await expect(rows.first()).toContainText("2025-12-31 08:00:00");
+
+  // another column takes over, and the first one goes back to unsorted
+  await page.locator(".list th button", { hasText: "Duration" }).click();
+  await expect(page.locator(".list th").first()).toHaveAttribute("aria-sort", "none");
+  await expect(rows.first()).toContainText("3.2s");
+  await expect(rows.last()).toContainText("9.5s");
+  await page.locator(".list th button", { hasText: "Duration" }).click();
+  await expect(rows.first()).toContainText("9.5s");
+
+  await expect(page).toHaveScreenshot("sorted.png");
+
+  // sorting is per table: the results tab has its own
+  await page.locator("nav button", { hasText: "Results" }).click();
+  await page.locator(".list th button", { hasText: "Failed" }).click();
+  const tests = page.locator(".list tbody tr");
+  await expect(tests.first()).toContainText("ci/build");
+  await page.locator(".list th button", { hasText: "Failed" }).click();
+  await expect(tests.first()).not.toContainText("ci/build");
+
+  // and the executions table on the right sorts on its own
+  await page.locator(".detail th button", { hasText: "Duration" }).click();
+  const durations = page.locator(".detail tbody tr");
+  await expect(durations.first()).toContainText("3.1s");
+  await expect(durations.last()).toContainText("5.3s");
 });
 
 test("the run detail is the suite tree, including what never ran", async ({ page }) => {

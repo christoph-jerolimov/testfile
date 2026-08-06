@@ -122,6 +122,39 @@ th {
   white-space: nowrap;
 }
 
+/* Every column of a data table sorts; the header is the button. The arrow
+   is always there, greyed until the column is the one being sorted by, so
+   the header row does not change width when the sort moves. */
+th button.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+th button.sort:hover {
+  color: var(--text);
+}
+
+th button.sort.on {
+  color: var(--text);
+}
+
+.sort-arrow {
+  font-size: 0.65rem;
+  opacity: 0.35;
+}
+
+th button.sort.on .sort-arrow {
+  opacity: 1;
+  color: var(--accent);
+}
+
 td {
   padding: 0.32rem 0.6rem;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 45%, transparent);
