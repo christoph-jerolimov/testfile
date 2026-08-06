@@ -24,7 +24,7 @@ export function writeRun(
     status?: RunRecord["status"];
     services?: { name: string; status?: string; log?: string }[];
     variants?: Record<string, string>;
-    labels?: string[];
+    labels?: Record<string, string>;
   } = {},
 ): RunRecord {
   const runDir = join(baseDir, ".testfile", "runs", id);

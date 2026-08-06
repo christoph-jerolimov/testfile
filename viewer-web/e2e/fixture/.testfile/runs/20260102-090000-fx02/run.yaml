@@ -6,11 +6,11 @@ status: failed
 exitCode: 1
 cancelled: false
 labels:
-  - trigger=pull_request
-  - branch=fix/math
-  - base=main
-  - pr=42
-  - actor=octocat
+  trigger: pull_request
+  branch: fix/math
+  base: main
+  pr: "42"
+  actor: octocat
 env:
   CI: "1"
 ports:

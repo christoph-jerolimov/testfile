@@ -59,8 +59,8 @@ export interface RunRecord {
   cancelled: boolean;
   // What distinguishes this run from a sibling run of the same suite.
   variants?: Record<string, string>;
-  // Free-form strings attached to the run so it can be found again.
-  labels?: string[];
+  // What the run should be findable by, e.g. { branch: main, pr: "42" }.
+  labels?: Record<string, string>;
   // Present when this run was produced by merging others.
   merged?: RunMerged;
   env: Record<string, string>;

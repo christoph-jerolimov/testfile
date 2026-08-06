@@ -15,7 +15,7 @@ export interface RunFilter {
   // Variant labels ("platform=linux"), matched against the run's own
   // variants and, for a merged run, against those of its legs.
   variants: string[];
-  // The run's own labels ("branch=main"), matched for equality.
+  // The run's own labels as "branch=main" pairs, matched for equality.
   labels: string[];
   text: string;
 }
@@ -86,9 +86,14 @@ export function variantOptions(runs: readonly RunRecord[]): string[] {
   return [...new Set(runs.flatMap(runVariantLabels))].sort();
 }
 
+// A run's labels as pickable "branch=main" strings.
+export function runLabels(run: RunRecord): string[] {
+  return variantLabels(run.labels);
+}
+
 // Every label any recorded run carries, in a stable order.
 export function labelOptions(runs: readonly RunRecord[]): string[] {
-  return [...new Set(runs.flatMap((run) => run.labels ?? []))].sort();
+  return [...new Set(runs.flatMap(runLabels))].sort();
 }
 
 export function statusOptions(runs: readonly RunRecord[]): string[] {
@@ -153,13 +158,13 @@ export function filterRuns(
     if (since !== undefined && Date.parse(run.startedAt) < since) return false;
     if (!selected(filter.statuses, [run.status])) return false;
     if (!selected(filter.variants, runVariantLabels(run))) return false;
-    if (!selected(filter.labels, run.labels ?? [])) return false;
+    if (!selected(filter.labels, runLabels(run))) return false;
     return matches(filter.text, [
       run.id,
       run.status,
       ...run.selected,
       ...runVariantLabels(run),
-      ...(run.labels ?? []),
+      ...runLabels(run),
       ...run.tests.map((test) => test.path),
     ]);
   });

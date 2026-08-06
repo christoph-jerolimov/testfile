@@ -133,19 +133,31 @@ exit code is `1` when a check failed — warnings alone keep it `0`, so
 
 ## Labelling runs
 
-A recorded run can carry free-form **labels**, so it can be found again in
-a history that mixes branches, pull requests and nightlies:
+A recorded run can carry **labels**, so it can be found again in a history
+that mixes branches, pull requests and nightlies:
 
 ```sh
-testfile run --label branch=main --label nightly
-testfile run -l "release candidate"
+testfile run --label branch=main --label tier=nightly
+testfile run -l pr=42
 ```
 
-`-l/--label` is repeatable; labels are trimmed, empty ones are dropped and
-a label given twice is recorded once. They land in the run's `run.yaml` as
-a plain list of strings — nothing parses them, so `key=value` is a
-convention that reads well rather than a format. Merging a set of runs
-keeps the union of their labels.
+`-l/--label` takes a `key=value` pair, split at the **first** `=` so a
+value may contain more, and is repeatable. Both halves are trimmed, and a
+key may only be given once — `-l branch=main -l branch=other` is an error
+rather than a silent choice between the two.
+
+They land in the run's `run.yaml` as a map of strings:
+
+```yaml
+labels:
+  branch: main
+  pr: "42"
+```
+
+Values are always strings, including numeric-looking ones. Merging a set
+of runs keeps the union of their labels; where two runs disagree on a key
+the first one wins, because what actually differs between the legs of a
+matrix belongs in [`--variant`](#merging-runs).
 
 Viewers show them (`testfile-viewer run <id>`, the TUI's run detail, the
 web viewer's run detail) and the web viewer filters by them. The

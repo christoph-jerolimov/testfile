@@ -61,11 +61,13 @@
       }
     },
     "labels": {
-      "description": "Free-form strings attached to the run so it can be found again, e.g. branch=main or pr=42. Consumers match them for equality and must not parse their contents.",
-      "type": "array",
-      "items": {
-        "type": "string",
+      "description": "What the run should be findable by, e.g. {\"branch\": \"main\", \"pr\": \"42\"}. Set by the runner (--label). Keys and values are free-form; values are always strings.",
+      "type": "object",
+      "propertyNames": {
         "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "string"
       }
     },
     "merged": {

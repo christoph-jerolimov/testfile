@@ -313,19 +313,20 @@ test("labels are recorded when the run was given some", () => {
   const dir = tempDir();
   const history = new RunHistory(dir);
   const record = history.saveRun(
-    { ...meta(Date.parse("2026-01-01T10:00:00.000Z")), labels: ["branch=main", "nightly"] },
+    { ...meta(Date.parse("2026-01-01T10:00:00.000Z")), labels: { branch: "main", pr: "42" } },
     [{ path: "all", status: "passed", lines: [] }],
     [],
   );
-  assert.deepEqual(record.labels, ["branch=main", "nightly"]);
+  assert.deepEqual(record.labels, { branch: "main", pr: "42" });
   const written = parse(
     readFileSync(join(dir, ".testfile", "runs", record.id, "run.yaml"), "utf8"),
   );
-  assert.deepEqual(written.labels, ["branch=main", "nightly"], "and they survive the round trip");
+  assert.deepEqual(written.labels, { branch: "main", pr: "42" }, "and they survive the round trip");
+  assert.equal(typeof written.labels.pr, "string", "a numeric-looking value stays a string");
 
   // no labels, no field: an unlabelled run's record stays as it was
   const plain = history.saveRun(
-    { ...meta(Date.parse("2026-01-01T10:00:01.000Z")), labels: [] },
+    { ...meta(Date.parse("2026-01-01T10:00:01.000Z")), labels: {} },
     [{ path: "all", status: "passed", lines: [] }],
     [],
   );
