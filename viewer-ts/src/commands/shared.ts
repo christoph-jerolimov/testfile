@@ -23,6 +23,11 @@ export function resolveHistoryBase(path: string): string {
   return existsSync(p) && statSync(p).isFile() ? dirname(p) : p;
 }
 
+// Repeatable options gather their values, like the runner's filters do.
+export function collect(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
 export function commandFailed(err: unknown): void {
   console.error(`${color(31, "\u2718")} ${err instanceof Error ? err.message : err}`);
   process.exitCode = 1;
