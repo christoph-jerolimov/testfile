@@ -271,6 +271,36 @@ test("status, variant and text filters narrow the runs", async ({ page }) => {
   await expect(page.locator(".list tbody tr").first()).toContainText("2026-01-01 12:00:00");
 });
 
+test("runs carry their labels and can be filtered by them", async ({ page }) => {
+  // the newest run came from a pull request; its labels say which
+  const detail = page.locator(".detail .labels");
+  await expect(detail.locator(".badge.label")).toHaveCount(5);
+  await expect(detail).toContainText("trigger=pull_request");
+  await expect(detail).toContainText("branch=fix/math");
+  await expect(detail).toContainText("base=main");
+  await expect(detail).toContainText("pr=42");
+  await expect(detail).toContainText("actor=octocat");
+
+  // every label of every run is a chip
+  await page.getByRole("button", { name: "branch=main", exact: true }).click();
+  await expect(page.locator(".filter-count")).toContainText("2 of 3 runs");
+  await page.getByRole("button", { name: "branch=main", exact: true }).click();
+
+  await page.getByRole("button", { name: "trigger=schedule", exact: true }).click();
+  await expect(page.locator(".list tbody tr")).toHaveCount(1);
+  await expect(page.locator(".list tbody tr").first()).toContainText("2025-12-31");
+
+  await expect(page).toHaveScreenshot("labels.png");
+
+  await page.getByRole("button", { name: "clear filters" }).click();
+  await page.getByRole("button", { name: "all", exact: true }).click();
+
+  // and the text box searches them as well
+  await page.getByPlaceholder("run id, test, variant, label").fill("pr=42");
+  await expect(page.locator(".list tbody tr")).toHaveCount(1);
+  await expect(page.locator(".list tbody tr").first()).toContainText("2026-01-02");
+});
+
 test("the results table filters by status, tag and text", async ({ page }) => {
   await page.locator("nav button", { hasText: "Results" }).click();
   await expect(page.locator(".filter-count")).toContainText("3 tests");

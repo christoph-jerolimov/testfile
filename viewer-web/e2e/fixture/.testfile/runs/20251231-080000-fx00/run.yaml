@@ -27,6 +27,10 @@ merged:
     platform:
       - linux
       - windows
+labels:
+  - trigger=schedule
+  - branch=main
+  - actor=octocat
 env:
   CI: "1"
 ports: {}

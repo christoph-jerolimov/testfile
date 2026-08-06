@@ -1,0 +1,16 @@
+# A label is a non-empty string; an empty one names nothing, and a number
+# is not a label.
+id: 20260101-120000-dddd
+startedAt: 2026-01-01T12:00:00.000Z
+durationMs: 42
+status: passed
+exitCode: 0
+cancelled: false
+labels:
+  - branch=main
+  - ""
+  - 7
+env: {}
+ports: {}
+selected: []
+tests: []

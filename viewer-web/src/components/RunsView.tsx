@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   filterRuns,
   isDefaultRunFilter,
+  labelOptions,
   runFilterDefaults,
   statusOptions,
   variantOptions,
@@ -120,9 +121,15 @@ export function RunsView({
             selected={filter.variants}
             onChange={(variants) => setFilter({ ...filter, variants })}
           />
+          <MultiSelect
+            label="Labels"
+            options={labelOptions(runs)}
+            selected={filter.labels}
+            onChange={(labels) => setFilter({ ...filter, labels })}
+          />
           <SearchInput
             value={filter.text}
-            placeholder="run id, test, variant"
+            placeholder="run id, test, variant, label"
             onChange={(text) => setFilter({ ...filter, text })}
           />
         </FilterBar>

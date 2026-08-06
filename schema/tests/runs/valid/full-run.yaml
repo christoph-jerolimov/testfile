@@ -5,6 +5,11 @@ status: passed
 exitCode: 0
 cancelled: false
 machine: vm
+labels:
+  - trigger=push
+  - branch=main
+  - pr=42
+  - nightly
 env: {}
 ports: {}
 selected:

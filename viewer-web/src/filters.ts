@@ -15,6 +15,8 @@ export interface RunFilter {
   // Variant labels ("platform=linux"), matched against the run's own
   // variants and, for a merged run, against those of its legs.
   variants: string[];
+  // The run's own labels ("branch=main"), matched for equality.
+  labels: string[];
   text: string;
 }
 
@@ -32,6 +34,7 @@ export const runFilterDefaults: RunFilter = {
   days: DEFAULT_DAYS,
   statuses: [],
   variants: [],
+  labels: [],
   text: "",
 };
 
@@ -47,6 +50,7 @@ export function isDefaultRunFilter(filter: RunFilter): boolean {
     filter.days === DEFAULT_DAYS &&
     filter.statuses.length === 0 &&
     filter.variants.length === 0 &&
+    filter.labels.length === 0 &&
     filter.text === ""
   );
 }
@@ -80,6 +84,11 @@ export function runVariantLabels(run: RunRecord): string[] {
 // The values a filter can offer, in a stable order.
 export function variantOptions(runs: readonly RunRecord[]): string[] {
   return [...new Set(runs.flatMap(runVariantLabels))].sort();
+}
+
+// Every label any recorded run carries, in a stable order.
+export function labelOptions(runs: readonly RunRecord[]): string[] {
+  return [...new Set(runs.flatMap((run) => run.labels ?? []))].sort();
 }
 
 export function statusOptions(runs: readonly RunRecord[]): string[] {
@@ -144,11 +153,13 @@ export function filterRuns(
     if (since !== undefined && Date.parse(run.startedAt) < since) return false;
     if (!selected(filter.statuses, [run.status])) return false;
     if (!selected(filter.variants, runVariantLabels(run))) return false;
+    if (!selected(filter.labels, run.labels ?? [])) return false;
     return matches(filter.text, [
       run.id,
       run.status,
       ...run.selected,
       ...runVariantLabels(run),
+      ...(run.labels ?? []),
       ...run.tests.map((test) => test.path),
     ]);
   });

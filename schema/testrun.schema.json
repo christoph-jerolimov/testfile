@@ -60,6 +60,14 @@
         "type": "string"
       }
     },
+    "labels": {
+      "description": "Free-form strings attached to the run so it can be found again, e.g. branch=main or pr=42. Consumers match them for equality and must not parse their contents.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "merged": {
       "type": "object",
       "description": "Present when this run was produced by merging others (testfile-viewer merge). The merged run is an ordinary run; this records what went into it.",

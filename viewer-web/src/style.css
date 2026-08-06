@@ -601,6 +601,20 @@ table.services {
   text-decoration: underline;
 }
 
+/* What a run was labelled with, e.g. branch=main or pr=42. */
+.labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin: -0.4rem 0 0.5rem;
+}
+
+.labels .badge.label {
+  margin-left: 0;
+  color: var(--magenta);
+  border-color: color-mix(in srgb, var(--magenta) 45%, var(--border));
+}
+
 .files {
   display: flex;
   flex-wrap: wrap;

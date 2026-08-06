@@ -45,6 +45,14 @@ inputs:
     description: "What distinguishes this run from the other legs of a matrix, as key=value pairs separated by commas or newlines (for example platform=ubuntu-latest). Recorded with the run; `testfile-viewer merge` needs it to combine the legs."
     required: false
     default: ""
+  labels:
+    description: 'Extra labels to record with the run, separated by commas or newlines (for example "nightly, slow"). Recorded alongside the automatic ones; viewers filter runs by them.'
+    required: false
+    default: ""
+  auto-labels:
+    description: "Label the run with the GitHub context: how it was triggered, the branch (or tag), the pull request and its target branch, the actor, the repository, the workflow and job, the runner OS, the short commit sha and the Actions run id"
+    required: false
+    default: "true"
   reporter:
     description: "Write machine-readable results: junit or json"
     required: false
@@ -101,6 +109,8 @@ runs:
         INPUT_FAIL_FAST: ${{ inputs.fail-fast }}
         INPUT_MAX_PARALLEL: ${{ inputs.max-parallel }}
         INPUT_VARIANTS: ${{ inputs.variants }}
+        INPUT_LABELS: ${{ inputs.labels }}
+        INPUT_AUTO_LABELS: ${{ inputs['auto-labels'] }}
         INPUT_REPORTER: ${{ inputs.reporter }}
         INPUT_OUTPUT: ${{ inputs.output }}
       run: |
@@ -119,6 +129,10 @@ runs:
           variant=$(printf '%s' "$variant" | tr -d '[:space:]')
           if [ -n "$variant" ]; then ARGS+=(--variant "$variant"); fi
         done <<< "$(printf '%s' "$INPUT_VARIANTS" | tr ',' '\n')"
+        # One label per line, so a branch name with a space survives.
+        while IFS= read -r label; do
+          if [ -n "$label" ]; then ARGS+=(--label "$label"); fi
+        done < <(node "${{ github.action_path }}/action/labels.mjs")
         [ -n "$INPUT_REPORTER" ] && ARGS+=(--reporter "$INPUT_REPORTER")
         [ -n "$INPUT_OUTPUT" ] && ARGS+=(--output "$INPUT_OUTPUT")
         node "${{ github.action_path }}/runner-ts/dist/cli.js" "${ARGS[@]}"

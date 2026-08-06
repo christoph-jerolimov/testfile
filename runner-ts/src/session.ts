@@ -44,6 +44,8 @@ export class Session extends EventEmitter {
       forwardEnv?: string[];
       // Recorded with the run, e.g. { platform: linux } - see --variant.
       variants?: Record<string, string>;
+      // Free-form strings recorded with the run, for filtering it later.
+      labels?: string[];
     } = {},
   ) {
     super();
@@ -165,6 +167,7 @@ export class Session extends EventEmitter {
         cancelled: runner.interrupted,
         machine: detectMachine(),
         variants: this.runDefaults.variants,
+        labels: this.runDefaults.labels,
         env: Object.fromEntries(
           Object.entries(runner.docEnv).map(([key, value]) => [key, maskSecrets(value, secrets)]),
         ),
