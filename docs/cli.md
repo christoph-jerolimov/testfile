@@ -555,6 +555,12 @@ narrows anything is the time window:
 | **flaky only** | tests, an on/off chip: keeps only tests that both passed *and* failed across the recorded runs | off |
 | **Search** | free text over run ids, test paths, statuses and variant labels | empty |
 
+Every column of every table sorts: the header is a button, clicking it
+flips between ascending and descending, and the arrow shows which column
+the table is ordered by. The runs table opens newest first, the tests
+table by path, and each table remembers its own order — the suite tree is
+the one exception, because sorting a tree would take it apart.
+
 The count on the right says how much survived (`4 of 27 runs`) and clears
 the filters again. A run or test opened by link stays visible even when the
 filters would hide it — the link should not silently open something else.

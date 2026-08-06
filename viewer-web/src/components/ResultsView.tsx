@@ -10,10 +10,102 @@ import {
 } from "../filters.js";
 import { aggregate, formatMs, isFlaky, startedLabel, variantLabel } from "../format.js";
 import { navigate } from "../router.js";
-import type { RunRecord, RunTest } from "../types.js";
+import type { Aggregate, RunRecord, RunTest } from "../types.js";
+import { columnHelper, DataTable, type Column } from "./DataTable.js";
 import { FilterBar, MultiSelect, SearchInput, Toggle } from "./FilterBar.js";
 import { Sparkline } from "./Sparkline.js";
 import { StatusCell } from "./StatusCell.js";
+
+// One recorded execution of a test: which run it came from, and what it did
+// there. A merged run holds one result per leg, so a run can contribute more
+// than one execution of the same test.
+interface Execution {
+  run: RunRecord;
+  test: RunTest;
+}
+
+const tests = columnHelper<Aggregate>();
+const executions = columnHelper<Execution>();
+
+const testColumns: Column<Aggregate>[] = [
+  tests.accessor("path", {
+    header: "Test",
+    sortFn: "alphanumeric",
+    meta: { className: "mono" },
+    cell: (info) => (
+      <>
+        {info.getValue()}
+        {isFlaky(info.row.original) ? <span className="badge flaky">flaky</span> : null}
+      </>
+    ),
+  }),
+  tests.accessor("lastStatus", {
+    header: "Last",
+    sortFn: "alphanumeric",
+    cell: (info) => <StatusCell status={info.getValue()} />,
+  }),
+  tests.accessor((test) => test.history.length, {
+    id: "history",
+    header: "History",
+    sortFn: "basic",
+    cell: (info) => <Sparkline history={info.row.original.history} />,
+  }),
+  tests.accessor("passes", { header: "Passed", sortFn: "basic" }),
+  tests.accessor("fails", { header: "Failed", sortFn: "basic" }),
+  tests.accessor("occurrences", { header: "Runs", sortFn: "basic" }),
+];
+
+const executionColumns: Column<Execution>[] = [
+  executions.accessor((entry) => entry.run.id, {
+    id: "run",
+    header: "Run",
+    sortFn: "alphanumeric",
+    meta: { className: "mono" },
+    cell: (info) => (
+      <>
+        {info.getValue()}
+        {variantLabel(info.row.original.test.variants) ? (
+          <span className="variant">{variantLabel(info.row.original.test.variants)}</span>
+        ) : null}
+      </>
+    ),
+  }),
+  executions.accessor((entry) => entry.run.startedAt, {
+    id: "started",
+    header: "Started",
+    sortFn: "datetime",
+    meta: { className: "mono" },
+    cell: (info) => startedLabel(info.getValue()),
+  }),
+  executions.accessor((entry) => entry.test.status, {
+    id: "status",
+    header: "Status",
+    sortFn: "alphanumeric",
+    cell: (info) => <StatusCell status={info.getValue()} cached={info.row.original.test.cached} />,
+  }),
+  executions.accessor((entry) => entry.test.durationMs ?? 0, {
+    id: "duration",
+    header: "Duration",
+    sortFn: "basic",
+    cell: (info) => formatMs(info.row.original.test.durationMs),
+  }),
+  executions.accessor((entry) => (entry.test.artifacts?.length ?? 0) + (entry.test.log ? 1 : 0), {
+    id: "notes",
+    header: "Notes",
+    sortFn: "basic",
+    cell: (info) => {
+      const { test } = info.row.original;
+      return (
+        <>
+          {test.artifacts?.length ? (
+            <span className="badge">{test.artifacts.length} artifacts</span>
+          ) : null}
+          {test.log ? <span className="badge">log</span> : null}
+        </>
+      );
+    },
+  }),
+];
 
 export function ResultsView({
   runs,
@@ -24,15 +116,13 @@ export function ResultsView({
   selected?: string;
 }): React.ReactElement {
   const [filter, setFilter] = useState<TestFilter>(testFilterDefaults);
-  const tests = useMemo(() => aggregate(runs), [runs]);
+  const rows = useMemo(() => aggregate(runs), [runs]);
   const tags = useMemo(() => tagsByPath(runs), [runs]);
-  const shown = useMemo(() => filterTests(tests, filter, tags), [tests, filter, tags]);
+  const shown = useMemo(() => filterTests(rows, filter, tags), [rows, filter, tags]);
   // as on the runs tab, a linked test stays visible even when filtered out
-  const current = tests.find((t) => t.path === selected) ?? shown[0] ?? tests[0];
+  const current = rows.find((t) => t.path === selected) ?? shown[0] ?? rows[0];
   if (!current) return <div className="empty">no recorded runs yet — run some tests first</div>;
-  // A merged run holds one result per leg, so a run can contribute more
-  // than one execution of the same test.
-  const executions: { run: RunRecord; test: RunTest }[] = runs.flatMap((run) =>
+  const ran: Execution[] = runs.flatMap((run) =>
     run.tests.filter((t) => t.path === current.path).map((test) => ({ run, test })),
   );
   return (
@@ -40,13 +130,13 @@ export function ResultsView({
       <div className="list">
         <FilterBar
           shown={shown.length}
-          total={tests.length}
+          total={rows.length}
           noun="tests"
           onClear={isDefaultTestFilter(filter) ? undefined : () => setFilter(testFilterDefaults)}
         >
           <MultiSelect
             label="Status"
-            options={testStatusOptions(tests)}
+            options={testStatusOptions(rows)}
             selected={filter.statuses}
             onChange={(statuses) => setFilter({ ...filter, statuses })}
           />
@@ -67,48 +157,15 @@ export function ResultsView({
             onChange={(text) => setFilter({ ...filter, text })}
           />
         </FilterBar>
-        <table>
-          <thead>
-            <tr>
-              <th>Test</th>
-              <th>Last</th>
-              <th>History</th>
-              <th>Passed</th>
-              <th>Failed</th>
-              <th>Runs</th>
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((t) => (
-              <tr
-                key={t.path}
-                className={`row ${t.path === current.path ? "selected" : ""}`}
-                onClick={() => navigate({ view: "results", testPath: t.path })}
-              >
-                <td className="mono">
-                  {t.path}
-                  {isFlaky(t) ? <span className="badge flaky">flaky</span> : null}
-                </td>
-                <td>
-                  <StatusCell status={t.lastStatus} />
-                </td>
-                <td>
-                  <Sparkline history={t.history} />
-                </td>
-                <td>{t.passes}</td>
-                <td>{t.fails}</td>
-                <td>{t.occurrences}</td>
-              </tr>
-            ))}
-            {shown.length === 0 ? (
-              <tr>
-                <td className="empty-row" colSpan={6}>
-                  no test matches the filters
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+        <DataTable
+          columns={testColumns}
+          data={shown}
+          initialSorting={[{ id: "path", desc: false }]}
+          rowKey={(t) => t.path}
+          rowClassName={(t) => `row ${t.path === current.path ? "selected" : ""}`}
+          onRowClick={(t) => navigate({ view: "results", testPath: t.path })}
+          empty="no test matches the filters"
+        />
       </div>
       <div className="detail">
         <h2>
@@ -120,40 +177,13 @@ export function ResultsView({
             </span>
           ))}
         </h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Run</th>
-              <th>Started</th>
-              <th>Status</th>
-              <th>Duration</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            {executions.map(({ run, test }) => (
-              <tr key={`${run.id} ${test.origin ?? ""}`}>
-                <td className="mono">
-                  {run.id}
-                  {variantLabel(test.variants) ? (
-                    <span className="variant">{variantLabel(test.variants)}</span>
-                  ) : null}
-                </td>
-                <td className="mono">{startedLabel(run.startedAt)}</td>
-                <td>
-                  <StatusCell status={test.status} cached={test.cached} />
-                </td>
-                <td>{formatMs(test.durationMs)}</td>
-                <td>
-                  {test.artifacts?.length ? (
-                    <span className="badge">{test.artifacts.length} artifacts</span>
-                  ) : null}
-                  {test.log ? <span className="badge">log</span> : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          columns={executionColumns}
+          data={ran}
+          // newest first, as the runs list reads
+          initialSorting={[{ id: "started", desc: true }]}
+          rowKey={(entry) => `${entry.run.id} ${entry.test.origin ?? ""}`}
+        />
       </div>
     </main>
   );
