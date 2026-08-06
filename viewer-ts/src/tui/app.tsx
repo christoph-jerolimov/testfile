@@ -245,7 +245,8 @@ export function App({
                 return (
                   <Text key={test.path} inverse={i === resultsIndex} wrap="truncate">
                     <Text color={g.color}>{g.glyph}</Text> {test.path}
-                    {test.flaky ? <Text color="yellow"> flaky</Text> : null}
+                    {test.verdict === "flaky" ? <Text color="yellow"> flaky</Text> : null}
+                    {test.verdict === "broken" ? <Text color="red"> broken</Text> : null}
                     <Text dimColor>
                       {" "}
                       {test.passes}✔ {test.fails}✘ of {test.occurrences}

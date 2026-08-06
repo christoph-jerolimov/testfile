@@ -8,7 +8,7 @@ import {
   testStatusOptions,
   type TestFilter,
 } from "../filters.js";
-import { aggregate, formatMs, isFlaky, startedLabel, variantLabel } from "../format.js";
+import { aggregate, formatMs, startedLabel, variantLabel, verdictOf } from "../format.js";
 import { navigate } from "../router.js";
 import type { Aggregate, RunRecord, RunTest } from "../types.js";
 import { columnHelper, DataTable, type Column } from "./DataTable.js";
@@ -24,6 +24,14 @@ interface Execution {
   test: RunTest;
 }
 
+// A test is only labelled once it has enough results to judge; healthy
+// tests say nothing, which keeps the table quiet.
+function VerdictBadge({ test }: { test: Aggregate }): React.ReactElement | null {
+  const verdict = verdictOf(test);
+  if (verdict !== "flaky" && verdict !== "broken") return null;
+  return <span className={`badge ${verdict}`}>{verdict}</span>;
+}
+
 const tests = columnHelper<Aggregate>();
 const executions = columnHelper<Execution>();
 
@@ -35,7 +43,7 @@ const testColumns: Column<Aggregate>[] = [
     cell: (info) => (
       <>
         {info.getValue()}
-        {isFlaky(info.row.original) ? <span className="badge flaky">flaky</span> : null}
+        <VerdictBadge test={info.row.original} />
       </>
     ),
   }),
@@ -170,7 +178,7 @@ export function ResultsView({
       <div className="detail">
         <h2>
           executions of <span className="mono">{current.path}</span>
-          {isFlaky(current) ? <span className="badge flaky">flaky</span> : null}
+          <VerdictBadge test={current} />
           {(tags.get(current.path) ?? []).map((tag) => (
             <span key={tag} className="badge">
               {tag}

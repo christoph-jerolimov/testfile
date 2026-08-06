@@ -70,12 +70,28 @@ test("the results view opens the test from the URL", () => {
   assert.match(first, /executions of <span class="mono">ci</);
 });
 
-test("the results table carries a history sparkline and marks flaky tests", () => {
+test("the results table carries a history sparkline and a verdict badge", () => {
   const markup = renderToStaticMarkup(<ResultsView runs={runs} />);
   assert.match(markup, /class="spark"/);
-  // ci and ci/unit each failed once and passed once
-  assert.equal(markup.match(/class="badge flaky"/g)?.length, 3, "two rows plus the heading");
   assert.match(markup, /aria-pressed="false">flaky only/);
+  // two runs is not enough evidence to judge anything
+  assert.doesNotMatch(markup, /class="badge flaky"/);
+  assert.doesNotMatch(markup, /class="badge broken"/);
+
+  // 12 runs: ci alternates, ci/unit fails all but the first
+  const judged = Array.from({ length: 12 }, (_, i) =>
+    run(`2026010${i}-000000-fx`, hoursAgo(i + 1), i % 2 === 0 ? "failed" : "passed"),
+  );
+  for (const [index, record] of judged.entries()) {
+    record.tests = [
+      { path: "ci", status: index % 2 === 0 ? "failed" : "passed" },
+      { path: "ci/unit", status: index === 0 ? "passed" : "failed" },
+    ];
+  }
+  const verdicts = renderToStaticMarkup(<ResultsView runs={judged} />);
+  // ci is flaky: one row plus the heading, since it is the selected test
+  assert.equal(verdicts.match(/class="badge flaky"/g)?.length, 2);
+  assert.equal(verdicts.match(/class="badge broken"/g)?.length, 1, "ci/unit, in its row");
 });
 
 test("a run detail offers the runs it can be compared with", () => {

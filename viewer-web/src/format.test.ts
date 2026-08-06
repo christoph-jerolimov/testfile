@@ -4,16 +4,18 @@ import {
   aggregate,
   countSummary,
   formatMs,
+  isBroken,
   isFlaky,
   mergedVariantLabel,
   startedLabel,
   variantLabel,
+  verdictOf,
 } from "./format.js";
-import type { Aggregate, RunRecord } from "./types.js";
+import type { RunRecord } from "./types.js";
 
-// The flaky window is measured against "now", so the tests fix both ends.
-const NOW = Date.parse("2026-01-03T00:00:00.000Z");
-const daysAgo = (days: number): string => new Date(NOW - days * 86_400_000).toISOString();
+// Runs need distinct, ordered timestamps; nothing here depends on the clock.
+const EPOCH = Date.parse("2026-01-03T00:00:00.000Z");
+const daysAgo = (days: number): string => new Date(EPOCH - days * 86_400_000).toISOString();
 
 function run(id: string, startedAt: string, tests: RunRecord["tests"]): RunRecord {
   return {
@@ -68,7 +70,7 @@ test("aggregate folds runs per test path, newest run first", () => {
     { path: "ci/old", status: "aborted" },
   ]);
 
-  const rows = aggregate([newest, oldest], NOW);
+  const rows = aggregate([newest, oldest]);
   const unit = rows.find((row) => row.path === "ci/unit")!;
   assert.deepEqual(unit, {
     path: "ci/unit",
@@ -99,85 +101,81 @@ test("aggregate of no runs is empty", () => {
   assert.deepEqual(aggregate([]), []);
 });
 
-test("a test is flaky when more than a quarter of its recent results failed", () => {
-  const rows = aggregate(
-    [
-      run("r2", daysAgo(1), [
-        { path: "ci/unit", status: "failed" },
-        { path: "ci/build", status: "passed" },
-        { path: "ci/skipped", status: "skipped" },
-      ]),
-      run("r1", daysAgo(2), [
-        { path: "ci/unit", status: "passed" },
-        { path: "ci/build", status: "passed" },
-        { path: "ci/skipped", status: "skipped" },
-      ]),
-    ],
-    NOW,
+// Newest first, one run per result, so a list reads most-recent to oldest.
+const history = (results: string[], path = "ci/unit"): RunRecord[] =>
+  results.map((status, index) =>
+    run(`r${index}`, daysAgo(index), [{ path, status: status as RunRecord["tests"][0]["status"] }]),
   );
-  const flaky = rows.filter(isFlaky).map((row) => row.path);
-  assert.deepEqual(flaky, ["ci/unit"], "a test that never failed is not flaky");
-  // a skipped-only test has no evidence either way
-  assert.deepEqual(rows.find((row) => row.path === "ci/skipped")?.recent, []);
+
+test("a verdict needs at least 10 results", () => {
+  const [nine] = aggregate(history(Array.from({ length: 9 }, () => "failed")));
+  assert.equal(nine.recent.length, 9);
+  assert.equal(verdictOf(nine), "unknown", "9 failures still say nothing");
+  assert.equal(isFlaky(nine), false);
+  assert.equal(isBroken(nine), false);
+
+  const [ten] = aggregate(history(Array.from({ length: 10 }, () => "failed")));
+  assert.equal(verdictOf(ten), "broken");
 });
 
-test("results older than 14 days do not decide flakiness", () => {
-  const rows = aggregate(
-    [
-      run("recent", daysAgo(1), [{ path: "ci/unit", status: "passed" }]),
-      run("edge", daysAgo(13.9), [{ path: "ci/unit", status: "failed" }]),
-      run("old", daysAgo(14.1), [{ path: "ci/unit", status: "failed" }]),
-      run("older", daysAgo(60), [{ path: "ci/unit", status: "failed" }]),
-    ],
-    NOW,
-  );
-  const unit = rows[0];
-  assert.equal(unit.occurrences, 4, "every run still counts towards the totals");
-  assert.deepEqual(unit.recent, ["passed", "failed"], "only the last 14 days decide");
-  assert.equal(isFlaky(unit), true, "1 of 2 failed");
-
-  // without the failure inside the window, the old ones say nothing
-  const stable = aggregate(
-    [
-      run("recent", daysAgo(1), [{ path: "ci/unit", status: "passed" }]),
-      run("old", daysAgo(20), [{ path: "ci/unit", status: "failed" }]),
-      run("older", daysAgo(60), [{ path: "ci/unit", status: "failed" }]),
-    ],
-    NOW,
-  );
-  assert.equal(isFlaky(stable[0]), false);
+test("healthy below a quarter, flaky up to three quarters, broken above", () => {
+  const verdict = (fails: number, total: number): string =>
+    verdictOf(
+      aggregate(
+        history(Array.from({ length: total }, (_, i) => (i < fails ? "failed" : "passed"))),
+      )[0],
+    );
+  assert.equal(verdict(0, 10), "healthy");
+  assert.equal(verdict(2, 10), "healthy", "20% is below the flaky band");
+  // the band is inclusive at both ends
+  assert.equal(verdict(5, 20), "flaky", "exactly 25%");
+  assert.equal(verdict(15, 20), "flaky", "exactly 75%");
+  assert.equal(verdict(16, 20), "broken", "80% is past the band");
+  assert.equal(verdict(20, 20), "broken");
 });
 
-test("only the 20 most recent results decide flakiness", () => {
-  const runs = [
-    ...Array.from({ length: 20 }, (_, i) =>
-      run(`p${i}`, daysAgo(1), [{ path: "ci/unit", status: "passed" }]),
+test("skipped and aborted results are not evidence either way", () => {
+  const rows = aggregate([
+    ...history(
+      Array.from({ length: 12 }, () => "skipped"),
+      "ci/skipped",
     ),
-    ...Array.from({ length: 10 }, (_, i) =>
-      run(`f${i}`, daysAgo(2), [{ path: "ci/unit", status: "failed" }]),
+    ...history(
+      Array.from({ length: 12 }, () => "aborted"),
+      "ci/aborted",
     ),
-  ];
-  const [unit] = aggregate(runs, NOW);
-  assert.equal(unit.occurrences, 30);
+  ]);
+  for (const row of rows) {
+    assert.deepEqual(row.recent, [], row.path);
+    assert.equal(verdictOf(row), "unknown", row.path);
+  }
+  assert.equal(
+    rows.find((r) => r.path === "ci/aborted")?.fails,
+    12,
+    "but they still count as fails",
+  );
+});
+
+test("only the 20 most recent results decide the verdict", () => {
+  // newest first: 20 green, then a long run of red behind them
+  const [unit] = aggregate(
+    history([
+      ...Array.from({ length: 20 }, () => "passed"),
+      ...Array.from({ length: 10 }, () => "failed"),
+    ]),
+  );
+  assert.equal(unit.occurrences, 30, "every run still counts towards the totals");
   assert.equal(unit.recent.length, 20);
-  assert.equal(isFlaky(unit), false, "the older failures are out of sample");
-});
+  assert.equal(verdictOf(unit), "healthy", "the older failures are out of sample");
 
-test("the flaky threshold is more than a quarter, not a quarter", () => {
-  const sample = (fails: number, total: number): Aggregate => ({
-    path: "t",
-    occurrences: total,
-    passes: total - fails,
-    fails,
-    lastStatus: "passed",
-    history: [],
-    recent: Array.from({ length: total }, (_, i) => (i < fails ? "failed" : "passed")),
-  });
-  assert.equal(isFlaky(sample(5, 20)), false, "exactly 25% is not more than 25%");
-  assert.equal(isFlaky(sample(6, 20)), true);
-  assert.equal(isFlaky(sample(1, 4)), false);
-  assert.equal(isFlaky(sample(1, 3)), true);
-  assert.equal(isFlaky(sample(0, 0)), false, "no evidence is not flakiness");
+  // however old the history is, age alone never excludes a result
+  const [old] = aggregate(
+    history(Array.from({ length: 12 }, () => "failed")).map((r, i) => ({
+      ...r,
+      startedAt: daysAgo(400 + i),
+    })),
+  );
+  assert.equal(verdictOf(old), "broken");
 });
 
 test("variantLabel is sorted by key and empty without variants", () => {

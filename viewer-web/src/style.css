@@ -617,6 +617,12 @@ table.services {
   border-color: var(--yellow);
 }
 
+/* Worse than flaky: it fails more often than not. */
+.badge.broken {
+  color: var(--red);
+  border-color: var(--red);
+}
+
 /* Comparing this run with another one, the `testfile-viewer diff` of the CLI. */
 .compare {
   display: flex;

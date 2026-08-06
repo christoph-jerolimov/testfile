@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { detectFlaky, diffRuns, flakyWindows, isFlaky, type RunRecord } from "./runrecord.js";
+import { detectFlaky, diffRuns, flakyWindows, verdictOf, type RunRecord } from "./runrecord.js";
 import type { RunRecordTest } from "./runrecord.js";
 
-// The flaky window is measured against "now", so the tests fix both ends.
-const NOW = Date.parse("2026-08-01T12:00:00.000Z");
-const daysAgo = (days: number): string => new Date(NOW - days * 86_400_000).toISOString();
-
-function record(id: string, tests: RunRecordTest[], startedAt = daysAgo(0)): RunRecord {
+function record(
+  id: string,
+  tests: RunRecordTest[],
+  startedAt = "2026-08-01T00:00:00.000Z",
+): RunRecord {
   return {
     id,
     startedAt,
@@ -77,100 +77,91 @@ test("identical runs produce an empty diff", () => {
   });
 });
 
+// Newest first, like RunHistory.runs: `results` reads left to right as
+// most-recent to oldest, one run per result.
+function history(results: ("passed" | "failed" | "skipped")[], path = "t"): RunRecord[] {
+  return results.map((status, index) => record(`r${index}`, [{ path, status }]));
+}
+
 test("detectFlaky finds tests that alternate and counts flips", () => {
-  // records are newest first, like RunHistory.runs
-  const runs = [
-    record("r5", [
-      { path: "a/flaky", status: "failed" },
-      { path: "a/stable", status: "passed" },
-      { path: "a/always-broken", status: "failed" },
-    ]),
-    record("r4", [
-      { path: "a/flaky", status: "passed" },
-      { path: "a/stable", status: "passed" },
-      { path: "a/always-broken", status: "failed" },
-    ]),
-    record("r3", [
-      { path: "a/flaky", status: "failed" },
-      { path: "a/stable", status: "passed" },
-      { path: "a/always-broken", status: "failed" },
-      { path: "a/skipped-once", status: "skipped" },
-    ]),
-    record("r2", [
-      { path: "a/flaky", status: "passed" },
-      { path: "a/once-fixed", status: "passed" },
-    ]),
-    record("r1", [{ path: "a/once-fixed", status: "failed" }]),
-  ];
-  const reports = detectFlaky(runs, undefined, NOW);
-  assert.deepEqual(
-    reports.map((r) => r.path),
-    ["a/flaky", "a/once-fixed", "a/always-broken"],
-    "a stable test is not flaky, and a skip-only test has no evidence either way",
+  const runs: RunRecord[] = [];
+  // 12 results each, newest first: one alternating, one always green, one
+  // always red, and one that is only ever skipped
+  const flaky: ("passed" | "failed")[] = Array.from({ length: 12 }, (_, i) =>
+    i % 2 === 0 ? "failed" : "passed",
   );
-  const flaky = reports[0];
-  assert.equal(flaky.occurrences, 4);
-  assert.equal(flaky.passes, 2);
-  assert.equal(flaky.fails, 2);
-  assert.equal(flaky.flips, 3, "passed->failed->passed->failed chronologically");
-  assert.equal(flaky.lastStatus, "failed");
-  assert.equal(reports[1].flips, 1);
+  for (let i = 0; i < 12; i++) {
+    runs.push(
+      record(`r${i}`, [
+        { path: "a/flaky", status: flaky[i] },
+        { path: "a/stable", status: "passed" },
+        { path: "a/always-broken", status: "failed" },
+        { path: "a/skipped", status: "skipped" },
+      ]),
+    );
+  }
+
+  const reports = detectFlaky(runs);
+  assert.deepEqual(
+    reports.map((r) => `${r.path}:${r.verdict}`),
+    ["a/flaky:flaky", "a/always-broken:broken"],
+    "a stable test is fine, and a skip-only test has no evidence either way",
+  );
+  const report = reports[0];
+  assert.equal(report.occurrences, 12);
+  assert.equal(report.passes, 6);
+  assert.equal(report.fails, 6);
+  assert.equal(report.flips, 11, "it alternated on every run");
+  assert.equal(report.lastStatus, "failed");
+  assert.equal(reports[1].flips, 0, "a broken test never changes its mind");
 });
 
 test("detectFlaky honors the lastN window", () => {
-  const runs = [
-    record("new", [{ path: "t", status: "passed" }]),
-    record("mid", [{ path: "t", status: "passed" }]),
-    record("old", [{ path: "t", status: "failed" }]),
-  ];
-  assert.equal(detectFlaky(runs, undefined, NOW).length, 1, "1 of 3 failed");
-  assert.equal(detectFlaky(runs, 2, NOW).length, 0, "stable within the recent window");
+  // newest 10 green, then 10 red behind them
+  const runs = history([
+    ...Array.from({ length: 10 }, () => "passed" as const),
+    ...Array.from({ length: 10 }, () => "failed" as const),
+  ]);
+  assert.equal(detectFlaky(runs).length, 1, "10 of 20 failed");
+  assert.deepEqual(detectFlaky(runs, 10), [], "all green within the recent window");
+  // below the minimum there is no verdict either way
+  assert.deepEqual(detectFlaky(runs, 9), []);
 });
 
-test("only results from the last 14 days count", () => {
-  const runs = [
-    record("recent", [{ path: "t", status: "passed" }], daysAgo(1)),
-    record("edge", [{ path: "t", status: "failed" }], daysAgo(13.9)),
-    // three failures, but too old to say anything about the test today
-    record("old", [{ path: "t", status: "failed" }], daysAgo(14.1)),
-    record("older", [{ path: "t", status: "failed" }], daysAgo(30)),
-    record("ancient", [{ path: "t", status: "failed" }], daysAgo(90)),
-  ];
-  assert.deepEqual(flakyWindows(runs, NOW).get("t"), ["passed", "failed"]);
-  const [report] = detectFlaky(runs, undefined, NOW);
-  assert.equal(report.occurrences, 2, "the window, not the whole history");
-  assert.equal(report.fails, 1);
-
-  // the same test, with the recent failure dropped, is not flaky at all
-  assert.deepEqual(detectFlaky(runs.slice(0, 1).concat(runs.slice(2)), undefined, NOW), []);
+test("a verdict needs at least 10 results", () => {
+  const allRed = (count: number): RunRecord[] =>
+    history(Array.from({ length: count }, () => "failed" as const));
+  assert.deepEqual(verdictOf([]), "unknown");
+  assert.deepEqual(detectFlaky(allRed(9)), [], "9 failures still say nothing");
+  assert.equal(detectFlaky(allRed(10))[0]?.verdict, "broken");
+  assert.equal(flakyWindows(allRed(9)).get("t")?.length, 9, "the results are still collected");
 });
 
 test("only the 20 most recent results count", () => {
-  const fail = (id: number): RunRecord =>
-    record(`f${id}`, [{ path: "t", status: "failed" }], daysAgo(1));
-  const pass = (id: number): RunRecord =>
-    record(`p${id}`, [{ path: "t", status: "passed" }], daysAgo(2));
-  // newest first: 20 green runs, then a long run of red behind them
-  const runs = [
-    ...Array.from({ length: 20 }, (_, i) => pass(i)),
-    ...Array.from({ length: 10 }, (_, i) => fail(i)),
-  ];
-  assert.equal(flakyWindows(runs, NOW).get("t")?.length, 20);
-  assert.deepEqual(detectFlaky(runs, undefined, NOW), [], "the old failures are out of sample");
-
-  // one recent failure inside the sample is still not enough on its own
-  assert.deepEqual(detectFlaky([fail(99), ...runs.slice(0, 19)], undefined, NOW), []);
+  // newest first: 20 green, then a long run of red behind them
+  const runs = history([
+    ...Array.from({ length: 20 }, () => "passed" as const),
+    ...Array.from({ length: 10 }, () => "failed" as const),
+  ]);
+  assert.equal(flakyWindows(runs).get("t")?.length, 20);
+  assert.deepEqual(detectFlaky(runs), [], "the older failures are out of sample");
+  assert.equal(runs.length, 30, "but every run is still there");
 });
 
-test("flaky means more than a quarter of the sample failed", () => {
+test("the verdict is healthy below a quarter, flaky up to three quarters, broken above", () => {
   const sample = (fails: number, total: number): string[] =>
     Array.from({ length: total }, (_, i) => (i < fails ? "failed" : "passed"));
-  assert.equal(isFlaky(sample(5, 20)), false, "exactly 25% is not more than 25%");
-  assert.equal(isFlaky(sample(6, 20)), true);
-  assert.equal(isFlaky(sample(1, 4)), false);
-  assert.equal(isFlaky(sample(1, 3)), true);
-  // a single failed result is the whole sample, so it counts
-  assert.equal(isFlaky(["failed"]), true);
-  assert.equal(isFlaky(["passed"]), false);
-  assert.equal(isFlaky([]), false, "no evidence is not flakiness");
+
+  // fewer than 10 results is never a verdict, however bad they look
+  assert.equal(verdictOf(sample(9, 9)), "unknown");
+  assert.equal(verdictOf(sample(0, 9)), "unknown");
+
+  assert.equal(verdictOf(sample(0, 10)), "healthy");
+  assert.equal(verdictOf(sample(2, 10)), "healthy", "20% is below the flaky band");
+  // the band is inclusive at both ends
+  assert.equal(verdictOf(sample(5, 20)), "flaky", "exactly 25%");
+  assert.equal(verdictOf(sample(15, 20)), "flaky", "exactly 75%");
+  assert.equal(verdictOf(sample(10, 20)), "flaky");
+  assert.equal(verdictOf(sample(16, 20)), "broken", "80% is past the band");
+  assert.equal(verdictOf(sample(20, 20)), "broken");
 });

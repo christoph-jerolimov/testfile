@@ -33,19 +33,20 @@ export function countSummary(run: RunRecord): string {
   return [...counts.entries()].map(([status, n]) => `${n} ${status}`).join(", ");
 }
 
-// How flakiness is decided, the same rule `testfile-viewer runs --flaky`
-// uses (viewer-ts/src/runrecord.ts). A verdict is only worth anything while
-// it is current, so the evidence is bounded twice: by age, and by how many
-// results are looked at.
-export const FLAKY_DAYS = 14;
+// How a test's reliability is judged, the same rule
+// `testfile-viewer runs --flaky` uses (viewer-ts/src/runrecord.ts). Only the
+// FLAKY_SAMPLE most recent results count, and below FLAKY_MIN_RESULTS there
+// is not enough evidence to say anything at all.
 export const FLAKY_SAMPLE = 20;
-export const FLAKY_FAIL_RATE = 0.25;
+export const FLAKY_MIN_RESULTS = 10;
+export const FLAKY_MIN_RATE = 0.25;
+export const BROKEN_MIN_RATE = 0.75;
 
-export function aggregate(runs: RunRecord[], now: number = Date.now()): Aggregate[] {
-  const since = now - FLAKY_DAYS * 24 * 60 * 60 * 1000;
+export type Verdict = "unknown" | "healthy" | "flaky" | "broken";
+
+export function aggregate(runs: RunRecord[]): Aggregate[] {
   const byPath = new Map<string, Aggregate>();
   for (const run of runs) {
-    const recent = Date.parse(run.startedAt) >= since;
     for (const test of run.tests) {
       let entry = byPath.get(test.path);
       if (!entry) {
@@ -70,7 +71,6 @@ export function aggregate(runs: RunRecord[], now: number = Date.now()): Aggregat
       // `skipped` and `aborted` are not evidence of flakiness: a skip says
       // the test never ran, and one Ctrl+C aborts everything in flight.
       if (
-        recent &&
         entry.recent.length < FLAKY_SAMPLE &&
         (test.status === "passed" || test.status === "failed")
       ) {
@@ -81,9 +81,19 @@ export function aggregate(runs: RunRecord[], now: number = Date.now()): Aggregat
   return [...byPath.values()];
 }
 
-// More than a quarter of the sampled results failed.
+// What the sample says about a test: nothing below FLAKY_MIN_RESULTS, then
+// healthy / flaky / broken by how often it failed.
+export function verdictOf(test: Aggregate): Verdict {
+  if (test.recent.length < FLAKY_MIN_RESULTS) return "unknown";
+  const rate = test.recent.filter((status) => status === "failed").length / test.recent.length;
+  if (rate > BROKEN_MIN_RATE) return "broken";
+  return rate >= FLAKY_MIN_RATE ? "flaky" : "healthy";
+}
+
 export function isFlaky(test: Aggregate): boolean {
-  if (test.recent.length === 0) return false;
-  const fails = test.recent.filter((status) => status === "failed").length;
-  return fails / test.recent.length > FLAKY_FAIL_RATE;
+  return verdictOf(test) === "flaky";
+}
+
+export function isBroken(test: Aggregate): boolean {
+  return verdictOf(test) === "broken";
 }

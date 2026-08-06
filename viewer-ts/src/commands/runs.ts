@@ -9,7 +9,7 @@ export function registerRuns(program: Command): void {
     .command("runs", { isDefault: true })
     .argument("[path]", "directory containing a .testfile folder", ".")
     .option("--json [file]", "write the runs as JSON, to a file or (without a value) stdout")
-    .option("--flaky", "find tests that fail too often in their recent runs to trust", false)
+    .option("--flaky", "find tests that fail too often in their recent results to trust", false)
     .option(
       "--last <n>",
       "with --flaky: narrow the history to the most recent n runs",
@@ -32,18 +32,24 @@ export function registerRuns(program: Command): void {
           }
           if (reports.length === 0) {
             console.log(
-              `no flaky tests detected across ${considered} run${considered === 1 ? "" : "s"}`,
+              `no flaky or broken tests detected across ${considered} run${
+                considered === 1 ? "" : "s"
+              }`,
             );
             return;
           }
           console.log(
-            color(1, `flaky tests across ${considered} run${considered === 1 ? "" : "s"}:`),
+            color(1, `unreliable tests across ${considered} run${considered === 1 ? "" : "s"}:`),
           );
           for (const report of reports) {
+            // broken is the worse verdict, so it is the louder colour
+            const verdict = color(report.verdict === "broken" ? 31 : 33, pad(report.verdict, 6));
             const rate = `${report.fails}/${report.occurrences} failed`;
             const flips = `${report.flips} flip${report.flips === 1 ? "" : "s"}`;
             const last = `last ${colorStatus(report.lastStatus)}`;
-            console.log(`  ${pad(color(33, report.path), 40)} ${rate}, ${flips}, ${last}`);
+            console.log(
+              `  ${verdict} ${pad(color(33, report.path), 40)} ${rate}, ${flips}, ${last}`,
+            );
           }
           console.log(color(90, '\nconsider tagging these tests [flaky] and adding "retry"'));
           return;
