@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { writeRun } from "./fixture.js";
-import { ViewerServer } from "./serve.js";
+import { safeRelative, ViewerServer } from "./serve.js";
 
 function tempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "testfile-viewer-serve-"));
@@ -58,6 +58,72 @@ test("the REST API serves runs, logs and results on localhost", async () => {
     // no viewer build configured: the fallback page still links the API
     const index = await (await fetch(`${base}/`)).text();
     assert.match(index, /REST API/);
+  } finally {
+    server.close();
+  }
+});
+
+test("safeRelative refuses anything that could leave the run folder", () => {
+  assert.equal(safeRelative(["artifacts", "one", "report.txt"]), "artifacts/one/report.txt");
+  assert.equal(safeRelative(["junit.xml"]), "junit.xml");
+  // a space, and a name that only looks dangerous
+  assert.equal(safeRelative(["my%20report..txt"]), "my report..txt");
+
+  // a path has to name something
+  assert.equal(safeRelative([]), undefined);
+  assert.equal(safeRelative([""]), undefined);
+  // "." and ".." in any of the spellings a request can carry
+  for (const attempt of ["..", ".", "%2e%2e", "%2E%2E", "%2e"]) {
+    assert.equal(safeRelative([attempt]), undefined, attempt);
+  }
+  // a separator smuggled into one segment, on either platform
+  assert.equal(safeRelative(["..%2fsecret"]), undefined);
+  assert.equal(safeRelative(["..%5csecret"]), undefined);
+  assert.equal(safeRelative(["a", "..%2f..%2fetc%2fpasswd"]), undefined);
+  // a NUL, and a broken escape
+  assert.equal(safeRelative(["a%00b"]), undefined);
+  assert.equal(safeRelative(["%zz"]), undefined);
+});
+
+test("a run's own files are served from its folder, and only from there", async () => {
+  const dir = tempDir();
+  const saved = writeRun(dir, "20260101-100000-bbbb", "2026-01-01T10:00:00.000Z", [
+    { path: "all/one", status: "passed" },
+  ]);
+  const runDir = join(dir, ".testfile", "runs", saved.id);
+  mkdirSync(join(runDir, "artifacts", "all-one"), { recursive: true });
+  writeFileSync(join(runDir, "artifacts", "all-one", "report.txt"), "42 checks\n");
+  writeFileSync(join(runDir, "junit.xml"), "<testsuites/>");
+  writeFileSync(join(dir, ".testfile", "secret.txt"), "not yours");
+
+  const server = new ViewerServer({ baseDir: dir, port: 0 });
+  const port = await server.start();
+  const base = `http://127.0.0.1:${port}/api/runs/${saved.id}/artifacts`;
+  try {
+    // the path is exactly what run.yaml records
+    const report = await fetch(`${base}/artifacts/all-one/report.txt`);
+    assert.equal(report.status, 200);
+    assert.equal(await report.text(), "42 checks\n");
+    assert.match(report.headers.get("content-type") ?? "", /text\/plain/);
+    assert.equal(report.headers.get("x-content-type-options"), "nosniff");
+
+    const junit = await fetch(`${base}/junit.xml`);
+    assert.match(junit.headers.get("content-type") ?? "", /application\/xml/);
+    assert.equal(await junit.text(), "<testsuites/>");
+
+    // the record itself is in the folder, so it is served by the same route
+    assert.match(await (await fetch(`${base}/run.yaml`)).text(), /20260101-100000-bbbb/);
+
+    assert.equal((await fetch(`${base}/nothing.txt`)).status, 404);
+    // the route needs a path; it is not a directory listing
+    assert.equal((await fetch(`${base}`)).status, 400);
+    assert.equal((await fetch(`${base}/`)).status, 400);
+    // A traversal hidden inside a segment - the one shape a URL parser does
+    // not resolve away before it reaches us. (A plain "../" never arrives:
+    // the client resolves it, and the request lands on another route.)
+    assert.equal((await fetch(`${base}/..%2fsecret.txt`)).status, 400);
+    assert.equal((await fetch(`${base}/%00`)).status, 400);
+    assert.equal((await fetch(`${base}/../secret.txt`)).status, 404);
   } finally {
     server.close();
   }

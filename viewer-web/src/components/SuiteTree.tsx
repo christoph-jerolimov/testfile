@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { fileName, fileUrl } from "../api.js";
 import { formatMs, variantLabel } from "../format.js";
 import { groupPaths, suiteRowsOf, visibleRows, type TreeRow } from "../suite.js";
 import type { RunRecord, RunTest } from "../types.js";
@@ -8,11 +9,13 @@ import { StatusCell } from "./StatusCell.js";
 // of this run on it. A node the run never reached keeps its place, greyed.
 function RowCells({
   row,
+  runId,
   result,
   onLog,
   selected,
 }: {
   row: TreeRow;
+  runId: string;
   result?: RunTest;
   onLog: (path: string) => void;
   selected: boolean;
@@ -31,9 +34,19 @@ function RowCells({
         ) : (
           <span className="status-skipped">-</span>
         )}
-        {result?.artifacts?.length ? (
-          <span className="badge">{result.artifacts.length} artifacts</span>
-        ) : null}
+        {/* what the test kept: each one opens from the run folder */}
+        {(result?.artifacts ?? []).map((artifact) => (
+          <a
+            key={artifact}
+            className="badge file"
+            href={fileUrl(runId, artifact)}
+            title={artifact}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {fileName(artifact)}
+          </a>
+        ))}
       </td>
     </>
   );
@@ -132,7 +145,13 @@ export function SuiteTree({
                     ) : null}
                     {result?.reason ? <div className="muted small">{result.reason}</div> : null}
                   </td>
-                  <RowCells row={row} result={result} onLog={onLog} selected={selected} />
+                  <RowCells
+                    row={row}
+                    runId={run.id}
+                    result={result}
+                    onLog={onLog}
+                    selected={selected}
+                  />
                 </tr>
               );
             });

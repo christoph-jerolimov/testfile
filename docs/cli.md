@@ -585,10 +585,28 @@ reloaded — and the browser's back button walks through it:
 An id or test path that no longer exists falls back to the newest run
 (respectively the first test) instead of an error page.
 
+Whatever a run kept can be opened from the page: the artifacts of a test
+are links in its row, and the run detail links `run.yaml` — the record the
+page was built from — and `junit.xml` when the run wrote one. They all go
+through one endpoint, addressed exactly as `run.yaml` records the path:
+
+```
+/api/runs/<id>/artifacts/artifacts/ci-unit/report.txt
+/api/runs/<id>/artifacts/junit.xml
+/api/runs/<id>/artifacts/run.yaml
+```
+
+It reads from that one run folder and nowhere else: the id is checked as
+it is everywhere else, each path segment is decoded and rejected if it is
+`.`, `..`, or hides a separator, and the resolved path has to still be
+inside the folder. Nothing is served as HTML or JavaScript, so a recorded
+artifact can never run as a page on the viewer's own origin.
+
 The server binds to `127.0.0.1` **only** — it is never reachable from the
 network. It exposes a read-only REST API for other tooling:
 `/api/summary`, `/api/runs`, `/api/runs/<id>`, `/api/runs/<id>/log`
-(`?test=<path>` for one test), `/api/results` and `/api/events` (SSE).
+(`?test=<path>` for one test), `/api/runs/<id>/artifacts/<path>`,
+`/api/results` and `/api/events` (SSE).
 The UI itself lives in the `viewer-web/` workspace (React, bundled with
 esbuild); `serve` picks up its build automatically.
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { runLogUrl, serviceLogUrl, testLogUrl } from "../api.js";
+import { fileUrl, runLogUrl, serviceLogUrl, testLogUrl } from "../api.js";
 import { previousRun } from "../diff.js";
 import { formatMs, mergedVariantLabel, startedLabel, variantLabel } from "../format.js";
 import type { RunRecord } from "../types.js";
@@ -61,6 +61,28 @@ export function RunDetail({
             {" "}
             · <span className="variant">{variantLabel(run.variants)}</span>
           </>
+        ) : null}
+      </div>
+      {/* The run folder itself: the record it was read from, and the JUnit
+          report when the run wrote one. */}
+      <div className="files">
+        <a
+          className="badge file"
+          href={fileUrl(run.id, "run.yaml")}
+          target="_blank"
+          rel="noreferrer"
+        >
+          run.yaml
+        </a>
+        {run.junit ? (
+          <a
+            className="badge file"
+            href={fileUrl(run.id, run.junit)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {run.junit}
+          </a>
         ) : null}
       </div>
       {run.merged ? (

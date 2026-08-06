@@ -4,9 +4,9 @@
 // history to the network.
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, extname, join, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { RunHistory } from "./runrecord.js";
+import { RunHistory, type RunRecord } from "./runrecord.js";
 import { recordedTests } from "./tui/model.js";
 import { watchRuns } from "./tui/watch-runs.js";
 
@@ -27,6 +27,45 @@ const CONTENT_TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
 };
+
+// What a run keeps: the types worth naming, so the browser shows them
+// instead of downloading them. Everything else is served as a download.
+const FILE_TYPES: Record<string, string> = {
+  ".txt": "text/plain; charset=utf-8",
+  ".log": "text/plain; charset=utf-8",
+  ".md": "text/plain; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8",
+  ".yaml": "application/yaml; charset=utf-8",
+  ".yml": "application/yaml; charset=utf-8",
+  ".csv": "text/csv; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".pdf": "application/pdf",
+};
+
+// A recorded path, turned into something safe to join onto the run folder.
+// Every segment is decoded first, because "%2e%2e" is "..". Returns
+// undefined for anything that could leave the folder.
+export function safeRelative(segments: readonly string[]): string | undefined {
+  if (segments.length === 0) return undefined;
+  const parts: string[] = [];
+  for (const raw of segments) {
+    let segment: string;
+    try {
+      segment = decodeURIComponent(raw);
+    } catch {
+      return undefined;
+    }
+    if (segment === "" || segment === "." || segment === "..") return undefined;
+    if (segment.includes("\\") || segment.includes("\0") || segment.includes("/")) return undefined;
+    parts.push(segment);
+  }
+  return parts.join("/");
+}
 
 // The built viewer app: next to this package in the monorepo, or wherever
 // TESTFILE_VIEWER points.
@@ -86,7 +125,7 @@ export class ViewerServer {
   }
 
   private handleApi(url: URL, response: ServerResponse): void {
-    const [, , resource, id, sub] = url.pathname.split("/");
+    const [, , resource, id, sub, ...rest] = url.pathname.split("/");
     if (resource === "summary") {
       return this.json(response, 200, {
         name: this.options.name,
@@ -122,6 +161,9 @@ export class ViewerServer {
         response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
         return void response.end(text);
       }
+      // Anything the run kept, addressed exactly as run.yaml records it:
+      // "artifacts/ci-unit/report.txt", "junit.xml", "run.yaml".
+      if (sub === "artifacts") return this.sendFile(run, rest, response);
     }
     if (resource === "results") {
       return this.json(response, 200, { tests: recordedTests(this.history) });
@@ -138,6 +180,30 @@ export class ViewerServer {
       return;
     }
     this.json(response, 404, { error: "not found" });
+  }
+
+  // Reading a file out of a run folder, and out of that folder only: the
+  // segments are checked one by one, and the resolved path has to still be
+  // inside the folder afterwards. Nothing is ever served as HTML or
+  // JavaScript - a recorded artifact must not be able to run as a page on
+  // the viewer's own origin.
+  private sendFile(run: RunRecord, segments: string[], response: ServerResponse): void {
+    const relative = safeRelative(segments);
+    if (relative === undefined) return this.json(response, 400, { error: "invalid path" });
+    const runDir = this.history.runDir(run);
+    const file = resolve(runDir, relative);
+    if (!file.startsWith(`${resolve(runDir)}${sep}`)) {
+      return this.json(response, 400, { error: "invalid path" });
+    }
+    if (!existsSync(file) || !statSync(file).isFile()) {
+      return this.json(response, 404, { error: `no file ${relative}` });
+    }
+    response.writeHead(200, {
+      "content-type": FILE_TYPES[extname(file).toLowerCase()] ?? "application/octet-stream",
+      "content-disposition": `inline; filename="${basename(file).replace(/["\\]/g, "")}"`,
+      "x-content-type-options": "nosniff",
+    });
+    response.end(readFileSync(file));
   }
 
   private handleStatic(pathname: string, response: ServerResponse): void {

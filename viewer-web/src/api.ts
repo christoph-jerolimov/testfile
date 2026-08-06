@@ -22,6 +22,19 @@ export function serviceLogUrl(runId: string, serviceName: string): string {
   return `/api/runs/${runId}/log?service=${encodeURIComponent(serviceName)}`;
 }
 
+// Anything the run kept, addressed exactly as run.yaml records it:
+// "artifacts/ci-unit/report.txt", "junit.xml", "run.yaml". Each segment is
+// encoded on its own, so the slashes survive and the names are escaped.
+export function fileUrl(runId: string, path: string): string {
+  const encoded = path.split("/").map(encodeURIComponent).join("/");
+  return `/api/runs/${runId}/artifacts/${encoded}`;
+}
+
+// The last segment - what an artifact is called, without where it sits.
+export function fileName(path: string): string {
+  return path.slice(path.lastIndexOf("/") + 1);
+}
+
 // Server-sent events: the server pings whenever .testfile/runs/ changes.
 export function subscribeRunsChanged(
   onChange: () => void,

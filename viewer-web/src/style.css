@@ -470,6 +470,29 @@ table.services {
   background: var(--yellow);
 }
 
+/* A file the run kept - a badge that is actually a link to it. */
+.badge.file {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  text-decoration: none;
+}
+
+.badge.file:hover {
+  border-color: var(--accent);
+  text-decoration: underline;
+}
+
+.files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin: -0.4rem 0 0.7rem;
+}
+
+.files .badge.file {
+  margin-left: 0;
+}
+
 .badge.flaky {
   color: var(--yellow);
   border-color: var(--yellow);
