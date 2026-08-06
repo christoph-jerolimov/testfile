@@ -1,7 +1,14 @@
 import type { Command } from "commander";
 import { s3List, s3Pull, s3Push } from "../transfer/index.js";
 import { color } from "../util.js";
-import { commandFailed, pickRun, reportImport, resolveHistoryBase } from "./shared.js";
+import {
+  commandFailed,
+  pickRun,
+  reportImport,
+  resolveHistoryBase,
+  wantsJson,
+  writeJson,
+} from "./shared.js";
 
 export function registerS3(program: Command): void {
   const s3Command = program
@@ -42,10 +49,15 @@ export function registerS3(program: Command): void {
   s3Command
     .command("list")
     .argument("<s3-prefix>", "s3://bucket/prefix to list")
+    .option("--json [file]", "write the archives as JSON, to a file or (without a value) stdout")
     .description("List the run archives available under an S3 prefix (newest first)")
-    .action((prefix: string) => {
+    .action((prefix: string, options: { json?: string | boolean }) => {
       try {
         const names = s3List(prefix);
+        if (wantsJson(options.json)) {
+          writeJson({ prefix, archives: names }, options.json);
+          return;
+        }
         if (names.length === 0) {
           console.log(color(90, `no run archives under ${prefix}`));
           return;

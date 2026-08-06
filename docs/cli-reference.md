@@ -55,6 +55,10 @@ Print the expanded test suite — matrix instances, tags and services
 included. Takes the shared [filter options](#shared-filter-options-run-and-list), so it
 previews exactly what a filtered `run` would execute.
 
+| Option | Description |
+| ------ | ----------- |
+| `--json [file]` | Write the suite as JSON (`{path, services, count, tests: [{path, name, kind, tags?, matrix?, services?}]}`), to a file or (without a value) stdout. |
+
 ### Shared filter options (`run` and `list`)
 
 | Option | Description |
@@ -96,7 +100,11 @@ git repository to inspect.
 
 Validate a Testfile against the JSON schema (see
 [editor support](./getting-started#4-editor-support) for live validation
-while writing). No options.
+while writing). Exits `1` when the file is rejected.
+
+| Option | Description |
+| ------ | ----------- |
+| `--json [file]` | Write the result as JSON (`{path, valid}`, plus `message` and one `errors` entry per schema violation when invalid), to a file or (without a value) stdout. |
 
 ### `testfile init [path]`
 
@@ -165,12 +173,17 @@ Show one recorded run in detail — a unique id prefix is enough.
 | Option | Description |
 | ------ | ----------- |
 | `--log [test-path]` | Print the run's merged log, or a single test's log. |
+| `--json [file]` | Write the full run record as JSON, to a file or (without a value) stdout. Cannot be combined with `--log`, which is raw text. |
 
 ### `testfile-viewer diff <older> <newer> [path]`
 
 Compare two recorded runs (older id first, unique prefixes are enough):
 newly failed, fixed, still failing, added/removed tests and significant
-duration changes. No options.
+duration changes.
+
+| Option | Description |
+| ------ | ----------- |
+| `--json [file]` | Write the diff as JSON (`{base, compare, newlyFailed, fixed, stillFailing, added, removed, durations}`), to a file or (without a value) stdout. |
 
 ### `testfile-viewer merge <run...>`
 
@@ -251,8 +264,11 @@ Download a run archive from S3 into the local history.
 
 #### `s3 list <s3-prefix>`
 
-List the run archives available under the prefix, newest first. No
-options.
+List the run archives available under the prefix, newest first.
+
+| Option | Description |
+| ------ | ----------- |
+| `--json [file]` | Write the archive names as JSON (`{prefix, archives}`), to a file or (without a value) stdout. |
 
 ### `testfile-viewer github` subcommands
 
@@ -279,6 +295,10 @@ List the run artifacts available in recent workflow runs — workflow run
 id, artifact name, workflow name, creation time and size — without
 downloading anything.
 
+| Option | Description |
+| ------ | ----------- |
+| `--json [file]` | Write the artifacts as JSON (`{repo, artifacts}`), to a file or (without a value) stdout. |
+
 ### `testfile-viewer gitlab` subcommands
 
 Bring the run artifacts of GitLab CI jobs into the local history (see
@@ -301,3 +321,7 @@ is a path like `group/project` or a numeric id.
 
 List the run artifacts available in recent pipelines — pipeline, job, name
 and creation time — without downloading anything.
+
+| Option | Description |
+| ------ | ----------- |
+| `--json [file]` | Write the artifacts as JSON (`{project, artifacts}`), to a file or (without a value) stdout. |

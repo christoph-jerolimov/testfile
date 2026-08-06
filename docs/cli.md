@@ -182,6 +182,23 @@ classname) with `<failure>` elements carrying the merged log and
 `<skipped/>` markers; the JSON report is the same record that the run's
 `run.yaml` stores. In watch mode the report is rewritten after every re-run.
 
+Everything else a command prints is available as JSON too, always through
+the same `--json [file]` flag: a file name writes there, the bare flag
+writes to stdout, so a command can be piped straight into `jq`.
+
+```sh
+testfile list --json | jq '.tests[].path'   # what a filtered run would execute
+testfile validate --json                    # {path, valid} - or the errors
+testfile tags --json                        # the tag inventory
+testfile changes --json                     # what --changed selects from
+testfile doctor --json checks.json          # machine status of this machine
+
+testfile-viewer runs --json                 # the recorded runs
+testfile-viewer run <id> --json             # one run record, in full
+testfile-viewer diff <a> <b> --json         # what changed between two runs
+testfile-viewer s3 list <prefix> --json     # ... and github/gitlab list
+```
+
 ## Watch mode
 
 `testfile run --watch` (or `-w`) re-runs the current selection whenever a
@@ -462,6 +479,7 @@ testfile-viewer tui                       # browse runs in the TUI
 testfile-viewer run 20260801-1046         # one run in detail (id prefix is ok)
 testfile-viewer run <id> --log            # merged stdout+stderr of the run
 testfile-viewer run <id> --log all/e2e    # ... of a single test
+testfile-viewer run <id> --json           # the whole record, for a script
 ```
 
 A history that collects runs from every branch and every CI job gets long,
@@ -508,7 +526,9 @@ testfile-viewer diff 20260801-1040 20260801-1146
 
 The diff lists newly failed, fixed and still-failing tests, tests added to
 or removed from the run, and significant duration changes (more than 100ms
-and more than 20%) of tests that passed in both runs.
+and more than 20%) of tests that passed in both runs. `--json` writes the
+same lists as `{base, compare, newlyFailed, fixed, stillFailing, added,
+removed, durations}`, which is enough to post a comment from CI.
 
 Hunt down flaky tests:
 

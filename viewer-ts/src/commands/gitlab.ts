@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { gitlabRunArchives, syncFromGitlab } from "../transfer/index.js";
 import { color, pad } from "../util.js";
-import { commandFailed, reportImport, resolveHistoryBase } from "./shared.js";
+import { commandFailed, reportImport, resolveHistoryBase, wantsJson, writeJson } from "./shared.js";
 
 export function registerGitlab(program: Command): void {
   const gitlabCommand = program
@@ -66,11 +66,18 @@ export function registerGitlab(program: Command): void {
     gitlabCommand
       .command("list")
       .argument("<project>", 'project path ("group/project") or numeric id')
+      .option("--json [file]", "write the artifacts as JSON, to a file or (without a value) stdout")
       .description("List the run artifacts available in recent pipelines"),
   ).action(
     async (
       project: string,
-      options: { latest: number; job: string; ref?: string; host: string },
+      options: {
+        latest: number;
+        job: string;
+        ref?: string;
+        host: string;
+        json?: string | boolean;
+      },
     ) => {
       try {
         if (!(options.latest >= 1)) throw new Error("--latest must be a positive integer");
@@ -82,6 +89,10 @@ export function registerGitlab(program: Command): void {
           host: options.host,
           token: gitlabToken(),
         });
+        if (wantsJson(options.json)) {
+          writeJson({ project, artifacts: archives }, options.json);
+          return;
+        }
         if (archives.length === 0) {
           console.log(
             color(90, `no "${options.job}" job artifacts in the last ${options.latest} pipelines`),

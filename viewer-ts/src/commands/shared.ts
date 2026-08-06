@@ -73,6 +73,11 @@ export function reportImport(result: { imported: string[]; skipped: string[] }):
   }
 }
 
+// `--json` without a value is `true`; absent is `undefined` or `false`.
+export function wantsJson(value: string | boolean | undefined): value is string | true {
+  return value !== undefined && value !== false;
+}
+
 export function writeJson(data: unknown, target: string | true): void {
   const json = `${JSON.stringify(data, null, 2)}\n`;
   if (typeof target === "string") {

@@ -1,10 +1,10 @@
-import { writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Command } from "commander";
 import { loadTestfile } from "../loader.js";
 import { Session } from "../session.js";
 import { collectTags, sortTags } from "../tags.js";
 import { color } from "../util.js";
+import { wantsJson, writeJson } from "./shared.js";
 
 export function registerTags(program: Command): void {
   program
@@ -29,23 +29,17 @@ export function registerTags(program: Command): void {
         const summary = collectTags(session.suite);
         const tags = sortTags(summary.tags, options.order);
 
-        if (options.json !== undefined && options.json !== false) {
-          const json = `${JSON.stringify(
+        if (wantsJson(options.json)) {
+          writeJson(
             {
               order: options.order,
               tags: tags.map(({ name, count, appearance }) => ({ name, count, appearance })),
               untagged: summary.untagged,
               tests: summary.tests,
             },
-            null,
-            2,
-          )}\n`;
-          if (typeof options.json === "string") {
-            writeFileSync(options.json, json);
-            console.log(color(90, `tags written to ${options.json}`));
-          } else {
-            process.stdout.write(json);
-          }
+            options.json,
+            "tags",
+          );
           return;
         }
 
