@@ -42,7 +42,8 @@ export function registerRun(program: Command): void {
         if (run.machine) console.log(`machine:   ${run.machine}`);
         const variants = variantLabel(run.variants);
         if (variants) console.log(`variants:  ${variants}`);
-        if (run.labels?.length) console.log(`labels:    ${run.labels.join(", ")}`);
+        const labels = variantLabel(run.labels);
+        if (labels) console.log(`labels:    ${labels}`);
         if (run.merged) {
           const all = Object.entries(run.merged.variants ?? {})
             .map(([key, values]) => `${key}=${values.join("|")}`)

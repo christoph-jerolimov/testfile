@@ -6,10 +6,10 @@ exitCode: 0
 cancelled: false
 machine: vm
 labels:
-  - trigger=push
-  - branch=main
-  - pr=42
-  - nightly
+  trigger: push
+  branch: main
+  pr: "42"
+  tier: nightly
 env: {}
 ports: {}
 selected:

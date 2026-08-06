@@ -66,11 +66,11 @@ export function RunDetail({
       </div>
       {/* What the run was labelled with - the branch, the pull request,
           whoever started it - so a run can be placed without opening it. */}
-      {run.labels?.length ? (
+      {Object.keys(run.labels ?? {}).length > 0 ? (
         <div className="labels">
-          {run.labels.map((label) => (
-            <span key={label} className="badge label">
-              {label}
+          {Object.entries(run.labels ?? {}).map(([key, value]) => (
+            <span key={key} className="badge label">
+              {key}={value}
             </span>
           ))}
         </div>

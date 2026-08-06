@@ -62,7 +62,7 @@ of every record, so editors validate and complete it.
 | `exitCode`   | integer | yes      | The runner's exit code for this run (`0`, `1`, `130`). |
 | `machine`    | string  | no       | Who ran the suite: a CI actor name (`GITHUB_ACTOR`, `GITLAB_USER_LOGIN`, `BUILDKITE_BUILD_CREATOR`), a GitHub login from an authenticated `gh`, or the hostname. Free-form identifier; consumers must not parse it. |
 | `variants`   | map     | no       | What distinguishes this run from a sibling run of the same suite, as string values — e.g. `{platform: linux}` for one leg of a matrix. Keys and values are free-form; consumers display them and compare them for equality. |
-| `labels`     | array   | no       | Free-form strings attached to the run so it can be found again — e.g. `branch=main`, `pr=42`, `nightly`. Order is the order they were given; producers should not record duplicates. Consumers display them and match them for equality; they must not parse a label's contents, even when it looks like `key=value`. |
+| `labels`     | map     | no       | What the run should be findable by, as string values — e.g. `{branch: main, pr: "42"}`. Keys and values are free-form; a key appears at most once. Consumers display them and compare them for equality. Values are **always strings**, including numeric-looking ones. |
 | `merged`     | object  | no       | Present when this run was produced by merging others — see [merged runs](#merged-runs). |
 | `cancelled`  | boolean | yes      | True when the run was interrupted. |
 | `env`        | map     | yes      | The resolved top-level `env` of the Testfile (may be empty). Secret values are masked. |
@@ -168,7 +168,7 @@ How the top-level fields are derived:
 | `variants` | the entries **all** merged runs agree on (a matrix over platforms that all used `node=22` keeps `node: "22"` here) |
 | `env`, `ports` | the entries all merged runs agree on |
 | `selected` | the union, in the order first seen |
-| `labels` | the union, in the order first seen |
+| `labels` | the union; where two runs disagree on a key, the first run's value wins (what differs between the legs belongs in `variants`) |
 | `suite` | the tree of the first merged run that recorded one |
 | `tests`, `services` | the concatenation, each entry tagged with its `variants` and `origin` |
 | `tests[].startedAfterMs` | recomputed against the merged `startedAt`, so one timeline holds every leg; `startedAt` is untouched. A test whose record has no `startedAt` keeps no offset either. |

@@ -28,9 +28,9 @@ merged:
       - linux
       - windows
 labels:
-  - trigger=schedule
-  - branch=main
-  - actor=octocat
+  trigger: schedule
+  branch: main
+  actor: octocat
 env:
   CI: "1"
 ports: {}

@@ -17,16 +17,20 @@ test("parseVariants turns key=value pairs into a map", () => {
   assert.throws(() => parseVariants(["=linux"]), /--variant expects key=value/);
 });
 
-test("parseLabels trims, drops empties and keeps the first of a duplicate", () => {
-  assert.deepEqual(parseLabels(["branch=main", "nightly"]), ["branch=main", "nightly"]);
-  assert.deepEqual(parseLabels([]), []);
-  assert.deepEqual(parseLabels(["  spaced  "]), ["spaced"]);
-  assert.deepEqual(parseLabels(["", "   "]), [], "a label has to say something");
-  assert.deepEqual(parseLabels(["a", "b", "a", " a "]), ["a", "b"], "in the order first given");
-  // a label is free-form: no key=value shape is required or parsed
-  assert.deepEqual(parseLabels(["release candidate", "=", "pr=42"]), [
-    "release candidate",
-    "=",
-    "pr=42",
-  ]);
+test("parseLabels splits at the first = and refuses a repeated key", () => {
+  assert.deepEqual(parseLabels(["branch=main", "pr=42"]), { branch: "main", pr: "42" });
+  assert.deepEqual(parseLabels([]), {});
+  // the value may contain "=", and both halves are trimmed
+  assert.deepEqual(parseLabels([" note = a=b "]), { note: "a=b" });
+  // an empty value is a value: "no branch" is worth recording as such
+  assert.deepEqual(parseLabels(["branch="]), { branch: "" });
+
+  assert.throws(() => parseLabels(["nightly"]), /--label expects key=value/);
+  assert.throws(() => parseLabels(["=main"]), /--label expects key=value/);
+  assert.throws(() => parseLabels(["  =main"]), /--label expects key=value/);
+  assert.throws(
+    () => parseLabels(["branch=main", "branch=other"]),
+    /--label branch was given twice/,
+  );
+  assert.throws(() => parseLabels(["branch=main", " branch = main"]), /given twice/);
 });

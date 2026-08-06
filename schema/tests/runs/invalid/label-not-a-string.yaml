@@ -1,5 +1,5 @@
-# A label is a non-empty string; an empty one names nothing, and a number
-# is not a label.
+# Label values are always strings - a bare 42 is a number - and a key names
+# something, so it cannot be empty.
 id: 20260101-120000-dddd
 startedAt: 2026-01-01T12:00:00.000Z
 durationMs: 42
@@ -7,9 +7,9 @@ status: passed
 exitCode: 0
 cancelled: false
 labels:
-  - branch=main
-  - ""
-  - 7
+  branch: main
+  pr: 42
+  "": nothing
 env: {}
 ports: {}
 selected: []

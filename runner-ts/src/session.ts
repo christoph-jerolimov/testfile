@@ -44,8 +44,9 @@ export class Session extends EventEmitter {
       forwardEnv?: string[];
       // Recorded with the run, e.g. { platform: linux } - see --variant.
       variants?: Record<string, string>;
-      // Free-form strings recorded with the run, for filtering it later.
-      labels?: string[];
+      // Recorded with the run so it can be found again, e.g.
+      // { branch: main } - see --label.
+      labels?: Record<string, string>;
     } = {},
   ) {
     super();

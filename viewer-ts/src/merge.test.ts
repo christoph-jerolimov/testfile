@@ -275,14 +275,14 @@ test("a merged run carries the union of its legs' labels", () => {
     "20260101-100000-ll01",
     "2026-01-01T10:00:00.000Z",
     [{ path: "ci/unit", status: "passed" }],
-    { variants: { platform: "linux" }, labels: ["branch=main", "os=Linux", "pr=7"] },
+    { variants: { platform: "linux" }, labels: { branch: "main", os: "Linux", pr: "7" } },
   );
   writeRun(
     dir,
     "20260101-100010-ll02",
     "2026-01-01T10:00:10.000Z",
     [{ path: "ci/unit", status: "passed" }],
-    { variants: { platform: "windows" }, labels: ["branch=main", "os=Windows", "pr=7"] },
+    { variants: { platform: "windows" }, labels: { branch: "main", os: "Windows", pr: "7" } },
   );
   const { record } = mergeRuns(
     [source(dir, "20260101-100000-ll01"), source(dir, "20260101-100010-ll02")],
@@ -290,8 +290,8 @@ test("a merged run carries the union of its legs' labels", () => {
   );
   assert.deepEqual(
     record.labels,
-    ["branch=main", "os=Linux", "pr=7", "os=Windows"],
-    "in the order first seen, without duplicates",
+    { branch: "main", os: "Linux", pr: "7" },
+    "the union; where the legs disagree the first one wins - os belongs in variants",
   );
 });
 

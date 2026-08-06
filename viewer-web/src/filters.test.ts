@@ -37,14 +37,14 @@ const runs: RunRecord[] = [
     id: "fresh-failed",
     startedAt: daysAgo(1),
     status: "failed",
-    labels: ["branch=main", "trigger=push"],
+    labels: { branch: "main", trigger: "push" },
     tests: [{ path: "ci/unit", status: "failed" }],
   }),
   run({
     id: "fresh-linux",
     startedAt: daysAgo(3),
     variants: { platform: "linux" },
-    labels: ["branch=feature/x", "pr=7", "trigger=pull_request"],
+    labels: { branch: "feature/x", pr: "7", trigger: "pull_request" },
   }),
   run({
     id: "merged",

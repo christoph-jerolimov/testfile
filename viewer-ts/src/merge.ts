@@ -229,8 +229,15 @@ export function mergeRuns(sources: readonly MergeSource[], id: string): MergeRes
   if (Object.keys(allVariants).length > 0) merged.variants = allVariants;
 
   const common = commonEntries(records.map((record) => record.variants ?? {}));
-  // the union of what the legs were labelled with, in the order first seen
-  const labels = [...new Set(records.flatMap((record) => record.labels ?? []))];
+  // The union of what the legs were labelled with. Where two legs disagree
+  // on a key the first one wins: what actually differs between them belongs
+  // in `variants`, which is what keeps their results apart.
+  const labels: Record<string, string> = {};
+  for (const record of records) {
+    for (const [key, value] of Object.entries(record.labels ?? {})) {
+      if (!(key in labels)) labels[key] = value;
+    }
+  }
   const startedAt = records.map((r) => r.startedAt).sort()[0];
   // Each leg recorded its offsets against its own start; against the merged
   // start they all land on one timeline, which is what the legs really did.
@@ -255,7 +262,7 @@ export function mergeRuns(sources: readonly MergeSource[], id: string): MergeRes
     env: commonEntries(records.map((r) => r.env ?? {})),
     ports: commonEntries(records.map((r) => r.ports ?? {})),
     selected: [...new Set(records.flatMap((r) => r.selected ?? []))],
-    ...(labels.length > 0 ? { labels } : {}),
+    ...(Object.keys(labels).length > 0 ? { labels } : {}),
     ...(records.find((r) => r.suite)?.suite ? { suite: records.find((r) => r.suite)!.suite } : {}),
     tests,
     ...(services.length > 0 ? { services } : {}),

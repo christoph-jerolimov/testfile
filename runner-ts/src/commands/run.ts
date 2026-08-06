@@ -19,13 +19,18 @@ import {
   type FilterFlags,
 } from "./shared.js";
 
-// Free-form labels, trimmed and de-duplicated, in the order they were
-// given. Empty values are dropped so `-l ""` is not recorded.
-export function parseLabels(values: string[]): string[] {
-  const labels: string[] = [];
-  for (const value of values) {
-    const label = value.trim();
-    if (label !== "" && !labels.includes(label)) labels.push(label);
+// "branch=main" pairs into a map, split at the first "=" so a value may
+// contain more. A key may only be given once: silently keeping one of two
+// values for the same key would record something nobody asked for.
+export function parseLabels(pairs: string[]): Record<string, string> {
+  const labels: Record<string, string> = {};
+  for (const pair of pairs) {
+    const at = pair.indexOf("=");
+    if (at <= 0) throw new Error(`--label expects key=value, got "${pair}"`);
+    const key = pair.slice(0, at).trim();
+    if (key === "") throw new Error(`--label expects key=value, got "${pair}"`);
+    if (key in labels) throw new Error(`--label ${key} was given twice`);
+    labels[key] = pair.slice(at + 1).trim();
   }
   return labels;
 }
@@ -84,8 +89,8 @@ export function registerRun(program: Command): void {
         [],
       )
       .option(
-        "-l, --label <label>",
-        "record a free-form label with the run, e.g. branch=main (repeatable)",
+        "-l, --label <key=value>",
+        "record a label with the run, e.g. branch=main, to find it again later (repeatable)",
         collect,
         [],
       )

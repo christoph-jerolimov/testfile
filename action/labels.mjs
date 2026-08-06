@@ -2,9 +2,8 @@
 // GitHub context. They are what makes a recorded run findable later: which
 // branch, which pull request, who started it and how.
 //
-// Labels are free-form strings (spec/RESULTS.md); these use a `key=value`
-// shape by convention so a viewer's text filter can match either half. The
-// shape is a convention only - consumers must not parse it.
+// A run's labels are a key/value map (spec/RESULTS.md); the runner takes
+// them one `--label key=value` at a time.
 
 // A short commit sha reads better in a label than 40 hex characters, and is
 // still enough to find the commit.
@@ -25,10 +24,10 @@ function triggerOf(eventName) {
 // Every label the GitHub context can supply, in a stable order. Anything the
 // environment does not provide is left out rather than recorded as empty.
 export function githubLabels(env = process.env) {
-  const labels = [];
+  const labels = {};
   const add = (key, value) => {
     const text = typeof value === "string" ? value.trim() : "";
-    if (text !== "") labels.push(`${key}=${text}`);
+    if (text !== "") labels[key] = text;
   };
 
   const event = (env.GITHUB_EVENT_NAME ?? "").trim();
@@ -60,26 +59,32 @@ export function githubLabels(env = process.env) {
   return labels;
 }
 
-// The action's `labels` input: one label per line, commas allowed as a
-// separator so a workflow can write `labels: nightly, slow`.
+// The action's `labels` input: one `key=value` per line, commas allowed as
+// a separator so a workflow can write `labels: tier=nightly, owner=infra`.
+// A pair splits at its first "="; anything without one is skipped rather
+// than failing a build over a stray comma.
 export function inputLabels(text) {
-  return String(text ?? "")
-    .split(/[,\n]/)
-    .map((label) => label.trim())
-    .filter((label) => label !== "");
+  const labels = {};
+  for (const entry of String(text ?? "").split(/[,\n]/)) {
+    const at = entry.indexOf("=");
+    if (at <= 0) continue;
+    const key = entry.slice(0, at).trim();
+    if (key !== "") labels[key] = entry.slice(at + 1).trim();
+  }
+  return labels;
 }
 
-// Everything the run should be labelled with, de-duplicated, the automatic
-// ones first.
+// Everything the run should be labelled with. The workflow's own labels win
+// over the automatic ones: the runner refuses a key given twice, and an
+// explicit value is the one the author meant.
 export function runLabels({ env = process.env, input = "", auto = true } = {}) {
-  const labels = [...(auto ? githubLabels(env) : []), ...inputLabels(input)];
-  return [...new Set(labels)];
+  return { ...(auto ? githubLabels(env) : {}), ...inputLabels(input) };
 }
 
-// Printed one per line for the shell to read into the runner's arguments.
+// Printed one `key=value` per line for the shell to read into the runner's
+// arguments.
 if (process.argv[1] && process.argv[1].endsWith("labels.mjs")) {
   const auto = (process.env.INPUT_AUTO_LABELS ?? "true") !== "false";
-  for (const label of runLabels({ input: process.env.INPUT_LABELS, auto })) {
-    console.log(label);
-  }
+  const labels = runLabels({ input: process.env.INPUT_LABELS, auto });
+  for (const [key, value] of Object.entries(labels)) console.log(`${key}=${value}`);
 }
