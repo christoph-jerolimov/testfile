@@ -64,6 +64,17 @@ export function RunDetail({
           </>
         ) : null}
       </div>
+      {/* What the run was labelled with - the branch, the pull request,
+          whoever started it - so a run can be placed without opening it. */}
+      {run.labels?.length ? (
+        <div className="labels">
+          {run.labels.map((label) => (
+            <span key={label} className="badge label">
+              {label}
+            </span>
+          ))}
+        </div>
+      ) : null}
       {/* The run folder itself: the record it was read from, and the JUnit
           report when the run wrote one. */}
       <div className="files">

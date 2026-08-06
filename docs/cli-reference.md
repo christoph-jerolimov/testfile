@@ -67,6 +67,7 @@ previews exactly what a filtered `run` would execute.
 | `--changed` | Only tests whose `inputs` match files [changed against the base branch](./writing-tests#change-based-selection), plus local changes. |
 | `--changed-since <ref>` | Base branch/ref for `--changed`, e.g. `origin/main` (implies `--changed`). |
 | `--variant <key=value>` | Record what distinguishes this run from a sibling run — e.g. `platform=linux` for one leg of a matrix. Recorded in `run.yaml` and used by [`testfile-viewer merge`](#testfile-viewer-merge-run). *(repeatable)* |
+| `-l, --label <label>` | Record a free-form label with the run, e.g. `branch=main`, so it can be [found again later](./cli#labelling-runs). Trimmed; empties and duplicates are dropped. *(repeatable)* |
 | `--shard <i/n>` | Run only this shard of the selected tests, e.g. `2/4`. Time-balanced from the [run history](./cli#run-history) when it has durations, round-robin otherwise. |
 
 ### `testfile tags [path]`

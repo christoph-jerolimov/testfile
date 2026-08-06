@@ -4,6 +4,7 @@ import {
   filterRuns,
   filterTests,
   isDefaultRunFilter,
+  labelOptions,
   isDefaultTestFilter,
   runFilterDefaults,
   runVariantLabels,
@@ -36,9 +37,15 @@ const runs: RunRecord[] = [
     id: "fresh-failed",
     startedAt: daysAgo(1),
     status: "failed",
+    labels: ["branch=main", "trigger=push"],
     tests: [{ path: "ci/unit", status: "failed" }],
   }),
-  run({ id: "fresh-linux", startedAt: daysAgo(3), variants: { platform: "linux" } }),
+  run({
+    id: "fresh-linux",
+    startedAt: daysAgo(3),
+    variants: { platform: "linux" },
+    labels: ["branch=feature/x", "pr=7", "trigger=pull_request"],
+  }),
   run({
     id: "merged",
     startedAt: daysAgo(5),
@@ -109,12 +116,32 @@ test("a variant filter also matches the legs of a merged run", () => {
   );
 });
 
+test("runs filter by the labels they were recorded with", () => {
+  assert.deepEqual(labelOptions(runs), [
+    "branch=feature/x",
+    "branch=main",
+    "pr=7",
+    "trigger=pull_request",
+    "trigger=push",
+  ]);
+  const byLabel = (labels: string[]): string[] =>
+    filterRuns(runs, { ...runFilterDefaults, labels }, NOW).map((r) => r.id);
+  assert.deepEqual(byLabel(["branch=main"]), ["fresh-failed"]);
+  assert.deepEqual(byLabel(["pr=7"]), ["fresh-linux"]);
+  // several selected labels are an OR, and an unlabelled run matches none
+  assert.deepEqual(byLabel(["branch=main", "pr=7"]), ["fresh-failed", "fresh-linux"]);
+  assert.deepEqual(byLabel(["nightly"]), []);
+  assert.equal(filterRuns(runs, { ...runFilterDefaults, labels: [] }, NOW).length, 3);
+  assert.equal(isDefaultRunFilter({ ...runFilterDefaults, labels: ["x"] }), false);
+});
+
 test("the text filter looks at the id, the status, the variants and the test paths", () => {
   const text = (value: string): string[] =>
     filterRuns(runs, { ...runFilterDefaults, text: value }, NOW).map((r) => r.id);
   assert.deepEqual(text("MERGED"), ["merged"], "case-insensitive");
   assert.deepEqual(text("ci/unit"), ["fresh-failed"]);
   assert.deepEqual(text("platform=windows"), ["merged"]);
+  assert.deepEqual(text("feature/x"), ["fresh-linux"], "labels are searchable text too");
   assert.deepEqual(text(""), ["fresh-failed", "fresh-linux", "merged"]);
 });
 

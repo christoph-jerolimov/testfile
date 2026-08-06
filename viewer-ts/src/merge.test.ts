@@ -267,3 +267,45 @@ test("a merged test without a recorded start keeps no offset", () => {
     [undefined, 12_000],
   );
 });
+
+test("a merged run carries the union of its legs' labels", () => {
+  const dir = tempDir();
+  writeRun(
+    dir,
+    "20260101-100000-ll01",
+    "2026-01-01T10:00:00.000Z",
+    [{ path: "ci/unit", status: "passed" }],
+    { variants: { platform: "linux" }, labels: ["branch=main", "os=Linux", "pr=7"] },
+  );
+  writeRun(
+    dir,
+    "20260101-100010-ll02",
+    "2026-01-01T10:00:10.000Z",
+    [{ path: "ci/unit", status: "passed" }],
+    { variants: { platform: "windows" }, labels: ["branch=main", "os=Windows", "pr=7"] },
+  );
+  const { record } = mergeRuns(
+    [source(dir, "20260101-100000-ll01"), source(dir, "20260101-100010-ll02")],
+    "merged-labels",
+  );
+  assert.deepEqual(
+    record.labels,
+    ["branch=main", "os=Linux", "pr=7", "os=Windows"],
+    "in the order first seen, without duplicates",
+  );
+});
+
+test("merging runs without labels leaves the field out", () => {
+  const dir = tempDir();
+  writeRun(dir, "20260101-100000-mm01", "2026-01-01T10:00:00.000Z", [
+    { path: "ci/unit", status: "passed" },
+  ]);
+  writeRun(dir, "20260101-100010-mm02", "2026-01-01T10:00:10.000Z", [
+    { path: "ci/e2e", status: "passed" },
+  ]);
+  const { record } = mergeRuns(
+    [source(dir, "20260101-100000-mm01"), source(dir, "20260101-100010-mm02")],
+    "merged-plain",
+  );
+  assert.equal(record.labels, undefined);
+});

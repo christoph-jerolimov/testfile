@@ -19,6 +19,17 @@ import {
   type FilterFlags,
 } from "./shared.js";
 
+// Free-form labels, trimmed and de-duplicated, in the order they were
+// given. Empty values are dropped so `-l ""` is not recorded.
+export function parseLabels(values: string[]): string[] {
+  const labels: string[] = [];
+  for (const value of values) {
+    const label = value.trim();
+    if (label !== "" && !labels.includes(label)) labels.push(label);
+  }
+  return labels;
+}
+
 // "platform=linux" pairs into a map, in the order they were given.
 export function parseVariants(pairs: string[]): Record<string, string> {
   const variants: Record<string, string> = {};
@@ -42,6 +53,7 @@ export function registerRun(program: Command): void {
     reporter?: ReporterKind;
     output: string;
     variant: string[];
+    label: string[];
   }
 
   addFilterOptions(
@@ -71,6 +83,12 @@ export function registerRun(program: Command): void {
         collect,
         [],
       )
+      .option(
+        "-l, --label <label>",
+        "record a free-form label with the run, e.g. branch=main (repeatable)",
+        collect,
+        [],
+      )
       .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
       .option("--output <file>", 'report target file, or "-" for stdout', "-")
       .description("Run the test suite"),
@@ -95,6 +113,7 @@ export function registerRun(program: Command): void {
         noCache: !options.cache,
         forwardEnv: options.forwardEnv,
         variants: parseVariants(options.variant),
+        labels: parseLabels(options.label),
       });
       filtered = resolveFilters(session, options);
       if (filtered.testCount === 0) throw new Error("no tests match the given filters");

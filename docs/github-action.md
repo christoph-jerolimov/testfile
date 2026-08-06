@@ -38,6 +38,33 @@ against your repository's Testfile. The job fails when tests fail.
 | `upload-run` | `true` | Upload the recorded run (`.testfile/runs/<id>` as a `.tgz`) as a build artifact. |
 | `artifact-name` | `testfile-run` | Name of the uploaded run artifact. |
 | `variants` | – | What tells this run apart from the other legs of a matrix, as `key=value` pairs separated by commas or newlines (e.g. `platform=ubuntu-latest`). Recorded in `run.yaml`; [merging](./cli#merging-runs) needs it. |
+| `labels` | – | Extra [labels](./cli#labelling-runs) to record, separated by commas or newlines (e.g. `nightly, slow`). Added to the automatic ones. |
+| `auto-labels` | `true` | Label the run with the GitHub context — see below. |
+
+## What a CI run is labelled with
+
+Every run the action records is labelled with where it came from, so a
+history collected from many workflows can be narrowed down afterwards
+(`testfile-viewer serve` filters by label; so does the run list in the
+TUI's detail pane). Nothing here is parsed — the `key=value` shape is a
+convention that makes the labels read well and search well.
+
+| Label | Value |
+| ----- | ----- |
+| `trigger=` | how the workflow started: `manual` (a `workflow_dispatch`), `schedule` (a cron job), `push`, `pull_request`, or GitHub's own name for any other event |
+| `branch=` | the branch the run used — on a pull request the **source** branch, not the ephemeral merge ref |
+| `base=` | pull requests only: the **target** branch |
+| `pr=` | pull requests only: the pull request number |
+| `tag=` | tag builds only, instead of `branch=` |
+| `actor=` | the GitHub username that triggered the run |
+| `repo=` | `owner/name` — worth having once runs from several repositories share a history |
+| `workflow=`, `job=` | which workflow and job produced the run |
+| `os=` | the runner's operating system |
+| `sha=` | the short commit sha |
+| `ci-run=` | the Actions run id, to get from a recorded run back to its job |
+
+A label is only recorded when the context supplies it, so a run never
+carries an empty one. Set `auto-labels: false` to record only your own.
 
 ## Examples
 

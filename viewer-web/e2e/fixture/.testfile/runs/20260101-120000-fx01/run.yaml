@@ -5,6 +5,10 @@ durationMs: 4100
 status: passed
 exitCode: 0
 cancelled: false
+labels:
+  - trigger=push
+  - branch=main
+  - actor=octocat
 env:
   CI: "1"
 ports: {}

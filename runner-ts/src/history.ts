@@ -89,6 +89,9 @@ export interface RunRecord {
   // e.g. { platform: linux } for one leg of a matrix. Set with --variant,
   // and what `testfile-viewer merge` needs to keep the legs apart.
   variants?: Record<string, string>;
+  // Free-form strings attached to the run so it can be found again - e.g.
+  // branch=main or pr=42. Set with --label; nothing parses their contents.
+  labels?: string[];
   // Env provided by the Testfile (top level, resolved) and the resolved ports.
   env: Record<string, string>;
   ports: Record<string, number>;
@@ -113,6 +116,7 @@ export interface RunMeta {
   cancelled: boolean;
   machine?: string;
   variants?: Record<string, string>;
+  labels?: string[];
   env: Record<string, string>;
   ports: Record<string, number>;
   selected: string[];
@@ -283,6 +287,7 @@ export class RunHistory {
       ...(meta.variants && Object.keys(meta.variants).length > 0
         ? { variants: meta.variants }
         : {}),
+      ...(meta.labels && meta.labels.length > 0 ? { labels: meta.labels } : {}),
       env: meta.env,
       ports: meta.ports,
       selected: meta.selected,

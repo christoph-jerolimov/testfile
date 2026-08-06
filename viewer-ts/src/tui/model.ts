@@ -73,6 +73,9 @@ export function describeRun(run: RunRecord): OutputLine[] {
   if (run.cancelled) lines.push({ text: "cancelled: yes", stream: "system" });
   const variants = variantLabel(run.variants);
   if (variants) lines.push({ text: `variants:  ${variants}`, stream: "system" });
+  if (run.labels?.length) {
+    lines.push({ text: `labels:    ${run.labels.join(", ")}`, stream: "system" });
+  }
   if (run.merged) {
     lines.push({
       text: `merged:    ${run.merged.runs.length} runs${

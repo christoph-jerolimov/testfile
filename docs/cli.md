@@ -131,6 +131,28 @@ nothing about whether the run works:
 exit code is `1` when a check failed — warnings alone keep it `0`, so
 `testfile doctor && testfile run` is a usable pre-flight.
 
+## Labelling runs
+
+A recorded run can carry free-form **labels**, so it can be found again in
+a history that mixes branches, pull requests and nightlies:
+
+```sh
+testfile run --label branch=main --label nightly
+testfile run -l "release candidate"
+```
+
+`-l/--label` is repeatable; labels are trimmed, empty ones are dropped and
+a label given twice is recorded once. They land in the run's `run.yaml` as
+a plain list of strings — nothing parses them, so `key=value` is a
+convention that reads well rather than a format. Merging a set of runs
+keeps the union of their labels.
+
+Viewers show them (`testfile-viewer run <id>`, the TUI's run detail, the
+web viewer's run detail) and the web viewer filters by them. The
+[GitHub Action](./github-action#what-a-ci-run-is-labelled-with) labels
+every run it records with its branch, pull request, actor and how it was
+triggered.
+
 ## Machine-readable reports
 
 For CI systems, `--reporter` writes the run's result after it finished:

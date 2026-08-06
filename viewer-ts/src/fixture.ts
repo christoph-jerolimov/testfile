@@ -24,6 +24,7 @@ export function writeRun(
     status?: RunRecord["status"];
     services?: { name: string; status?: string; log?: string }[];
     variants?: Record<string, string>;
+    labels?: string[];
   } = {},
 ): RunRecord {
   const runDir = join(baseDir, ".testfile", "runs", id);
@@ -36,6 +37,7 @@ export function writeRun(
     exitCode: options.status === "failed" ? 1 : 0,
     cancelled: false,
     ...(options.variants ? { variants: options.variants } : {}),
+    ...(options.labels ? { labels: options.labels } : {}),
     env: {},
     ports: {},
     selected: [],
