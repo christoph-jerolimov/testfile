@@ -38,7 +38,7 @@ function invoke(work, resultFile, env, expected, problems, label) {
   const args = expected.args ? ` ${expected.args}` : "";
   const proc = spawnSync(
     "sh",
-    ["-c", `${runner} run "${work}"${args} --reporter json --output "${resultFile}"`],
+    ["-c", `${runner} start "${work}"${args} --reporter json --output "${resultFile}"`],
     {
       encoding: "utf8",
       env: { ...process.env, ...env },

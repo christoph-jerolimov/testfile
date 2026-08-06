@@ -7,8 +7,8 @@ import { registerChanges } from "./commands/changes.js";
 import { registerCompletion } from "./commands/completion.js";
 import { registerDoctor } from "./commands/doctor.js";
 import { registerInit } from "./commands/init.js";
-import { registerList } from "./commands/list.js";
-import { registerRun } from "./commands/run.js";
+import { registerInspect } from "./commands/inspect.js";
+import { registerStart } from "./commands/start.js";
 import { registerTags } from "./commands/tags.js";
 import { registerValidate } from "./commands/validate.js";
 
@@ -21,9 +21,9 @@ program
 
 registerInit(program);
 registerValidate(program);
-registerList(program);
-// `run` is the default command
-registerRun(program);
+registerInspect(program);
+// `start` is the default command
+registerStart(program);
 registerTags(program);
 registerChanges(program);
 registerDoctor(program);

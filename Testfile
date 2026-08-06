@@ -167,7 +167,7 @@ test:
           needs: [build-runner]
           script: |
             out=$(mktemp)
-            node runner-ts/dist/cli.js run .github/action-smoke --reporter junit --output "$out"
+            node runner-ts/dist/cli.js start .github/action-smoke --reporter junit --output "$out"
             grep -q '<testcase name="hello"' "$out"
             grep -q 'failures="0"' "$out"
             rm -f "$out"

@@ -27,11 +27,11 @@ Conventions used below:
 testfile [command] [options] [path]
 ```
 
-Running without a command is the same as `testfile run`. Exit codes:
+Running without a command is the same as `testfile start`. Exit codes:
 `0` all tests passed (or everything skipped) · `1` failures or a service
 that would not start · `130` interrupted.
 
-### `testfile run [path]`
+### `testfile start [path]`
 
 Run the test suite (the default command).
 
@@ -47,19 +47,19 @@ Run the test suite (the default command).
 | `--reporter <kind>` | Write [machine-readable results](./cli#machine-readable-reports) after the run: `junit` or `json`. |
 | `--output <file>` | Report target file, or `-` for stdout (the default). |
 
-Plus the shared [filter options](#shared-filter-options-run-and-list) below.
+Plus the shared [filter options](#shared-filter-options-start-and-inspect) below.
 
-### `testfile list [path]`
+### `testfile inspect [path]`
 
 Print the expanded test suite — matrix instances, tags and services
-included. Takes the shared [filter options](#shared-filter-options-run-and-list), so it
-previews exactly what a filtered `run` would execute.
+included. Takes the shared [filter options](#shared-filter-options-start-and-inspect), so it
+previews exactly what a filtered `start` would execute.
 
 | Option | Description |
 | ------ | ----------- |
 | `--json [file]` | Write the suite as JSON (`{path, services, count, tests: [{path, name, kind, tags?, matrix?, services?}]}`), to a file or (without a value) stdout. |
 
-### Shared filter options (`run` and `list`)
+### Shared filter options (`start` and `inspect`)
 
 | Option | Description |
 | ------ | ----------- |
@@ -166,7 +166,7 @@ and an unused filter narrows nothing. The filters apply to everything the
 command produces — the table, `--json` and the `--flaky` report all see
 the same runs.
 
-### `testfile-viewer run <id> [path]`
+### `testfile-viewer inspect run <id> [path]`
 
 Show one recorded run in detail — a unique id prefix is enough.
 

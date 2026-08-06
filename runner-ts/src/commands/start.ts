@@ -46,7 +46,7 @@ export function parseVariants(pairs: string[]): Record<string, string> {
   return variants;
 }
 
-export function registerRun(program: Command): void {
+export function registerStart(program: Command): void {
   interface RunFlags extends FilterFlags {
     verbose: boolean;
     failFast: boolean;
@@ -63,7 +63,7 @@ export function registerRun(program: Command): void {
 
   addFilterOptions(
     program
-      .command("run", { isDefault: true })
+      .command("start", { isDefault: true })
       .argument("[path]", "Testfile or directory containing one", ".")
       .option("-v, --verbose", "also stream service output", false)
       .option("--fail-fast", "abort the whole run at the first test failure", false)
@@ -96,7 +96,7 @@ export function registerRun(program: Command): void {
       )
       .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
       .option("--output <file>", 'report target file, or "-" for stdout', "-")
-      .description("Run the test suite"),
+      .description("Start the test suite (the default command)"),
   ).action(async (path: string, options: RunFlags) => {
     let session: Session;
     let filtered: ReturnType<typeof resolveFilters>;

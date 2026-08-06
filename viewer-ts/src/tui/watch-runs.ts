@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { HISTORY_DIR } from "../runrecord.js";
 
 // Watches .testfile/runs/ for changes - runs recorded by other processes
-// (e.g. a plain `testfile run` in another terminal) show up in the TUI's
+// (e.g. a plain `testfile start` in another terminal) show up in the TUI's
 // runs and results views without restarting it. The folder may not exist
 // yet when the TUI starts; establishing the watch is retried until it does.
 // Returns a cleanup function.

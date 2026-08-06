@@ -1,7 +1,7 @@
 # Examples
 
 Complete, working Testfiles for common stacks. Copy one into your project,
-adjust the commands, run `testfile run`.
+adjust the commands, run `testfile start`.
 
 | Example | Stack | Shows |
 | ------- | ----- | ----- |

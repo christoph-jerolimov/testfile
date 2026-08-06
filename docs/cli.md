@@ -22,30 +22,30 @@ every command with all of its arguments and options.
 
 ```sh
 # the runner
-testfile init [path]       # create a starter Testfile (from package.json)
-testfile run [path]        # run the test suite (default command)
-testfile run --verbose     # also stream service output
-testfile run --fail-fast   # abort everything at the first failure
-testfile run --max-parallel 4   # global cap on concurrently running tests
-testfile run --dry-run     # print what would run, without running
-testfile run --watch       # re-run on file changes
-testfile run --reporter junit --output results.xml   # report for CI
-testfile run --variant platform=linux   # tag the run (for merging later)
-testfile validate [path]   # validate against the JSON schema
-testfile doctor [path]     # check this machine against what the file needs
-testfile list [path]       # print the expanded suite, incl. matrix instances
-testfile completion bash   # shell completions (bash, zsh, fish)
+testfile init [path]         # create a starter Testfile (from package.json)
+testfile start [path]        # run the test suite (default command)
+testfile start --verbose     # also stream service output
+testfile start --fail-fast   # abort everything at the first failure
+testfile start --max-parallel 4   # global cap on concurrently running tests
+testfile start --dry-run     # print what would run, without running
+testfile start --watch       # re-run on file changes
+testfile start --reporter junit --output results.xml   # report for CI
+testfile start --variant platform=linux   # tag the run (for merging later)
+testfile validate [path]     # validate against the JSON schema
+testfile doctor [path]       # check this machine against what the file needs
+testfile inspect [path]      # print the expanded suite, incl. matrix instances
+testfile completion bash     # shell completions (bash, zsh, fish)
 
 # the viewer (read-only over .testfile/)
-testfile-viewer runs           # table of recorded runs (default command)
-testfile-viewer run <id>       # one run in detail
-testfile-viewer diff <a> <b>   # compare two runs
-testfile-viewer merge <run...> # combine shards / platform runs into one
-testfile-viewer tui            # terminal UI: runs + results, watching
-testfile-viewer serve          # localhost REST API + web viewer
-testfile-viewer archive <cmd>  # pack/import recorded runs as archives
-testfile-viewer s3 <cmd>       # push/pull/list runs in an S3 bucket
-testfile-viewer github <cmd>   # sync/list GitHub Actions run artifacts
+testfile-viewer runs               # table of recorded runs (default command)
+testfile-viewer inspect run <id>   # one run in detail
+testfile-viewer diff <a> <b>       # compare two runs
+testfile-viewer merge <run...>     # combine shards / platform runs into one
+testfile-viewer tui                # terminal UI: runs + results, watching
+testfile-viewer serve              # localhost REST API + web viewer
+testfile-viewer archive <cmd>      # pack/import recorded runs as archives
+testfile-viewer s3 <cmd>           # push/pull/list runs in an S3 bucket
+testfile-viewer github <cmd>       # sync/list GitHub Actions run artifacts
 ```
 
 Tab completion for commands and flags:
@@ -129,7 +129,7 @@ nothing about whether the run works:
 
 `--json` writes the same as `{status, checks: […]}` for scripts, and the
 exit code is `1` when a check failed — warnings alone keep it `0`, so
-`testfile doctor && testfile run` is a usable pre-flight.
+`testfile doctor && testfile start` is a usable pre-flight.
 
 ## Labelling runs
 
@@ -137,8 +137,8 @@ A recorded run can carry **labels**, so it can be found again in a history
 that mixes branches, pull requests and nightlies:
 
 ```sh
-testfile run --label branch=main --label tier=nightly
-testfile run -l pr=42
+testfile start --label branch=main --label tier=nightly
+testfile start -l pr=42
 ```
 
 `-l/--label` takes a `key=value` pair, split at the **first** `=` so a
@@ -159,7 +159,7 @@ of runs keeps the union of their labels; where two runs disagree on a key
 the first one wins, because what actually differs between the legs of a
 matrix belongs in [`--variant`](#merging-runs).
 
-Viewers show them (`testfile-viewer run <id>`, the TUI's run detail, the
+Viewers show them (`testfile-viewer inspect run <id>`, the TUI's run detail, the
 web viewer's run detail) and both filter by them —
 [`runs --filter-label`](#run-history) on the command line, a Labels chip
 row in the browser. The
@@ -172,9 +172,9 @@ triggered.
 For CI systems, `--reporter` writes the run's result after it finished:
 
 ```sh
-testfile run --reporter junit --output results.xml
-testfile run --reporter json --output results.json
-testfile run --reporter json           # ... or to stdout
+testfile start --reporter junit --output results.xml
+testfile start --reporter json --output results.json
+testfile start --reporter json           # ... or to stdout
 ```
 
 The JUnit XML contains one `<testcase>` per executed test (group path as
@@ -187,26 +187,26 @@ the same `--json [file]` flag: a file name writes there, the bare flag
 writes to stdout, so a command can be piped straight into `jq`.
 
 ```sh
-testfile list --json | jq '.tests[].path'   # what a filtered run would execute
-testfile validate --json                    # {path, valid} - or the errors
-testfile tags --json                        # the tag inventory
-testfile changes --json                     # what --changed selects from
-testfile doctor --json checks.json          # machine status of this machine
+testfile inspect --json | jq '.tests[].path'   # what a filtered run would execute
+testfile validate --json                       # {path, valid} - or the errors
+testfile tags --json                           # the tag inventory
+testfile changes --json                        # what --changed selects from
+testfile doctor --json checks.json             # machine status of this machine
 
-testfile-viewer runs --json                 # the recorded runs
-testfile-viewer run <id> --json             # one run record, in full
-testfile-viewer diff <a> <b> --json         # what changed between two runs
-testfile-viewer s3 list <prefix> --json     # ... and github/gitlab list
+testfile-viewer runs --json                    # the recorded runs
+testfile-viewer inspect run <id> --json        # one run record, in full
+testfile-viewer diff <a> <b> --json            # what changed between two runs
+testfile-viewer s3 list <prefix> --json        # ... and github/gitlab list
 ```
 
 ## Watch mode
 
-`testfile run --watch` (or `-w`) re-runs the current selection whenever a
+`testfile start --watch` (or `-w`) re-runs the current selection whenever a
 file in the project changes — combined with filters (`-w -t fast`) it makes
 a tight edit-test loop:
 
 ```sh
-testfile run -w -f unit
+testfile start -w -f unit
 ```
 
 Changes are debounced, edits made while a run is in progress trigger one
@@ -223,16 +223,16 @@ start · `130` interrupted.
 
 ## Filtering
 
-`run` and `list` accept filters to work on a subset of the suite:
+`start` and `inspect` accept filters to work on a subset of the suite:
 
 ```sh
-testfile run -f e2e                          # best guess: name, tag, ...
-testfile run -f fast                         # ... tag ...
-testfile run -f db:postgres                  # ... or matrix (it has a ":")
-testfile run --filter-name all/checks/unit   # -n: match name/path only
-testfile run --filter-tags "slow, nightly"   # -t: tagged slow OR nightly
-testfile run --filter-matrix db:postgres     # -m: only these matrix instances
-testfile run -t slow -m db:postgres -m node:22
+testfile start -f e2e                          # best guess: name, tag, ...
+testfile start -f fast                         # ... tag ...
+testfile start -f db:postgres                  # ... or matrix (it has a ":")
+testfile start --filter-name all/checks/unit   # -n: match name/path only
+testfile start --filter-tags "slow, nightly"   # -t: tagged slow OR nightly
+testfile start --filter-matrix db:postgres     # -m: only these matrix instances
+testfile start -t slow -m db:postgres -m node:22
 ```
 
 - `-f, --filter <value>` is the quick, best-guess filter: a value containing
@@ -258,18 +258,18 @@ fork point plus everything changed locally (staged, unstaged, untracked).
 It needs a git checkout, not a warm cache, so it works on fresh CI clones;
 see [change-based selection](./writing-tests#change-based-selection). Tests
 without `inputs` always count as changed; it composes with the other
-filters, works on `list` for preview, and errors when nothing is selected.
+filters, works on `inspect` for preview, and errors when nothing is selected.
 `--changed-since <ref>` picks the base branch (default: the remote's
 default branch) and implies `--changed`. Selected tests log which pattern
 matched how many changed files, and record it as `reason` in `run.yaml`.
 
 `--failed` re-runs what broke last time: it keeps only tests that failed (or
 were aborted) in the most recent recorded run, and combines with the other
-filters — `testfile run --failed -t integration` re-runs only the failed
+filters — `testfile start --failed -t integration` re-runs only the failed
 integration tests.
 
 Different filter kinds are ANDed. Filters that match nothing are an error.
-`testfile list` shows each test's tags, so it's an easy way to preview what
+`testfile inspect` shows each test's tags, so it's an easy way to preview what
 a filter will run.
 
 ## Tags
@@ -307,8 +307,8 @@ the same command with a different index and executes its share of the
 selected tests.
 
 ```sh
-testfile run --shard 1/4      # on machine 1
-testfile run --shard 2/4      # on machine 2, ...
+testfile start --shard 1/4      # on machine 1
+testfile start --shard 2/4      # on machine 2, ...
 ```
 
 Each shard computes the same split from the same suite, so no coordination
@@ -364,8 +364,8 @@ around them are folded into one entry rather than reported as a clash. Jobs that
 `ci/unit` came from where. Tell the runs apart with `--variant`:
 
 ```sh
-testfile run --variant platform=linux        # on the Linux job
-testfile run --variant platform=windows      # on the Windows job
+testfile start --variant platform=linux        # on the Linux job
+testfile start --variant platform=windows      # on the Windows job
 ```
 
 Variants are free-form `key=value` pairs, recorded in `run.yaml` and shown
@@ -412,11 +412,11 @@ testfile changes --json                               # ... to stdout
 ```
 
 To debug why a specific test would (not) run, combine the file list with
-`testfile list --changed` or `testfile run --changed --dry-run`.
+`testfile inspect --changed` or `testfile start --changed --dry-run`.
 
 ## Plain output
 
-`testfile run` streams progress line by line — suitable for CI
+`testfile start` streams progress line by line — suitable for CI
 logs. Test output is prefixed with `[test name]`; service output is shown
 with `--verbose`, and the tail of a failing service's log is always printed.
 A nested summary with per-test durations is printed at the end.
@@ -424,7 +424,7 @@ A nested summary with per-test durations is printed at the end.
 ## The TUI
 
 `testfile-viewer tui` opens a read-only two-pane terminal UI over the
-recorded runs (it never starts tests — that is `testfile run`'s job). Two
+recorded runs (it never starts tests — that is `testfile start`'s job). Two
 views, switched with `1`/`2`:
 
 1. **runs** — a table of every recorded run (started, status, duration,
@@ -436,7 +436,7 @@ views, switched with `1`/`2`:
    selected test's executions across all runs as a table.
 
 Both views watch `.testfile/runs/` — runs recorded by other processes
-(say, a `testfile run` in a second terminal, or `testfile-viewer runs
+(say, a `testfile start` in a second terminal, or `testfile-viewer runs
 sync`) appear live. `--view results` opens on the results view.
 
 Keys: `↑`/`↓` (`k`/`j`) select · enter toggles details/merged log (runs
@@ -473,13 +473,13 @@ use.)
 Browse the history from the command line:
 
 ```sh
-testfile-viewer runs                      # table of recent runs, newest first
-testfile-viewer runs --json               # ... as JSON (or --json runs.json)
-testfile-viewer tui                       # browse runs in the TUI
-testfile-viewer run 20260801-1046         # one run in detail (id prefix is ok)
-testfile-viewer run <id> --log            # merged stdout+stderr of the run
-testfile-viewer run <id> --log all/e2e    # ... of a single test
-testfile-viewer run <id> --json           # the whole record, for a script
+testfile-viewer runs                             # table of recent runs, newest first
+testfile-viewer runs --json                      # ... as JSON (or --json runs.json)
+testfile-viewer tui                              # browse runs in the TUI
+testfile-viewer inspect run 20260801-1046        # one run in detail (id prefix is ok)
+testfile-viewer inspect run <id> --log           # merged stdout+stderr of the run
+testfile-viewer inspect run <id> --log all/e2e   # ... of a single test
+testfile-viewer inspect run <id> --json          # the whole record, for a script
 ```
 
 A history that collects runs from every branch and every CI job gets long,
@@ -566,7 +566,7 @@ Age is not a criterion — a long-untouched project keeps its verdicts, and
 
 Because every run is a self-contained `runs/<id>/` folder, runs can move
 between machines. `testfile-viewer archive` packs them as `.tgz` archives and
-brings them into the local history, where `runs`, `run`, `diff`, `--flaky`
+brings them into the local history, where `runs`, `inspect run`, `diff`, `--flaky`
 and the TUI treat them like local runs:
 
 ```sh
@@ -583,7 +583,7 @@ Packing and importing shell out to `tar`, and importing a zip (a CI
 artifact) additionally needs `unzip` on the `PATH`. Both are a given on
 Linux and macOS; on Windows `tar` ships with the system but `unzip` does
 not, so zip artifacts need it installed. Everything else in the viewer —
-`runs`, `run`, `diff`, `tui`, `serve` — is pure Node.
+`runs`, `inspect run`, `diff`, `tui`, `serve` — is pure Node.
 
 With the [aws CLI](https://aws.amazon.com/cli/) configured, runs can be
 shared through S3 — for example a CI job pushes, developers pull:

@@ -50,7 +50,7 @@ so you know where to look. Read the result before trusting it.
 ## 2. Run it
 
 ```sh
-npx testfile run
+npx testfile start
 ```
 
 The runner finds the Testfile in the current directory, runs the suite and
@@ -62,7 +62,7 @@ Other useful commands:
 ```sh
 testfile validate   # check the file against the JSON schema
 testfile doctor     # check this machine against what the file needs
-testfile list       # print the expanded test suite without running it
+testfile inspect    # print the expanded test suite without running it
 testfile-viewer tui # browse recorded runs (read-only terminal UI)
 ```
 

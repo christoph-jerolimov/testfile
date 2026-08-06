@@ -26,7 +26,7 @@ inputs:
     required: false
     default: ""
   changed:
-    description: "Run only tests whose `inputs` match files changed against the base branch (testfile run --changed). Needs the base branch in the checkout, e.g. actions/checkout with fetch-depth: 0"
+    description: "Run only tests whose `inputs` match files changed against the base branch (testfile start --changed). Needs the base branch in the checkout, e.g. actions/checkout with fetch-depth: 0"
     required: false
     default: "false"
   changed-since:
@@ -114,7 +114,7 @@ runs:
         INPUT_REPORTER: ${{ inputs.reporter }}
         INPUT_OUTPUT: ${{ inputs.output }}
       run: |
-        ARGS=(run "$INPUT_PATH")
+        ARGS=(start "$INPUT_PATH")
         [ -n "$INPUT_FILTER" ] && ARGS+=(-f "$INPUT_FILTER")
         [ -n "$INPUT_FILTER_NAME" ] && ARGS+=(-n "$INPUT_FILTER_NAME")
         [ -n "$INPUT_FILTER_TAGS" ] && ARGS+=(-t "$INPUT_FILTER_TAGS")

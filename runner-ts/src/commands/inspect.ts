@@ -15,13 +15,13 @@ import {
   type FilterFlags,
 } from "./shared.js";
 
-export function registerList(program: Command): void {
+export function registerInspect(program: Command): void {
   addFilterOptions(
     program
-      .command("list")
+      .command("inspect")
       .argument("[path]", "Testfile or directory containing one", ".")
       .option("--json [file]", "write the suite as JSON, to a file or (without a value) stdout")
-      .description("Print the expanded test suite (including matrix instances)"),
+      .description("Print the expanded test suite without running it (including matrix instances)"),
   ).action(async (path: string, flags: FilterFlags & { json?: string | boolean }) => {
     try {
       const { path: file, doc } = loadTestfile(path);

@@ -1,7 +1,7 @@
 // Combining several recorded runs into one. Two things produce more than
 // one run folder for what is conceptually a single test run:
 //
-//   - sharding (`testfile run --shard 2/4`), where each shard runs a
+//   - sharding (`testfile start --shard 2/4`), where each shard runs a
 //     disjoint part of the suite, and
 //   - a matrix of jobs, where every job runs the same suite somewhere else
 //     (a platform, a Node version, ...).

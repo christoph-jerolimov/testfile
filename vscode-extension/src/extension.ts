@@ -44,7 +44,7 @@ class TestfileCodeLensProvider implements vscode.CodeLensProvider {
       (test) =>
         new vscode.CodeLens(new vscode.Range(test.line, 0, test.line, 0), {
           title: `▶ run ${test.isGroup ? `${test.name} (with nested tests)` : test.name}`,
-          tooltip: `testfile run -n "${test.path}"`,
+          tooltip: `testfile start -n "${test.path}"`,
           command: "testfile.runTest",
           arguments: [document.uri, test.path],
         }),
@@ -133,7 +133,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.languages.registerCodeLensProvider(selector, new TestfileCodeLensProvider()),
 
     vscode.commands.registerCommand("testfile.runAll", () => {
-      runInTerminal("run", workspaceDirOf(vscode.window.activeTextEditor?.document.uri));
+      runInTerminal("start", workspaceDirOf(vscode.window.activeTextEditor?.document.uri));
     }),
 
     vscode.commands.registerCommand("testfile.runTest", (uri?: vscode.Uri, path?: string) => {
@@ -156,7 +156,7 @@ export function activate(context: vscode.ExtensionContext): void {
         );
         return;
       }
-      runInTerminal(`run -n "${path}"`, workspaceDirOf(uri));
+      runInTerminal(`start -n "${path}"`, workspaceDirOf(uri));
     }),
 
     vscode.commands.registerCommand("testfile.doctor", () => {

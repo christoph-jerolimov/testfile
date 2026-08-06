@@ -12,8 +12,12 @@ import {
   writeJson,
 } from "./shared.js";
 
-export function registerRun(program: Command): void {
-  program
+export function registerInspect(program: Command): void {
+  const inspectCommand = program
+    .command("inspect")
+    .description("Show a single recorded thing in detail");
+
+  inspectCommand
     .command("run")
     .argument("<id>", "recorded run to show (a unique id prefix is enough)")
     .argument("[path]", "directory containing a .testfile folder", ".")
@@ -139,7 +143,7 @@ export function registerRun(program: Command): void {
               console.log(`  ${pad(service.status ?? "-", 7)} ${service.name}${log}`);
             }
           }
-          console.log(color(90, `\nlogs: testfile-viewer run ${run.id} --log [test-path]`));
+          console.log(color(90, `\nlogs: testfile-viewer inspect run ${run.id} --log [test-path]`));
         } catch (err) {
           commandFailed(err);
         }

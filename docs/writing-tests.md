@@ -260,7 +260,7 @@ The runner hashes the matched files' content together with the test's
 configuration; when nothing changed since the last **passing** run, the test
 is reported as passed with a `cached` marker instead of re-running.
 Failures are never cached, and any change to the files, the command, the
-env or the matrix combination re-runs the test. `testfile run --no-cache`
+env or the matrix combination re-runs the test. `testfile start --no-cache`
 forces execution (and refreshes the cache); combined with
 [watch mode](./cli#watch-mode) caching makes the edit-test loop touch only
 what actually changed.
@@ -281,7 +281,7 @@ only the git history, which every CI checkout already has.
 
 ## Change-based selection
 
-`testfile run --changed` uses git instead of a warm cache to decide what to
+`testfile start --changed` uses git instead of a warm cache to decide what to
 run: it collects every file that differs between a **base branch** and the
 current commit, plus everything changed locally (staged, unstaged and
 untracked), and selects the tests whose `inputs` patterns match at least
@@ -319,7 +319,7 @@ test fails:
 
 Patterns are globs relative to the test's working directory. Collected
 files land in `.testfile/runs/<id>/artifacts/<test>/...` and are listed in
-the run's `run.yaml` and in `testfile-viewer run <id>`.
+the run's `run.yaml` and in `testfile-viewer inspect run <id>`.
 
 ## Setup and teardown
 
@@ -419,7 +419,7 @@ test:
 ```
 
 A tag on a group applies to all tests below it. Run a subset with
-[`testfile run -t fast`](./cli#filtering) (or just `-f fast`).
+[`testfile start -t fast`](./cli#filtering) (or just `-f fast`).
 
 ## Timeouts, env, workdir
 

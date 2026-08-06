@@ -42,7 +42,7 @@ test:
 Forwarded variables override the runner's defaults (forward `CI` to get
 the host's value), while explicit `env` entries and env files win over
 forwarded values. Ad-hoc forwarding without editing the Testfile:
-`testfile run --forward-env 'GITHUB_*'` (also on `testfile tui`).
+`testfile start --forward-env 'GITHUB_*'` (also on `testfile tui`).
 
 ## Environment variables
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseLabels, parseVariants } from "./run.js";
+import { parseLabels, parseVariants } from "./start.js";
 
 test("parseVariants turns key=value pairs into a map", () => {
   assert.deepEqual(parseVariants(["platform=linux", "node=22"]), {

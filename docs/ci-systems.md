@@ -6,7 +6,7 @@ description: Run a Testfile on GitLab CI, Jenkins, CircleCI or Buildkite — and
 
 # Other CI systems
 
-A Testfile is a plain command: `testfile run`. Any CI system that can run a
+A Testfile is a plain command: `testfile start`. Any CI system that can run a
 shell command can run your suite, and because the runner owns services,
 parallelism and matrices, the pipeline stays a single job instead of a
 translation of your test setup into that system's YAML dialect.

@@ -8,7 +8,7 @@ import { registerDiff } from "./commands/diff.js";
 import { registerGithub } from "./commands/github.js";
 import { registerGitlab } from "./commands/gitlab.js";
 import { registerMerge } from "./commands/merge.js";
-import { registerRun } from "./commands/run.js";
+import { registerInspect } from "./commands/inspect.js";
 import { registerRuns } from "./commands/runs.js";
 import { registerS3 } from "./commands/s3.js";
 import { registerServe } from "./commands/serve.js";
@@ -21,7 +21,7 @@ program
   .description("Inspect, browse and share recorded Testfile runs (read-only)")
   .version("0.1.0");
 
-registerRun(program);
+registerInspect(program);
 registerDiff(program);
 registerMerge(program);
 registerTui(program);

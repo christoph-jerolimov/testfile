@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Emits GitHub workflow-command annotations for the most recent recorded
 // run: one ::error per failed or aborted test, carrying the tail of its
-// log. Used by the composite action after `testfile run`; exits quietly
+// log. Used by the composite action after `testfile start`; exits quietly
 // when there is no run record (e.g. the Testfile failed validation).
 //
 //   node annotate.mjs <tested-path>
