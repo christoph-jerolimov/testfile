@@ -1,5 +1,11 @@
 import { variantLabel } from "../merge.js";
-import type { RunHistory, RunRecord, Status } from "../runrecord.js";
+import {
+  flakyWindows,
+  isFlaky,
+  type RunHistory,
+  type RunRecord,
+  type Status,
+} from "../runrecord.js";
 import { formatMs } from "../util.js";
 
 // A displayable log line; matches how the runner renders logs (# marks
@@ -159,9 +165,12 @@ export interface RecordedTest {
   passes: number;
   fails: number;
   lastStatus: Status;
+  // Judged on the recent window only - see flakyWindows in runrecord.ts.
+  flaky: boolean;
 }
 
-export function recordedTests(history: RunHistory): RecordedTest[] {
+export function recordedTests(history: RunHistory, now?: number): RecordedTest[] {
+  const windows = flakyWindows(history.runs, now);
   const byPath = new Map<string, RecordedTest>();
   for (const run of history.runs) {
     for (const test of run.tests) {
@@ -176,6 +185,7 @@ export function recordedTests(history: RunHistory): RecordedTest[] {
             passes: 0,
             fails: 0,
             lastStatus: test.status,
+            flaky: isFlaky(windows.get(test.path) ?? []),
           }),
         );
       }

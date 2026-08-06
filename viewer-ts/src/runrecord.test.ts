@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { detectFlaky, diffRuns, type RunRecord } from "./runrecord.js";
+import { detectFlaky, diffRuns, flakyWindows, isFlaky, type RunRecord } from "./runrecord.js";
 import type { RunRecordTest } from "./runrecord.js";
 
-function record(id: string, tests: RunRecordTest[]): RunRecord {
+// The flaky window is measured against "now", so the tests fix both ends.
+const NOW = Date.parse("2026-08-01T12:00:00.000Z");
+const daysAgo = (days: number): string => new Date(NOW - days * 86_400_000).toISOString();
+
+function record(id: string, tests: RunRecordTest[], startedAt = daysAgo(0)): RunRecord {
   return {
     id,
-    startedAt: "2026-08-01T00:00:00.000Z",
+    startedAt,
     durationMs: 1000,
     status: "passed",
     exitCode: 0,
@@ -98,11 +102,11 @@ test("detectFlaky finds tests that alternate and counts flips", () => {
     ]),
     record("r1", [{ path: "a/once-fixed", status: "failed" }]),
   ];
-  const reports = detectFlaky(runs);
+  const reports = detectFlaky(runs, undefined, NOW);
   assert.deepEqual(
     reports.map((r) => r.path),
-    ["a/flaky", "a/once-fixed"],
-    "stable, always-broken and skip-only tests are not flaky",
+    ["a/flaky", "a/once-fixed", "a/always-broken"],
+    "a stable test is not flaky, and a skip-only test has no evidence either way",
   );
   const flaky = reports[0];
   assert.equal(flaky.occurrences, 4);
@@ -119,6 +123,54 @@ test("detectFlaky honors the lastN window", () => {
     record("mid", [{ path: "t", status: "passed" }]),
     record("old", [{ path: "t", status: "failed" }]),
   ];
-  assert.equal(detectFlaky(runs).length, 1, "flaky across all runs");
-  assert.equal(detectFlaky(runs, 2).length, 0, "stable within the recent window");
+  assert.equal(detectFlaky(runs, undefined, NOW).length, 1, "1 of 3 failed");
+  assert.equal(detectFlaky(runs, 2, NOW).length, 0, "stable within the recent window");
+});
+
+test("only results from the last 14 days count", () => {
+  const runs = [
+    record("recent", [{ path: "t", status: "passed" }], daysAgo(1)),
+    record("edge", [{ path: "t", status: "failed" }], daysAgo(13.9)),
+    // three failures, but too old to say anything about the test today
+    record("old", [{ path: "t", status: "failed" }], daysAgo(14.1)),
+    record("older", [{ path: "t", status: "failed" }], daysAgo(30)),
+    record("ancient", [{ path: "t", status: "failed" }], daysAgo(90)),
+  ];
+  assert.deepEqual(flakyWindows(runs, NOW).get("t"), ["passed", "failed"]);
+  const [report] = detectFlaky(runs, undefined, NOW);
+  assert.equal(report.occurrences, 2, "the window, not the whole history");
+  assert.equal(report.fails, 1);
+
+  // the same test, with the recent failure dropped, is not flaky at all
+  assert.deepEqual(detectFlaky(runs.slice(0, 1).concat(runs.slice(2)), undefined, NOW), []);
+});
+
+test("only the 20 most recent results count", () => {
+  const fail = (id: number): RunRecord =>
+    record(`f${id}`, [{ path: "t", status: "failed" }], daysAgo(1));
+  const pass = (id: number): RunRecord =>
+    record(`p${id}`, [{ path: "t", status: "passed" }], daysAgo(2));
+  // newest first: 20 green runs, then a long run of red behind them
+  const runs = [
+    ...Array.from({ length: 20 }, (_, i) => pass(i)),
+    ...Array.from({ length: 10 }, (_, i) => fail(i)),
+  ];
+  assert.equal(flakyWindows(runs, NOW).get("t")?.length, 20);
+  assert.deepEqual(detectFlaky(runs, undefined, NOW), [], "the old failures are out of sample");
+
+  // one recent failure inside the sample is still not enough on its own
+  assert.deepEqual(detectFlaky([fail(99), ...runs.slice(0, 19)], undefined, NOW), []);
+});
+
+test("flaky means more than a quarter of the sample failed", () => {
+  const sample = (fails: number, total: number): string[] =>
+    Array.from({ length: total }, (_, i) => (i < fails ? "failed" : "passed"));
+  assert.equal(isFlaky(sample(5, 20)), false, "exactly 25% is not more than 25%");
+  assert.equal(isFlaky(sample(6, 20)), true);
+  assert.equal(isFlaky(sample(1, 4)), false);
+  assert.equal(isFlaky(sample(1, 3)), true);
+  // a single failed result is the whole sample, so it counts
+  assert.equal(isFlaky(["failed"]), true);
+  assert.equal(isFlaky(["passed"]), false);
+  assert.equal(isFlaky([]), false, "no evidence is not flakiness");
 });

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { RunRecord } from "../runrecord.js";
-import { describeRun, runsTable, timelineRows } from "./model.js";
+import { describeRun, recordedTests, runsTable, timelineRows } from "./model.js";
 
 function run(overrides: Partial<RunRecord> = {}): RunRecord {
   return {
@@ -119,4 +119,45 @@ test("a test shorter than one cell still gets a visible bar", () => {
     10,
   );
   assert.equal(rows[1].bar, "         █");
+});
+
+test("the recorded-tests view marks the flaky ones, on the recent window", () => {
+  const now = Date.parse("2026-08-01T12:00:00.000Z");
+  const at = (days: number): string => new Date(now - days * 86_400_000).toISOString();
+  const history = {
+    runs: [
+      run({
+        id: "new",
+        startedAt: at(1),
+        tests: [
+          { path: "ci/flaky", status: "failed" },
+          { path: "ci/stable", status: "passed" },
+          { path: "ci/was-bad", status: "passed" },
+        ],
+      }),
+      run({
+        id: "mid",
+        startedAt: at(2),
+        tests: [
+          { path: "ci/flaky", status: "passed" },
+          { path: "ci/stable", status: "passed" },
+          { path: "ci/was-bad", status: "passed" },
+        ],
+      }),
+      // an old bad patch: it still counts towards the totals, never the verdict
+      run({
+        id: "old",
+        startedAt: at(40),
+        tests: [{ path: "ci/was-bad", status: "failed" }],
+      }),
+    ],
+  } as unknown as Parameters<typeof recordedTests>[0];
+
+  const tests = recordedTests(history, now);
+  assert.deepEqual(
+    tests.map((t) => `${t.path}:${t.flaky}`),
+    ["ci/flaky:true", "ci/stable:false", "ci/was-bad:false"],
+  );
+  assert.equal(tests[2].fails, 1, "the old failure is still counted");
+  assert.equal(tests[2].occurrences, 3);
 });
