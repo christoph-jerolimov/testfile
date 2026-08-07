@@ -15,7 +15,7 @@ pipeline {
     }
     stage('Testfile') {
       steps {
-        sh 'npx --yes @testfile/runner run --reporter junit --output junit.xml'
+        sh 'npx --yes @testfile/runner start --reporter junit --output junit.xml'
       }
     }
   }
