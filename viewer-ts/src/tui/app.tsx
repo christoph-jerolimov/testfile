@@ -1,6 +1,6 @@
 // The read-only viewer TUI: recorded runs and per-test results, watching
 // .testfile/runs/ for changes. It never starts tests - that is the
-// runner's job (`testfile run`).
+// runner's job (`testfile start`).
 import React, { useEffect, useRef, useState } from "react";
 import { Box, Text, useApp, useInput, useStdout } from "ink";
 import type { RunHistory, RunRecord } from "../runrecord.js";

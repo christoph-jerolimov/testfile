@@ -10,7 +10,7 @@ format and runner.
   [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
   `Testfile` files are associated with YAML automatically.
 - **Run from the editor**: a `▶ run` code lens above every test runs it (with
-  its nested tests) via `testfile run -n <path>` in the shared *Testfile* terminal.
+  its nested tests) via `testfile start -n <path>` in the shared *Testfile* terminal.
   `Testfile: Run Test at Cursor` does the same for the test under the cursor,
   `Testfile: Run All Tests` runs everything.
 - **Testfile Runs** view in the explorer: the recorded runs from

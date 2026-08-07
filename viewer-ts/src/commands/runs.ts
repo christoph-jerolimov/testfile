@@ -164,7 +164,7 @@ export function registerRuns(program: Command): void {
           const shown = isEmptyFilter(filter)
             ? ""
             : `${describeFilter(history.runs.length, loaded.runs.length)} · `;
-          console.log(color(90, `\n${shown}details: testfile-viewer run <id>`));
+          console.log(color(90, `\n${shown}details: testfile-viewer inspect run <id>`));
         } catch (err) {
           commandFailed(err);
         }

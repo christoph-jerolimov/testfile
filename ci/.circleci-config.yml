@@ -20,7 +20,7 @@ jobs:
           command: npm ci --no-audit --no-fund
       - run:
           name: Testfile
-          command: npx --yes @testfile/runner run --reporter junit --output junit.xml
+          command: npx --yes @testfile/runner start --reporter junit --output junit.xml
       - store_test_results:
           path: junit.xml
       - store_artifacts:

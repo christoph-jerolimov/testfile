@@ -64,7 +64,7 @@ export function registerMerge(program: Command): void {
             `${record.tests.length} test${record.tests.length === 1 ? "" : "s"}, ` +
             formatMs(record.durationMs),
         );
-        console.log(color(90, `\ndetails: testfile-viewer run ${record.id}`));
+        console.log(color(90, `\ndetails: testfile-viewer inspect run ${record.id}`));
         if (record.status !== "passed") process.exitCode = 1;
       } catch (err) {
         commandFailed(err);

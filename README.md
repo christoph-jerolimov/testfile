@@ -67,7 +67,7 @@ npm test --workspace schema
 npm test --workspace runner-ts
 
 # run this repository's own Testfile with the runner
-node runner-ts/dist/cli.js run          # plain output
+node runner-ts/dist/cli.js start        # plain output
 node viewer-ts/dist/cli.js tui          # browse the recorded runs
 
 # build the documentation website

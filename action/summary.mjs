@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Writes a Markdown table of the most recent recorded run to the job
 // summary ($GITHUB_STEP_SUMMARY). Used by the composite action after
-// `testfile run`; exits quietly when there is no run record.
+// `testfile start`; exits quietly when there is no run record.
 //
 //   node summary.mjs <tested-path>
 import { appendFileSync } from "node:fs";

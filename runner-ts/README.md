@@ -7,11 +7,11 @@ The reference runner for the
 readiness checks and stopping them gracefully — plus an interactive TUI.
 
 ```sh
-testfile run            # run the suite, stream progress, record the run
-testfile tui            # interactive terminal UI (tests, runs, results, services)
-testfile run -w -f unit # watch mode + filter: a tight edit-test loop
-testfile validate       # check the file against the JSON schema
-testfile init           # write a starter Testfile from package.json
+testfile start              # run the suite, stream progress, record the run
+testfile tui                # interactive terminal UI (tests, runs, results, services)
+testfile start -w -f unit   # watch mode + filter: a tight edit-test loop
+testfile validate           # check the file against the JSON schema
+testfile init               # write a starter Testfile from package.json
 ```
 
 Beyond that core, the same binary covers the special cases:

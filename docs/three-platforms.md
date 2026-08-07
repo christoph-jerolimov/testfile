@@ -138,9 +138,9 @@ The result is an ordinary run folder. Download the `testfile-run-merged`
 artifact, unpack it into `.testfile/runs/`, and every viewer shows it:
 
 ```sh
-testfile-viewer run 20260805-101500-merged   # the tests, per platform
-testfile-viewer tui                          # browse it in the terminal
-testfile-viewer serve                        # ... or in the browser
+testfile-viewer inspect run 20260805-101500-merged   # the tests, per platform
+testfile-viewer tui                                  # browse it in the terminal
+testfile-viewer serve                                # ... or in the browser
 ```
 
 Each test appears once per platform, tagged with its variant, and the run
@@ -176,9 +176,9 @@ The same command merges [shards](./cli#sharding-across-machines). Sharding split
 suite, so no test appears twice and **no variants are needed**:
 
 ```sh
-testfile run --shard 1/3 &   # on three machines
-testfile run --shard 2/3 &
-testfile run --shard 3/3 &
+testfile start --shard 1/3 &   # on three machines
+testfile start --shard 2/3 &
+testfile start --shard 3/3 &
 testfile-viewer merge run-1 run-2 run-3
 ```
 

@@ -14,7 +14,7 @@ test:
 
     # One test definition, five runs: every Node version against every
     # PostgreSQL version. Run a single combination with:
-    #   testfile run -m node:22 -m postgres:17
+    #   testfile start -m node:22 -m postgres:17
     - name: node ${{ matrix.node }} / postgres ${{ matrix.postgres }}
       tags: [matrix]
       matrix:

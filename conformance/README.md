@@ -17,7 +17,7 @@ The harness (`run.mjs`) runs every case against the runner under test:
 1. The case directory is **copied to a fresh temporary directory**, so cases
    are hermetic and may write files.
 2. The runner is invoked as
-   `<runner> run <dir> --reporter json --output <file>`, with any `env`
+   `<runner> start <dir> --reporter json --output <file>`, with any `env`
    from `expected.yaml` added to the environment.
 3. The runner's **exit code**, the report's **run status** and the
    **per-test statuses** (matched by test path) are compared against
@@ -41,7 +41,7 @@ A conforming runner must support this command shape (or ship an adapter
 that does):
 
 ```sh
-<runner> run <path> --reporter json --output <file>
+<runner> start <path> --reporter json --output <file>
 ```
 
 and write a JSON report containing at least:

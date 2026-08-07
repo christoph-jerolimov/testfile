@@ -35,7 +35,7 @@ export function registerInit(program: Command): void {
         console.log(`${color(32, "✔")} wrote ${file}`);
         if (imported.length > 0) console.log(color(90, `imported from: ${imported.join(", ")}`));
         for (const note of notes) console.log(color(33, `! ${note}`));
-        console.log(color(90, "run it with: testfile run   (or testfile-viewer tui)"));
+        console.log(color(90, "run it with: testfile start   (or testfile-viewer tui)"));
       } catch (err) {
         console.error(`${color(31, "✘")} ${err instanceof Error ? err.message : err}`);
         process.exitCode = 1;

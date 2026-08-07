@@ -57,7 +57,7 @@ test:
 Run it with the [`testfile` CLI](./cli):
 
 ```sh
-testfile run          # plain output
+testfile start        # plain output
 testfile-viewer tui   # browse recorded runs (read-only terminal UI)
 ```
 

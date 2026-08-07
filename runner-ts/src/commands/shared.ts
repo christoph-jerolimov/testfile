@@ -159,8 +159,8 @@ export function resolveFilters(
   };
 }
 
-// Shared by `list` and `run --dry-run`.
-// What `list --json` writes: the selected tests in execution order, flat,
+// Shared by `inspect` and `start --dry-run`.
+// What `inspect --json` writes: the selected tests in execution order, flat,
 // with the path carrying the nesting - the same key `run.yaml`'s tests[]
 // uses, so the two read alike.
 export interface SuiteEntry {

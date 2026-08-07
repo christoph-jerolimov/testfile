@@ -10,7 +10,7 @@ testfile:
   # itself; GitLab's own `services:` are not required.
   script:
     - npm ci --no-audit --no-fund
-    - npx --yes @testfile/runner run --reporter junit --output junit.xml
+    - npx --yes @testfile/runner start --reporter junit --output junit.xml
   artifacts:
     when: always
     paths:
