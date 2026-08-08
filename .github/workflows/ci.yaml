@@ -8,7 +8,8 @@ on:
 # The whole CI is described by the Testfile in the repository root and runs
 # through the bundled action (see action.yml) - schema validation, runner
 # build & tests, website build, conformance suite and the action smoke test
-# are tests in that file. Failures are annotated on the PR by the action.
+# are tests in that file. Failures are annotated on the PR by the action,
+# and every test reports its own commit status (see `statuses:` below).
 #
 # One job, three platforms: the runner spawns processes, joins paths and
 # resolves globs, so Linux alone would not catch the portability bugs. Tests
@@ -28,6 +29,11 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    # `statuses: write` is what lets the action report each test as its own
+    # commit status; the rest of the job only reads the checkout.
+    permissions:
+      contents: read
+      statuses: write
     steps:
       - uses: actions/checkout@v7
       # The uploaded testfile-run artifact contains the JUnit result
@@ -40,6 +46,12 @@ jobs:
           variants: platform=${{ matrix.os }}
           # artifact names are unique per workflow run, so each leg needs its own
           artifact-name: testfile-run-${{ matrix.os }}
+          # One commit status per test, so a red pull request names the test
+          # rather than the platform it was hiding in. The contexts carry the
+          # variant above, so the three legs report side by side instead of
+          # overwriting each other. A pull request from a fork gets a
+          # read-only token and logs a warning here - that is not a failure.
+          statuses: true
 
   merge:
     name: Merge the platform runs
