@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content";
+import { examples, firstExample } from "../examples";
 import { specPages } from "../spec";
 
 interface Props {
@@ -29,7 +30,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
       <a class="brand" href={`${base}/`}><span class="brand-icon">🐙</span>Testfile</a>
       <nav class="top">
         <a href={`${base}/docs/${docs[0].id}`}>Documentation</a>
-        <a href={`${base}/examples`}>Examples</a>
+        <a href={`${base}/examples/${firstExample.id}`}>Examples</a>
       </nav>
       <nav class="top right">
         <a href="https://github.com/christoph-jerolimov/testfile">GitHub</a>
@@ -48,6 +49,19 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
                     <li>
                       <a href={href} aria-current={currentPath === href ? "page" : undefined}>
                         {doc.data.title}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+              <p class="nav-title">Examples</p>
+              <ul>
+                {examples.map((example) => {
+                  const href = `${base}/examples/${example.id}`;
+                  return (
+                    <li>
+                      <a href={href} aria-current={currentPath === href ? "page" : undefined}>
+                        {example.meta.title}
                       </a>
                     </li>
                   );

@@ -1,5 +1,6 @@
 ---
 import { Code } from "astro:components";
+import { firstExample } from "../examples";
 import Layout from "../layouts/Layout.astro";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -41,7 +42,7 @@ test:
       </p>
       <div class="cta">
         <a class="button primary" href={`${base}/docs/getting-started`}>Get started</a>
-        <a class="button ghost" href={`${base}/examples`}>Examples</a>
+        <a class="button ghost" href={`${base}/examples/${firstExample.id}`}>Examples</a>
       </div>
     </div>
     <div class="hero-code">
@@ -157,7 +158,7 @@ test:
     </div>
     <p class="all-features-cta">
       <a class="button ghost" href={`${base}/docs/writing-tests`}>Read the docs</a>
-      <a class="button ghost" href={`${base}/examples`}>Browse examples</a>
+      <a class="button ghost" href={`${base}/examples/${firstExample.id}`}>Browse examples</a>
     </p>
   </section>
 </Layout>
