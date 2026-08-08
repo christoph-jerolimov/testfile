@@ -35,6 +35,9 @@ against your repository's Testfile. The job fails when tests fail.
 | `node-version` | `22` | Node.js version for the runner. |
 | `annotations` | `true` | Emit GitHub annotations for failed tests — each failure appears on the PR with the tail of its log. |
 | `summary` | `true` | Write a job-summary table of the run's results (status, duration and notes per test). |
+| `statuses` | `false` | Report one [commit status per test](#a-status-per-test) — needs `permissions: statuses: write`. |
+| `status-prefix` | `Testfile: ` | Prefix of every status context, so the per-test statuses group together. |
+| `token` | `github.token` | Token the commit statuses are written with. |
 | `upload-run` | `true` | Upload the recorded run (`.testfile/runs/<id>` as a `.tgz`) as a build artifact. |
 | `artifact-name` | `testfile-run` | Name of the uploaded run artifact. |
 | `variants` | – | What tells this run apart from the other legs of a matrix, as `key=value` pairs separated by commas or newlines (e.g. `platform=ubuntu-latest`). Recorded in `run.yaml`; [merging](./cli#merging-runs) needs it. |
@@ -120,6 +123,64 @@ When tests fail, the action annotates the workflow run (and the PR's
 files/checks views) with one error per failed test carrying the last lines
 of its log, plus a summary notice — no extra configuration needed. The job
 summary shows a results table for every run, passing or failing.
+
+## A status per test
+
+By default a commit gets one verdict from the action: the job passed or it
+did not. With `statuses: true` every test that ran reports its own commit
+status instead, so the pull request's checks list names the test that broke
+rather than the job it was hiding in:
+
+```yaml
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # a status is a write to the repository; the default token may not have it
+    permissions:
+      contents: read
+      statuses: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: christoph-jerolimov/testfile@main
+        with:
+          statuses: true
+```
+
+That produces one status per test, named after the test's path behind the
+`status-prefix`:
+
+| Status | State | Description |
+| ------ | ----- | ----------- |
+| `Testfile: ci/install` | success | `passed in 12.4s` |
+| `Testfile: ci/checks/lint` | success | `passed in 900ms (cached)` |
+| `Testfile: ci/checks/unit` | failure | `failed in 2.0s` |
+| `Testfile: ci/checks/e2e` | success | `skipped` |
+
+Each links back to the workflow run. A few details worth knowing:
+
+- **Only the tests get a status**, not the `sequence` and `parallel` groups
+  around them — a group's result is the aggregate its children already
+  report, and the job's own status covers the run as a whole.
+- **On a pull request the status lands on the PR's head commit**, not on the
+  ephemeral merge commit, which is where GitHub shows it.
+- **Skipped tests report success**, with `skipped` as the description. A
+  commit status has no neutral state, and a [required
+  check](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches#require-status-checks-before-merging)
+  left pending forever would block the pull request over a test that was
+  never meant to run on this platform.
+- **`variants` go into the context.** The legs of a matrix all report on the
+  same commit, so `variants: platform=${{ matrix.os }}` makes the contexts
+  `Testfile: ci/checks/lint (platform=ubuntu-latest)` and the legs stop
+  overwriting each other. Without it the last leg to finish wins.
+- **Writing a status never fails the build.** A token without
+  `statuses: write` gets one warning in the log, not a red job.
+
+Because the contexts are stable, they can be used as required checks — pick
+`Testfile: ci/checks/unit` in the branch protection rules and a pull request
+cannot merge while that one test is red, whatever the rest of the suite
+does. Keep in mind that a test which stops being selected (by a filter, or
+by `changed`) stops reporting its status too, and a required check that
+never arrives blocks the merge.
 
 ## Bringing CI runs home
 
