@@ -73,6 +73,18 @@ inputs:
     description: "Write a job-summary table of the run's results"
     required: false
     default: "true"
+  statuses:
+    description: "Report one GitHub commit status per executed test, so the commit and the pull request show which tests passed rather than only whether the job did. Needs `permissions: statuses: write` in the workflow"
+    required: false
+    default: "false"
+  status-prefix:
+    description: "Prefix of every commit status context, so the per-test statuses group together and stay apart from other checks"
+    required: false
+    default: "Testfile: "
+  token:
+    description: "Token used to write the commit statuses"
+    required: false
+    default: ${{ github.token }}
   upload-run:
     description: "Upload the recorded run (.testfile/runs/<id>) as a build artifact, importable with `testfile-viewer github sync`"
     required: false
@@ -143,6 +155,17 @@ runs:
       env:
         INPUT_PATH: ${{ inputs.path }}
       run: node "${{ github.action_path }}/action/annotate.mjs" "$INPUT_PATH"
+
+    # One status per test, on the pull request's head commit rather than on
+    # the ephemeral merge commit GITHUB_SHA points at.
+    - name: Report a commit status per test
+      if: ${{ always() && inputs.statuses == 'true' }}
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_STATUS_PREFIX: ${{ inputs['status-prefix'] }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: node "${{ github.action_path }}/action/statuses.mjs" "$INPUT_PATH"
 
     - name: Write the job summary
       if: ${{ always() && inputs.summary == 'true' }}

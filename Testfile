@@ -110,6 +110,16 @@ test:
           inputs:
             - action/labels.mjs
             - action/labels.test.mjs
+        # The commit statuses the action writes end up in the pull request's
+        # checks, and a required check keyed on a context that quietly
+        # changed shape blocks merges - so the shape is pinned too.
+        - name: action-statuses
+          tags: [fast, action]
+          command: node --test action/statuses.test.mjs
+          inputs:
+            - action/statuses.mjs
+            - action/statuses.test.mjs
+            - action/record.mjs
         # Runs nothing: it maps the specification's sections onto the case
         # ids, so a new spec section cannot arrive without a case.
         - name: conformance-coverage
@@ -171,3 +181,6 @@ test:
             grep -q '<testcase name="hello"' "$out"
             grep -q 'failures="0"' "$out"
             rm -f "$out"
+            # Reporting the run must never be what fails a build: without a
+            # token there is nothing to post to, and that is not an error.
+            GITHUB_TOKEN= node action/statuses.mjs .github/action-smoke
