@@ -553,7 +553,7 @@
           "minLength": 1
         },
         "engine": {
-          "description": "Container engine to use. 'auto' picks podman if available, otherwise docker. 'kubernetes' (local or remote cluster) is reserved for a future version.",
+          "description": "Container engine to use. 'auto' picks podman if available, otherwise docker. 'kubernetes' runs the service as a pod on the cluster the kubeconfig points at, with the declared ports forwarded to localhost.",
           "enum": [
             "auto",
             "podman",
@@ -593,6 +593,14 @@
           "description": "Attach the container to this named network, creating it if needed. The service name becomes a network alias, so services on the same network reach each other by name.",
           "type": "string",
           "minLength": 1
+        },
+        "context": {
+          "type": "string",
+          "description": "kubernetes engine only: kubeconfig context to use. Default: kubectl's current context."
+        },
+        "namespace": {
+          "type": "string",
+          "description": "kubernetes engine only: namespace to run in (must exist). Default: the context's namespace."
         },
         "entrypoint": {
           "description": "Override the image entrypoint.",
@@ -801,12 +809,11 @@
           "minLength": 1
         },
         "engine": {
-          "description": "Container engine: 'auto' (default: podman if available, else docker), 'podman', 'docker'. 'kubernetes' is reserved for a future version.",
+          "description": "Container engine: 'auto' (default: podman if available, else docker), 'podman', 'docker'. The kubernetes engine is for services only - a test body needs the project mounted and runs locally.",
           "enum": [
             "auto",
             "podman",
-            "docker",
-            "kubernetes"
+            "docker"
           ]
         },
         "env": {

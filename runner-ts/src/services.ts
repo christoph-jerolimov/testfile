@@ -1,6 +1,7 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { resolve as resolvePath } from "node:path";
+import { KubernetesService, type KubectlRunner } from "./kubernetes.js";
 import type { ContainerDef, ServiceDef } from "./model.js";
 import { OutputBuffer } from "./output.js";
 import { waitReady } from "./ready.js";
@@ -127,6 +128,8 @@ export function sharedServiceKey(def: ServiceDef, scopes: Scopes, cwd: string): 
       ? {
           image: resolveTemplate(container.image, scopes, where),
           engine: container.engine,
+          context: opt(container.context),
+          namespace: opt(container.namespace),
           ports: (container.ports ?? []).map((p) => resolveTemplate(p, scopes, where)),
           env: resolveEnvMap(container.env, scopes, where),
           volumes: (container.volumes ?? []).map((v) => resolveTemplate(v, scopes, where)),
@@ -151,6 +154,8 @@ export class ServiceInstance extends EventEmitter {
   private child?: ChildProcess; // service process, or the log follower for containers
   private containerId?: string;
   private engine?: string;
+  private k8s?: KubernetesService;
+  private k8sAttempt = 0;
   private exited = false;
   private stopping = false;
   private env: Record<string, string> = {};
@@ -162,6 +167,8 @@ export class ServiceInstance extends EventEmitter {
   constructor(
     readonly name: string,
     readonly def: ServiceDef,
+    // Test seam for the kubernetes engine; the real runner spawns kubectl.
+    private readonly kubectl?: KubectlRunner,
   ) {
     super();
   }
@@ -190,7 +197,7 @@ export class ServiceInstance extends EventEmitter {
       : cwd;
     try {
       if (this.def.container) {
-        await this.startContainer(myScopes, where);
+        await this.startContainer(myScopes, where, signal);
       } else {
         this.startProcess(myScopes, where);
       }
@@ -242,12 +249,13 @@ export class ServiceInstance extends EventEmitter {
     this.child = child;
   }
 
-  private async startContainer(scopes: Scopes, where: string): Promise<void> {
+  private async startContainer(scopes: Scopes, where: string, signal: AbortSignal): Promise<void> {
     const container = this.def.container!;
     const engine =
       container.engine && container.engine !== "auto" ? container.engine : detectEngine();
     if (engine === "kubernetes") {
-      throw new Error('engine "kubernetes" is reserved for a future version');
+      await this.startKubernetes(container, scopes, where, signal);
+      return;
     }
     this.engine = engine;
 
@@ -281,6 +289,37 @@ export class ServiceInstance extends EventEmitter {
     this.child = logs;
   }
 
+  // Services on a Kubernetes cluster: the pod and its DNS Service are
+  // managed by KubernetesService; the declared ports arrive on 127.0.0.1
+  // through kubectl port-forward, so readiness checks and tests connect to
+  // localhost exactly as with published container ports.
+  private async startKubernetes(
+    container: ContainerDef,
+    scopes: Scopes,
+    where: string,
+    signal: AbortSignal,
+  ): Promise<void> {
+    this.engine = "kubernetes";
+    this.k8sAttempt++;
+    this.k8s = new KubernetesService(this.name, container, {
+      output: this.output,
+      scopes,
+      where,
+      signal,
+      runner: this.kubectl,
+      onDeath: () => {
+        this.exited = true;
+        if (this.stopping) return;
+        if (this.status === "ready") {
+          this.error = "pod exited unexpectedly";
+          this.setStatus("failed");
+          this.onUnexpectedExit?.();
+        }
+      },
+    });
+    await this.k8s.start(this.k8sAttempt);
+  }
+
   async stop(): Promise<void> {
     if (this.stopping || this.status === "pending" || this.status === "stopped") return;
     this.stopping = true;
@@ -299,7 +338,9 @@ export class ServiceInstance extends EventEmitter {
         cmd.stderr.on("data", (d) => this.output.append(d, "stderr"));
         await waitExit(cmd, timeoutMs);
       }
-      if (this.containerId && this.engine) {
+      if (this.k8s) {
+        await this.k8s.stop(Math.max(1, Math.ceil(timeoutMs / 1000)));
+      } else if (this.containerId && this.engine) {
         const seconds = Math.max(1, Math.ceil(timeoutMs / 1000));
         await execCapture(
           this.engine,
@@ -337,6 +378,7 @@ export class ServiceInstance extends EventEmitter {
     this.exited = false;
     this.child = undefined;
     this.containerId = undefined;
+    this.k8s = undefined;
     this.error = undefined;
     this.output.system("--- restart ---");
     try {
@@ -350,7 +392,9 @@ export class ServiceInstance extends EventEmitter {
   kill(): void {
     this.stopping = true;
     this.signalGroup("SIGKILL");
-    if (this.containerId && this.engine) {
+    if (this.k8s) {
+      this.k8s.kill();
+    } else if (this.containerId && this.engine) {
       spawnSync(this.engine, ["kill", this.containerId], { stdio: "ignore" });
     }
     this.setStatus("stopped");

@@ -46,8 +46,8 @@ variable combination.
 
 Tests may depend on **services** — long-running processes the tests need,
 such as the web server or app under test, or databases in specific versions.
-Services run as local processes or as containers (podman/docker today;
-kubernetes is a reserved engine name for a future version). The runner starts
+Services run as local processes or as containers (podman/docker locally, or
+as pods on a Kubernetes cluster). The runner starts
 them before the dependent tests, waits until they are **ready** (HTTP check,
 TCP check, or a log pattern on stdout/stderr), and **gracefully stops** them
 afterwards — including when the user aborts the run with Ctrl+C.
@@ -304,7 +304,7 @@ runner marks the service as failed and aborts the dependent tests.
 | Field     | Type            | Description |
 | --------- | --------------- | ----------- |
 | `image`   | string (req.)   | Image reference, e.g. `docker.io/library/postgres:16`. |
-| `engine`  | enum            | `auto` (default: podman if available, else docker), `podman`, `docker`. `kubernetes` is reserved for a future version (run in-cluster or on a remote cluster). |
+| `engine`  | enum            | `auto` (default: podman if available, else docker), `podman`, `docker`, `kubernetes` (see [Kubernetes](#kubernetes)). `auto` never picks kubernetes; it must be asked for. |
 | `ports`   | array of string | `"HOST:CONTAINER"` mappings; the host part may be a template like `"${{ ports.db }}:5432"`. |
 | `env`     | map             | Environment inside the container. |
 | `volumes` | array of string | `"HOST:CONTAINER[:OPTIONS]"` mounts. |
@@ -312,6 +312,49 @@ runner marks the service as failed and aborts the dependent tests.
 | `network` | string          | Attach to this named container network, creating it if needed (networks are left in place after the run). The service name becomes a network alias, so services on the same network reach each other by name. |
 | `entrypoint` | array of string | Override the image entrypoint. |
 | `command` | array of string | Override the image command. |
+
+### Kubernetes
+
+With `engine: kubernetes` the service runs as a **Pod** on whatever cluster
+the kubeconfig points at (overridable per service with `context` and
+`namespace`; the namespace must exist). The pod is created with
+`restartPolicy: Never` — the runner owns the lifecycle, and a service that
+dies must be reported as failed, not restarted behind the runner's back.
+
+Two directions of reachability, provided differently:
+
+- **Between services**: every service with `ports` also gets a Kubernetes
+  **Service** carrying the service's name (sanitized to a DNS label), so
+  sibling services in the same namespace reach it by name over cluster DNS —
+  the same role the network alias plays on a container network. `needs`
+  between services works unchanged.
+- **From the tests**: the local test process is outside the cluster. Each
+  `"LOCAL:CONTAINER"` port mapping is forwarded from `127.0.0.1:LOCAL` to
+  the pod via port-forward, so readiness checks and tests connect to
+  localhost exactly as with published container ports. Both sides of a
+  mapping must be plain ports after template resolution.
+
+Requirements a runner must meet:
+
+- **Status is followed, not assumed.** While the pod starts, the runner
+  watches its state and fails with the cluster's own reason when the pod can
+  never run (invalid image name, exhausted image pull, container exited) —
+  it must not idle into the readiness timeout.
+- **Logs are streamed** into the service's log (readiness `log` patterns
+  match on them, and they land in the run folder like any service log). A
+  dropped log stream or port-forward is re-established while the pod still
+  runs; a pod that is gone marks the service failed and aborts dependents.
+- **Cleanup**: stopping deletes the pod and its Service, passing the `stop`
+  timeout as the grace period, without waiting for termination. Everything
+  created carries the label `app.kubernetes.io/managed-by: testfile`, so
+  leftovers of a crashed runner are findable.
+
+`volumes` and `network` are errors with this engine: host paths mean
+nothing on a cluster, and services in one namespace already reach each
+other by name. Test bodies (`container:` on a test) cannot use it either —
+they need the project mounted and run locally. Concurrent runs sharing a
+namespace would race on the DNS Service name; give them separate
+namespaces.
 
 ### Readiness (`ready`)
 

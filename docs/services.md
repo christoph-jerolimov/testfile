@@ -126,14 +126,71 @@ container:
   command: ["./start.sh"]
 ```
 
-`engine: auto` prefers podman and falls back to docker. `kubernetes` is a
-reserved engine name: running service containers inside the cluster the
-runner runs in, or on a remote cluster, is planned for a future version.
+`engine: auto` prefers podman and falls back to docker. It never picks
+kubernetes — that engine has to be asked for.
 
 With `network`, service containers can talk to each other directly: each
 container joins the named network with its service name as alias, so an app
 container reaches its database at `db:5432` instead of going through host
 ports. The network is created on first use and left in place after the run.
+
+## Services on a Kubernetes cluster
+
+`engine: kubernetes` runs the service as a pod on whatever cluster your
+kubeconfig points at — a remote one, or a local kind/minikube. Nothing else
+about the Testfile changes:
+
+```yaml
+services:
+  db:
+    container:
+      image: docker.io/library/postgres:16
+      engine: kubernetes
+      namespace: ci          # optional; must exist (kubectl's default otherwise)
+      context: staging       # optional kubeconfig context
+      ports:
+        - "${{ ports.db }}:5432"
+      env:
+        POSTGRES_PASSWORD: test
+    ready:
+      tcp: ${{ ports.db }}
+      timeout: 120s
+```
+
+The declared ports are forwarded from `127.0.0.1` into the pod, so your
+tests and readiness checks connect to localhost exactly as they would with
+published container ports — `DATABASE_URL=postgres://…@localhost:${{ ports.db }}/…`
+keeps working unchanged.
+
+Between services the wiring is better than the forward suggests: each
+service with ports also gets a Kubernetes Service carrying its name, so
+sibling services in the same namespace reach each other by name over
+cluster DNS (`db:5432`), the same way the network alias works for container
+networks. `needs` between services behaves as always.
+
+What the runner does for stability, since two clusters hops are involved:
+
+- **Pod status is followed while starting.** A typo'd image fails in
+  seconds with the registry's message (`InvalidImageName`,
+  `ErrImagePull`…) instead of idling into the readiness timeout.
+- **Logs are streamed** (`ready.log` matches on them, and they end up in
+  the run folder like any service log). If the log stream or the
+  port-forward drops — both are known to die on network hiccups — it is
+  re-established automatically while the pod still runs.
+- **A pod that dies is a failed service**: pods run with
+  `restartPolicy: Never`, so a crash aborts the dependent tests instead of
+  being silently restarted behind the runner's back.
+- **Cleanup deletes the pod and its Service** (the `stop` timeout becomes
+  the grace period). Everything is labelled
+  `app.kubernetes.io/managed-by: testfile`, so leftovers of a crashed
+  runner are one `kubectl delete ... -l` away.
+
+Limits worth knowing: `volumes` and `network` are rejected (host paths mean
+nothing on a cluster; DNS already covers service-to-service), a
+[test body container](./writing-tests#running-a-test-in-a-container) still
+runs locally, and two concurrent runs sharing a namespace would fight over
+the DNS name — give them separate namespaces. `testfile doctor` checks that
+kubectl is installed and the cluster answers.
 
 ## Readiness checks
 

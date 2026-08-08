@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=../../../schema/testfile.schema.json
+version: 0
+ports:
+  web: random
+services:
+  # The pod side: an httpd on the cluster, reached from the local test
+  # through the forwarded port. The tcp readiness check already crosses the
+  # port-forward once before the test runs.
+  httpd:
+    container:
+      image: docker.io/library/busybox:1.36
+      engine: kubernetes
+      ports:
+        - "${{ ports.web }}:8080"
+      command: ["httpd", "-f", "-p", "8080"]
+    ready:
+      tcp: ${{ ports.web }}
+      timeout: 120s
+test:
+  name: root
+  sequence:
+    # the forwarded port serves from inside the cluster
+    - name: reach-service
+      script: |
+        code=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:${{ ports.web }}/ || true)
+        test "$code" = "404" || test "$code" = "200"

@@ -35,7 +35,10 @@ export function buildTestContainerArgs(
 ): TestContainerPlan {
   const engine = def.engine && def.engine !== "auto" ? def.engine : detect();
   if (engine === "kubernetes") {
-    throw new Error(`${where}: container engine "kubernetes" is reserved for a future version`);
+    throw new Error(
+      `${where}: the kubernetes engine runs services in a cluster; a test body needs the ` +
+        "project mounted and runs locally (use podman or docker here)",
+    );
   }
 
   // The whole project is mounted, not just the test's workdir, so relative
