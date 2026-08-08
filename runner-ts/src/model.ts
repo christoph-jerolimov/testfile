@@ -122,6 +122,10 @@ export interface ContainerDef {
   network?: string;
   entrypoint?: string[];
   command?: string[];
+  // kubernetes engine only: which kubeconfig context / namespace to run in.
+  // Both default to what kubectl would use on its own.
+  context?: string;
+  namespace?: string;
 }
 
 export interface ReadyDef {

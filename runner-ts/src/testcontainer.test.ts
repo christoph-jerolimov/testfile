@@ -86,5 +86,8 @@ test("workdir, volumes, pull, network, options and env are honored", () => {
 test("templates are resolved and kubernetes is rejected", () => {
   const result = plan({ image: "app:${{ ports.web }}", engine: "podman" });
   assert.ok(result.args.includes("app:5001"));
-  assert.throws(() => plan({ image: "x", engine: "kubernetes" }), /reserved for a future version/);
+  assert.throws(
+    () => plan({ image: "x", engine: "kubernetes" }),
+    /test body needs the project mounted/,
+  );
 });

@@ -391,9 +391,43 @@ function gitChecks(env: DoctorEnv, baseDir: string): Check[] {
   return checks;
 }
 
+// The kubernetes engine is not a binary of its own: it needs kubectl, and
+// behind kubectl a reachable cluster.
+function kubernetesChecks(env: DoctorEnv): Check[] {
+  if (!env.probe("kubectl", ["version", "--client"]).ok) {
+    return [
+      {
+        name: "container engine (kubernetes)",
+        status: "fail",
+        detail: "kubectl not found",
+        hint: "this Testfile runs services on kubernetes - install kubectl",
+      },
+    ];
+  }
+  const cluster = env.probe("kubectl", ["cluster-info"]);
+  if (!cluster.ok) {
+    return [
+      {
+        name: "container engine (kubernetes)",
+        status: "fail",
+        detail: "kubectl installed, but no reachable cluster",
+        hint: "is the kubeconfig context pointing at a running cluster?",
+      },
+    ];
+  }
+  return [
+    { name: "container engine (kubernetes)", status: "ok", detail: "kubectl and cluster respond" },
+  ];
+}
+
 function containerChecks(env: DoctorEnv, doc: TestfileDoc | undefined): Check[] {
   const needs = doc ? containerNeeds(doc) : { needed: false, engines: [] as string[] };
-  const candidates = needs.engines.length > 0 ? needs.engines : ["podman", "docker"];
+  const kubernetes = needs.engines.includes("kubernetes");
+  const localEngines = needs.engines.filter((engine) => engine !== "kubernetes");
+  // A Testfile that only uses kubernetes services needs no local engine.
+  if (needs.needed && kubernetes && localEngines.length === 0) return kubernetesChecks(env);
+  const prefix = kubernetes ? kubernetesChecks(env) : [];
+  const candidates = localEngines.length > 0 ? localEngines : ["podman", "docker"];
   const found = candidates.filter((engine) => env.probe(engine, ["--version"]).ok);
 
   // Nothing asks for a container: say what is there and move on instead of
@@ -413,6 +447,7 @@ function containerChecks(env: DoctorEnv, doc: TestfileDoc | undefined): Check[] 
 
   if (found.length === 0) {
     return [
+      ...prefix,
       {
         name: "container engine",
         status: "fail",
@@ -422,22 +457,25 @@ function containerChecks(env: DoctorEnv, doc: TestfileDoc | undefined): Check[] 
     ];
   }
 
-  return found.map((engine) => {
-    const info = env.probe(engine, ["info"]);
-    if (info.ok) {
+  return [
+    ...prefix,
+    ...found.map((engine) => {
+      const info = env.probe(engine, ["info"]);
+      if (info.ok) {
+        return {
+          name: `container engine (${engine})`,
+          status: "ok" as const,
+          detail: "installed, responding",
+        };
+      }
       return {
         name: `container engine (${engine})`,
-        status: "ok",
-        detail: "installed, responding",
+        status: "fail" as const,
+        detail: `installed, but "${engine} info" failed: ${info.output}`,
+        hint: engine === "docker" ? "is the Docker daemon running?" : `start the ${engine} machine`,
       };
-    }
-    return {
-      name: `container engine (${engine})`,
-      status: "fail",
-      detail: `installed, but "${engine} info" failed: ${info.output}`,
-      hint: engine === "docker" ? "is the Docker daemon running?" : `start the ${engine} machine`,
-    };
-  });
+    }),
+  ];
 }
 
 async function portChecks(env: DoctorEnv, doc: TestfileDoc | undefined): Promise<Check[]> {

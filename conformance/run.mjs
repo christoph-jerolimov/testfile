@@ -111,10 +111,16 @@ for (const name of readdirSync(join(here, "cases")).sort()) {
   if ((expected.requires ?? []).length > 0) {
     step(`checking required tools: ${expected.requires.join(", ")}`);
   }
+  // A tool is usable when it answers for its backend, not merely installed:
+  // engines answer `info`, kubectl answers `cluster-info` only with a
+  // reachable cluster.
+  const probeOf = (tool) => (tool === "kubectl" ? "kubectl cluster-info" : `${tool} info`);
   const missing = (expected.requires ?? []).filter(
     (tool) =>
-      spawnSync("sh", ["-c", `command -v ${tool} >/dev/null 2>&1 && ${tool} info >/dev/null 2>&1`])
-        .status !== 0,
+      spawnSync("sh", [
+        "-c",
+        `command -v ${tool} >/dev/null 2>&1 && ${probeOf(tool)} >/dev/null 2>&1`,
+      ]).status !== 0,
   );
   if (missing.length > 0) {
     console.log(`  skip    ${name} (requires ${missing.join(", ")})`);
