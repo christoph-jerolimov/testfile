@@ -21,6 +21,11 @@ base environment is:
   runner captures it through pipes. `TESTFILE_OS` and `TESTFILE_ARCH`
   describe the platform.
 
+The reverse direction exists too: `TESTFILE_ENGINE` is a variable the
+runner *reads* from its own environment to pick the
+[container engine](./services#containers) — it is not placed into the test
+environment, and tests have no reason to see it.
+
 Everything else must be forwarded explicitly with `forwardEnv` — a list of
 names or `*` patterns, at the top level or per test (applying to it and
 its nested tests):

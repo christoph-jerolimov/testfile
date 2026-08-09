@@ -65,6 +65,11 @@ directory (a test with a `workdir` lands in the mounted equivalent of it),
 and the test's environment is passed in — minus host-specific variables
 like `PATH` and `HOME`, which the image provides itself.
 
+Because the project is mounted, a test body always runs on a **local**
+engine (podman or docker, whichever [the run's engine
+selection](./services#containers) finds) — even when the run's services are
+on a kubernetes cluster, which cannot mount your working copy.
+
 A `container` on a group applies to everything nested below it, so one
 declaration can give a whole branch its toolchain:
 

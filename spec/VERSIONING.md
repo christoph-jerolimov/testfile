@@ -50,7 +50,7 @@ Testfile stays valid and keeps its meaning**. Allowed:
   `artifacts`, `include`, `envFile`, `shared` and the container options were
   added).
 - **New enum values** on existing fields, when omitting them keeps today's
-  behavior (e.g. a future `engine: kubernetes` becoming functional).
+  behavior (e.g. a new `pull:` policy).
 - **New template scopes** (`${{ new.thing }}`); unknown scopes remain errors
   until introduced.
 - **Loosening validation**: accepting documents that were previously

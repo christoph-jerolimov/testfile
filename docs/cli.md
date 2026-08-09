@@ -58,6 +58,9 @@ testfile completion fish > ~/.config/fish/completions/testfile.fish
 
 `--no-cache` ignores [cached results](./writing-tests#result-caching) for
 tests with `inputs` (fresh results still refresh the cache).
+`--engine` picks the container engine for the run — `podman`, `docker` or
+`kubernetes`; without it `TESTFILE_ENGINE` decides, and without either the
+first engine that responds is used ([how selection works](./services#containers)).
 `--fail-fast` aborts running siblings and skips everything queued as soon as
 one test fails. `--max-parallel` limits how many tests run at the same time
 across the *whole* run (group-level `maxParallel` still applies on top).
@@ -86,13 +89,17 @@ $ testfile doctor
   ↳ used by app/tests/unit - install it, or use a path to it
 ✘ command (./scripts/e2e.sh) /home/me/app/scripts/e2e.sh is missing or not executable
   ↳ used by app/tests/e2e - check the path, or chmod +x it
-✘ container engine (docker)  installed, but "docker info" failed: Cannot connect to the Docker daemon
+✘ container engine (podman)      not installed
+✘ container engine (docker)      installed, but "docker info" fails: Cannot connect to the Docker daemon
   ↳ is the Docker daemon running?
+✘ container engine (kubernetes)  kubectl not installed
+✘ engine selection               this Testfile starts containers, but no engine responds
+  ↳ install/start podman or docker, or point kubectl at a cluster
 ✘ port web                   8080 is already in use
   ↳ stop what listens on 8080, or declare "web: random" and template the value
 ✔ .testfile/                 /home/me/app/.testfile is writable
 
-4 failed, 0 warning(s), 11 checks
+7 failed, 0 warning(s), 14 checks
 ```
 
 What it looks at:
@@ -103,7 +110,8 @@ What it looks at:
 | `git` | *warns* when git is missing or the folder is not inside a work tree — only `--changed` and `testfile changes` need it |
 | `shell (…)` | a shell a test invokes (`sh` by default, or its `shell:`) cannot be started |
 | `command (…)` | an executable a `command:` starts is not on `PATH`, or the path it names is missing or not executable — see below |
-| `container engine` | the file starts containers and no engine is installed, or the engine is installed but not responding. Files without containers only get a note |
+| `container engine (…)` | one row per engine — podman, docker and kubernetes are all checked, and the first responding one is marked as what [a run would use](./services#containers). An engine that is installed but not responding (daemon down, no reachable cluster) is a warning while another covers the run, a failure when it is the pinned or only one. Files without containers only get a note |
+| `engine selection` | the file starts containers but no engine responds, or `TESTFILE_ENGINE` pins an engine that does not |
 | `port …` | a fixed `ports:` entry is already taken. `random` ports are allocated per run and never clash |
 | `.testfile/` | recorded runs cannot be written |
 

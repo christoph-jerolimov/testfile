@@ -206,7 +206,16 @@ See [sharing runs](./cli#sharing-runs) for the underlying `pack`/`import`
 commands and the S3 variant.
 
 Container services (postgres etc.) work out of the box on the standard
-`ubuntu-latest` runners, which ship with docker.
+`ubuntu-latest` runners, which ship with docker — the runner's
+[engine selection](./services#containers) finds it on its own. To pin the
+engine explicitly (or to run services on a cluster the job can reach), set
+the environment variable the runner reads:
+
+```yaml
+- uses: christoph-jerolimov/testfile@main
+  env:
+    TESTFILE_ENGINE: kubernetes
+```
 
 ## More than one platform
 
