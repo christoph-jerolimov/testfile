@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { RunRecord, RunTest } from "../types.js";
-import { ResultsView } from "./ResultsView.js";
+import { TestsView } from "./TestsView.js";
 import { RunsView } from "./RunsView.js";
+import { TestView } from "./TestView.js";
 
 // The browser side of the viewer is covered by the Playwright suite in e2e/;
 // these render the views without a browser, which is enough to pin what the
@@ -63,15 +64,15 @@ test("a run outside the default window is hidden, but a link still opens it", ()
   assert.match(markup, /run <span class="mono">20250101-000000-old0/);
 });
 
-test("the results view opens the test from the URL", () => {
-  const markup = renderToStaticMarkup(<ResultsView runs={runs} selected="ci/unit" />);
+test("the tests view opens the test from the URL", () => {
+  const markup = renderToStaticMarkup(<TestsView runs={runs} selected="ci/unit" />);
   assert.match(markup, /executions of <span class="mono">ci\/unit/);
-  const first = renderToStaticMarkup(<ResultsView runs={runs} />);
+  const first = renderToStaticMarkup(<TestsView runs={runs} />);
   assert.match(first, /executions of <span class="mono">ci</);
 });
 
-test("the results table carries a history sparkline and a verdict badge", () => {
-  const markup = renderToStaticMarkup(<ResultsView runs={runs} />);
+test("the tests table carries a history sparkline and a verdict badge", () => {
+  const markup = renderToStaticMarkup(<TestsView runs={runs} />);
   assert.match(markup, /class="spark"/);
   assert.match(markup, /aria-pressed="false">flaky only/);
   // two runs is not enough evidence to judge anything
@@ -88,7 +89,7 @@ test("the results table carries a history sparkline and a verdict badge", () => 
       { path: "ci/unit", status: index === 0 ? "passed" : "failed" },
     ];
   }
-  const verdicts = renderToStaticMarkup(<ResultsView runs={judged} />);
+  const verdicts = renderToStaticMarkup(<TestsView runs={judged} />);
   // ci is flaky: one row plus the heading, since it is the selected test
   assert.equal(verdicts.match(/class="badge flaky"/g)?.length, 2);
   assert.equal(verdicts.match(/class="badge broken"/g)?.length, 1, "ci/unit, in its row");
@@ -116,7 +117,7 @@ test("every column of both tables is a sort button", () => {
   assert.match(runsMarkup, /aria-sort="descending"/, "newest run first to begin with");
   assert.match(runsMarkup, /title="sort by startedAt"/);
 
-  const resultsMarkup = renderToStaticMarkup(<ResultsView runs={runs} />);
+  const resultsMarkup = renderToStaticMarkup(<TestsView runs={runs} />);
   // the list table (6) plus the executions table (5)
   assert.equal(resultsMarkup.match(/class="sort /g)?.length, 11);
   assert.match(resultsMarkup, /aria-sort="ascending"/, "tests read by path to begin with");
@@ -124,5 +125,27 @@ test("every column of both tables is a sort button", () => {
 
 test("without runs both views say so instead of crashing", () => {
   assert.match(renderToStaticMarkup(<RunsView runs={[]} />), /no recorded runs yet/);
-  assert.match(renderToStaticMarkup(<ResultsView runs={[]} />), /no recorded runs yet/);
+  assert.match(renderToStaticMarkup(<TestsView runs={[]} />), /no recorded runs yet/);
+});
+
+test("the test page breadcrumbs its way back and tabs its logs", () => {
+  const record = { ...runs[0] };
+  record.services = [{ name: "db", status: "stopped", log: "services/db.log" }];
+  const markup = renderToStaticMarkup(
+    <TestView runs={[record]} runId={record.id} testPath="ci/unit" />,
+  );
+  assert.match(markup, /class="breadcrumb"/);
+  assert.match(markup, /Tests<\/button>/);
+  assert.match(markup, /class="tabs"/);
+  assert.match(markup, /Overview<\/button>/);
+  assert.match(markup, /Test log<\/button>/);
+  assert.match(markup, /service db<\/button>/, "one tab per related service");
+
+  // a stale link degrades into words, not a crash
+  const gone = renderToStaticMarkup(<TestView runs={[record]} runId="gone" testPath="ci/unit" />);
+  assert.match(gone, /no longer recorded/);
+  const missing = renderToStaticMarkup(
+    <TestView runs={[record]} runId={record.id} testPath="ci/nope" />,
+  );
+  assert.match(missing, /not executed in this run/);
 });

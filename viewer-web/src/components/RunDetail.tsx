@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { fileUrl, runLogUrl, serviceLogUrl, testLogUrl } from "../api.js";
 import { previousRun } from "../diff.js";
 import { formatMs, mergedVariantLabel, startedLabel, variantLabel } from "../format.js";
+import { navigate } from "../router.js";
 import type { RunRecord } from "../types.js";
 import { DiffPanel } from "./DiffPanel.js";
 import { Log } from "./Log.js";
@@ -207,6 +208,14 @@ export function RunDetail({
             <button className="link" onClick={() => setChoice({ kind: "run" })}>
               (show merged log)
             </button>
+            {choice.kind === "test" ? (
+              <button
+                className="link"
+                onClick={() => navigate({ view: "test", runId: run.id, testPath: choice.path })}
+              >
+                (open test page)
+              </button>
+            ) : null}
           </>
         )}
       </h2>

@@ -99,3 +99,22 @@ export function groupPaths(rows: readonly TreeRow[]): string[] {
 export function serviceRows(run: RunRecord): RunService[] {
   return run.services ?? [];
 }
+
+// The services whose logs belong on a test's page: the ones declared on the
+// test's suite node or any ancestor. Runs without a recorded tree relate
+// every service - too many tabs beats missing ones.
+export function relatedServices(run: RunRecord, path: string): RunService[] {
+  const services = run.services ?? [];
+  if (services.length === 0 || !run.suite) return services;
+  const declared = new Set<string>();
+  let found = false;
+  const walk = (node: SuiteNode, prefixMatches: boolean): void => {
+    const onPath = prefixMatches && (path === node.path || path.startsWith(`${node.path}/`));
+    if (onPath) for (const name of node.services ?? []) declared.add(name);
+    if (node.path === path) found = true;
+    for (const child of node.children ?? []) walk(child, onPath);
+  };
+  walk(run.suite, true);
+  if (!found || declared.size === 0) return services;
+  return services.filter((service) => declared.has(service.name));
+}

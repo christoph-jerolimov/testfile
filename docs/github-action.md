@@ -203,7 +203,7 @@ workflow runs — every artifact whose name *starts with* `testfile-run`, so
 the per-platform legs and the merged run all arrive — and imports them into
 your local
 [run history](./cli#run-history), where `testfile-viewer runs`, `inspect run`,
-`diff`, `--flaky` and the TUI's runs/results views treat them like local
+`diff`, `--flaky` and the TUI's runs/tests views treat them like local
 runs:
 
 ```sh

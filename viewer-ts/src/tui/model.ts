@@ -16,13 +16,6 @@ export interface OutputLine {
   stream: "stdout" | "stderr" | "system";
 }
 
-// What the right (detail) pane shows: a titled block of log-style lines.
-export interface PaneContent {
-  title: string;
-  note?: string;
-  lines: OutputLine[];
-}
-
 function pad(text: string, width: number): string {
   return text + " ".repeat(Math.max(0, width - text.length));
 }
@@ -135,32 +128,6 @@ export function describeRun(run: RunRecord): OutputLine[] {
   return lines;
 }
 
-function testSummary(run: RunRecord): string {
-  const counts = new Map<string, number>();
-  for (const test of run.tests) counts.set(test.status, (counts.get(test.status) ?? 0) + 1);
-  return [...counts.entries()].map(([status, n]) => `${n} ${status}`).join(", ");
-}
-
-// The runs view as a table: a header line plus one aligned row per run.
-export function runsTable(runs: readonly RunRecord[]): { header: string; rows: string[] } {
-  // The variants column is only worth its width when some run has one.
-  const label = (run: RunRecord): string =>
-    run.merged
-      ? mergedVariantLabel(run.merged.variants) || `merged (${run.merged.runs.length})`
-      : variantLabel(run.variants);
-  const width = Math.max(0, ...runs.map((run) => label(run).length));
-  const column = width > 0 ? `${pad("VARIANTS", width)}  ` : "";
-  const header = `${pad("STARTED", 19)}  ${pad("STATUS", 7)}  ${pad("DURATION", 8)}  ${column}TESTS`;
-  const rows = runs.map(
-    (run) =>
-      `${pad(run.startedAt.replace("T", " ").slice(0, 19), 19)}  ${pad(run.status, 7)}  ${pad(
-        formatMs(run.durationMs),
-        8,
-      )}  ${width > 0 ? `${pad(label(run), width)}  ` : ""}${testSummary(run)}`,
-  );
-  return { header, rows };
-}
-
 // The tests recorded across all runs, aggregated per test path.
 export interface RecordedTest {
   path: string;
@@ -198,42 +165,6 @@ export function recordedTests(history: RunHistory): RecordedTest[] {
     }
   }
   return [...byPath.values()];
-}
-
-// The per-test history: one table row per recorded occurrence.
-export function testHistoryLines(path: string, history: RunHistory): OutputLine[] {
-  const rows: { run: RunRecord; test: RunRecord["tests"][number] }[] = [];
-  for (const run of history.runs) {
-    const test = run.tests.find((t) => t.path === path);
-    if (test) rows.push({ run, test });
-  }
-  if (rows.length === 0) {
-    return [{ text: "no recorded runs for this test", stream: "system" }];
-  }
-  const idWidth = Math.max(3, ...rows.map((r) => r.run.id.length));
-  const lines: OutputLine[] = [
-    {
-      text: `${pad("RUN", idWidth)}  ${pad("STARTED", 19)}  ${pad("STATUS", 8)}  ${pad("DURATION", 8)}  NOTES`,
-      stream: "system",
-    },
-  ];
-  for (const { run, test } of rows) {
-    const notes = [
-      test.cached ? "[cached]" : "",
-      test.artifacts?.length ? `[${test.artifacts.length} artifacts]` : "",
-      test.log ? "[log]" : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
-    lines.push({
-      text: `${pad(run.id, idWidth)}  ${pad(run.startedAt.replace("T", " ").slice(0, 19), 19)}  ${pad(
-        test.status,
-        8,
-      )}  ${pad(test.durationMs !== undefined ? formatMs(test.durationMs) : "-", 8)}  ${notes}`.trimEnd(),
-      stream: test.status === "failed" || test.status === "aborted" ? "stderr" : "stdout",
-    });
-  }
-  return lines;
 }
 
 // Splits a stored log into displayable lines (# marks runner messages).
@@ -276,4 +207,157 @@ export function logWindow<T>(
   const end = lines.length - clamped;
   const start = Math.max(0, end - height);
   return { window: lines.slice(start, end), above: start };
+}
+
+// --- v2 pages -------------------------------------------------------------
+
+// One row of the suite tree table on the run page: the recorded tree when
+// the run has one, else a tree derived from the test paths.
+export interface SuiteRow {
+  path: string;
+  name: string;
+  depth: number;
+  status?: Status;
+  durationMs?: number;
+  startedAfterMs?: number;
+  cached?: boolean;
+  artifacts?: number;
+}
+
+export function suiteRows(run: RunRecord): SuiteRow[] {
+  const byPath = new Map(run.tests.map((test) => [test.path, test]));
+  const rows: SuiteRow[] = [];
+  const add = (path: string, name: string, depth: number): void => {
+    const test = byPath.get(path);
+    rows.push({
+      path,
+      name,
+      depth,
+      status: test?.status,
+      durationMs: test?.durationMs,
+      startedAfterMs: test?.startedAfterMs,
+      cached: test?.cached,
+      artifacts: test?.artifacts?.length,
+    });
+  };
+  const suite = run.suite;
+  if (suite) {
+    const walk = (node: NonNullable<RunRecord["suite"]>, depth: number): void => {
+      add(node.path, node.name, depth);
+      for (const child of node.children ?? []) walk(child, depth + 1);
+    };
+    walk(suite, 0);
+    return rows;
+  }
+  // No recorded tree (older runs): derive one from the slash-paths.
+  const seen = new Set<string>();
+  for (const test of run.tests) {
+    const parts = test.path.split("/");
+    for (let depth = 0; depth < parts.length; depth++) {
+      const path = parts.slice(0, depth + 1).join("/");
+      if (seen.has(path)) continue;
+      seen.add(path);
+      add(path, parts[depth]!, depth);
+    }
+  }
+  return rows;
+}
+
+// One row of the per-test executions table (the right panel of the Tests
+// tab, and the whole content of its narrow-mode page).
+export interface TestRunRow {
+  runId: string;
+  startedAt: string;
+  path: string;
+  status: Status;
+  durationMs?: number;
+  cached?: boolean;
+  artifacts?: number;
+  hasLog: boolean;
+}
+
+// All executions of one test path across the history - or of every test
+// when `path` is undefined ("All tests").
+export function testRunsFor(history: RunHistory, path?: string): TestRunRow[] {
+  const rows: TestRunRow[] = [];
+  for (const run of history.runs) {
+    for (const test of run.tests) {
+      if (path !== undefined && test.path !== path) continue;
+      rows.push({
+        runId: run.id,
+        startedAt: run.startedAt,
+        path: test.path,
+        status: test.status,
+        durationMs: test.durationMs,
+        cached: test.cached,
+        artifacts: test.artifacts?.length,
+        hasLog: test.log !== undefined,
+      });
+    }
+  }
+  return rows;
+}
+
+// The services whose logs belong on a test's detail page: the ones declared
+// on the test's suite node or any ancestor. Runs without a recorded tree
+// relate every service - too many tabs beats missing ones.
+export function relatedServices(
+  run: RunRecord,
+  path: string | undefined,
+): NonNullable<RunRecord["services"]> {
+  const services = run.services ?? [];
+  if (services.length === 0) return [];
+  if (path === undefined || !run.suite) return services;
+  const declared = new Set<string>();
+  const walk = (node: NonNullable<RunRecord["suite"]>, prefixMatches: boolean): boolean => {
+    const onPath = prefixMatches && (path === node.path || path.startsWith(`${node.path}/`));
+    if (onPath) for (const name of node.services ?? []) declared.add(name);
+    let found = path === node.path;
+    for (const child of node.children ?? []) found = walk(child, onPath) || found;
+    return found;
+  };
+  const found = walk(run.suite, true);
+  if (!found || declared.size === 0) return services;
+  return services.filter((service) => declared.has(service.name));
+}
+
+// The overview tab of a test in a run.
+export function testOverview(run: RunRecord, path: string): OutputLine[] {
+  const test = run.tests.find((t) => t.path === path);
+  if (!test) {
+    return [{ text: "not executed in this run", stream: "system" }];
+  }
+  const lines: OutputLine[] = [
+    { text: `test:      ${test.path}`, stream: "system" },
+    { text: `run:       ${run.id} (${run.startedAt})`, stream: "system" },
+    {
+      text: `status:    ${test.status}${test.cached ? " (cached)" : ""}`,
+      stream: test.status === "failed" || test.status === "aborted" ? "stderr" : "system",
+    },
+  ];
+  if (test.startedAfterMs !== undefined) {
+    lines.push({ text: `started:   +${formatMs(test.startedAfterMs)}`, stream: "system" });
+  }
+  if (test.durationMs !== undefined) {
+    lines.push({ text: `duration:  ${formatMs(test.durationMs)}`, stream: "system" });
+  }
+  if (test.reason) lines.push({ text: `reason:    ${test.reason}`, stream: "system" });
+  const where = variantLabel(test.variants);
+  if (where) lines.push({ text: `variants:  ${where}`, stream: "system" });
+  if (test.artifacts?.length) {
+    lines.push({ text: `artifacts:`, stream: "system" });
+    for (const artifact of test.artifacts) lines.push({ text: `  ${artifact}`, stream: "stdout" });
+  }
+  const services = relatedServices(run, path);
+  if (services.length > 0) {
+    lines.push({ text: "", stream: "system" });
+    lines.push({ text: "services:", stream: "system" });
+    for (const service of services) {
+      lines.push({
+        text: `  ${service.name}${service.status ? ` (${service.status})` : ""}`,
+        stream: service.status === "failed" ? "stderr" : "stdout",
+      });
+    }
+  }
+  return lines;
 }

@@ -92,6 +92,54 @@ main {
   min-height: 0;
 }
 
+/* One-column pages - the per-execution test page. */
+main.single {
+  display: block;
+  overflow: auto;
+  min-height: 0;
+  padding: 0.8rem 1.2rem;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
+
+.breadcrumb .sep {
+  color: var(--dim);
+}
+
+/* The test page's tab strip - the nav look, underlined instead of boxed. */
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: 0.8rem 0 0.6rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs button {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--dim);
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tabs button.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.tabs button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .list,
 .detail {
   overflow: auto;

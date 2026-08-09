@@ -115,7 +115,7 @@ const executionColumns: Column<Execution>[] = [
   }),
 ];
 
-export function ResultsView({
+export function TestsView({
   runs,
   selected,
 }: {
@@ -171,7 +171,7 @@ export function ResultsView({
           initialSorting={[{ id: "path", desc: false }]}
           rowKey={(t) => t.path}
           rowClassName={(t) => `row ${t.path === current.path ? "selected" : ""}`}
-          onRowClick={(t) => navigate({ view: "results", testPath: t.path })}
+          onRowClick={(t) => navigate({ view: "tests", testPath: t.path })}
           empty="no test matches the filters"
         />
       </div>
@@ -191,6 +191,11 @@ export function ResultsView({
           // newest first, as the runs list reads
           initialSorting={[{ id: "started", desc: true }]}
           rowKey={(entry) => `${entry.run.id} ${entry.test.origin ?? ""}`}
+          rowClassName={() => "row"}
+          // a click opens the execution's own page: that test in that run
+          onRowClick={(entry) =>
+            navigate({ view: "test", runId: entry.run.id, testPath: entry.test.path })
+          }
         />
       </div>
     </main>

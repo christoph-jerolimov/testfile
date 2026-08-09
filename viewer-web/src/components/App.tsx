@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { fetchRuns, fetchSummary, subscribeRunsChanged } from "../api.js";
 import { navigate, parseRoute, type Route } from "../router.js";
 import type { RunRecord, Summary } from "../types.js";
-import { ResultsView } from "./ResultsView.js";
 import { RunsView } from "./RunsView.js";
+import { TestsView } from "./TestsView.js";
+import { TestView } from "./TestView.js";
 
 // The route is the only navigation state, so the back button, a reload and a
 // shared link all land in the same place.
@@ -56,10 +57,10 @@ export function App(): React.ReactElement {
             Runs
           </button>
           <button
-            className={route.view === "results" ? "active" : ""}
-            onClick={() => navigate({ view: "results" })}
+            className={route.view === "tests" || route.view === "test" ? "active" : ""}
+            onClick={() => navigate({ view: "tests" })}
           >
-            Results
+            Tests
           </button>
         </nav>
         <div className="live">
@@ -68,8 +69,10 @@ export function App(): React.ReactElement {
       </header>
       {route.view === "runs" ? (
         <RunsView runs={runs} selected={route.runId} revision={revision} />
+      ) : route.view === "test" && route.runId && route.testPath ? (
+        <TestView runs={runs} runId={route.runId} testPath={route.testPath} revision={revision} />
       ) : (
-        <ResultsView runs={runs} selected={route.testPath} />
+        <TestsView runs={runs} selected={route.testPath} />
       )}
     </div>
   );
