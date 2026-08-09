@@ -1,6 +1,9 @@
 spec:
   - Containers
+  - Engine selection
 requires: [podman]
+env:
+  TESTFILE_ENGINE: podman
 exitCode: 0
 status: passed
 tests:

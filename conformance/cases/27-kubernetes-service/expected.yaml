@@ -1,11 +1,14 @@
 spec:
   - Kubernetes
+  - Engine selection
   - Readiness (ready)
 # A service as a pod on a Kubernetes cluster: the runner applies the
 # manifests, follows the pod to Running, forwards the declared port to
 # localhost and the test talks to it there. Skipped where kubectl has no
 # reachable cluster.
 requires: [kubectl]
+env:
+  TESTFILE_ENGINE: kubernetes
 exitCode: 0
 status: passed
 tests:

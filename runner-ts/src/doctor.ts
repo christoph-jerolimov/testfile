@@ -125,19 +125,17 @@ function servicesOf(doc: TestfileDoc): ServiceDef[] {
   return services;
 }
 
-// Which engine (if any) the Testfile asks for: an explicit `engine:` wins,
-// otherwise the run needs whichever one is installed.
-export function containerNeeds(doc: TestfileDoc): { needed: boolean; engines: string[] } {
-  const engines = new Set<string>();
+// Whether this Testfile starts containers at all. Which engine runs them is
+// the run's choice (--engine / TESTFILE_ENGINE / first available), so the
+// file itself only says that one is needed.
+export function containerNeeds(doc: TestfileDoc): { needed: boolean } {
   let needed = false;
-  const note = (def: { engine?: string } | undefined): void => {
-    if (!def) return;
-    needed = true;
-    if (def.engine && def.engine !== "auto") engines.add(def.engine);
+  const note = (def: object | undefined): void => {
+    if (def) needed = true;
   };
   for (const service of servicesOf(doc)) note(service.container);
   walkTests(doc.test, (test) => note(test.container));
-  return { needed, engines: [...engines].sort() };
+  return { needed };
 }
 
 // The ports the Testfile pins; "random" ones are allocated by the runner and
@@ -391,91 +389,111 @@ function gitChecks(env: DoctorEnv, baseDir: string): Check[] {
   return checks;
 }
 
-// The kubernetes engine is not a binary of its own: it needs kubectl, and
-// behind kubectl a reachable cluster.
-function kubernetesChecks(env: DoctorEnv): Check[] {
-  if (!env.probe("kubectl", ["version", "--client"]).ok) {
-    return [
-      {
-        name: "container engine (kubernetes)",
-        status: "fail",
-        detail: "kubectl not found",
-        hint: "this Testfile runs services on kubernetes - install kubectl",
-      },
-    ];
-  }
-  const cluster = env.probe("kubectl", ["cluster-info"]);
-  if (!cluster.ok) {
-    return [
-      {
-        name: "container engine (kubernetes)",
-        status: "fail",
+// The state of one engine on this machine: whether it is installed, and
+// whether its backend actually answers - a docker CLI without its daemon,
+// or a kubectl without a reachable cluster, cannot run anything.
+function engineState(
+  env: DoctorEnv,
+  engine: string,
+): { installed: boolean; responding: boolean; detail: string; hint?: string } {
+  if (engine === "kubernetes") {
+    if (!env.probe("kubectl", ["version", "--client"]).ok) {
+      return { installed: false, responding: false, detail: "kubectl not installed" };
+    }
+    if (!env.probe("kubectl", ["cluster-info"]).ok) {
+      return {
+        installed: true,
+        responding: false,
         detail: "kubectl installed, but no reachable cluster",
         hint: "is the kubeconfig context pointing at a running cluster?",
-      },
-    ];
+      };
+    }
+    return { installed: true, responding: true, detail: "kubectl and cluster respond" };
   }
-  return [
-    { name: "container engine (kubernetes)", status: "ok", detail: "kubectl and cluster respond" },
-  ];
+  if (!env.probe(engine, ["--version"]).ok) {
+    return { installed: false, responding: false, detail: "not installed" };
+  }
+  const info = env.probe(engine, ["info"]);
+  if (!info.ok) {
+    return {
+      installed: true,
+      responding: false,
+      detail: `installed, but "${engine} info" fails: ${info.output}`,
+      hint: engine === "docker" ? "is the Docker daemon running?" : `start the ${engine} machine`,
+    };
+  }
+  return { installed: true, responding: true, detail: "installed, responding" };
 }
 
+// Which engine a run would use is the runner's decision: an explicit
+// TESTFILE_ENGINE (or --engine) wins, otherwise the first responding one of
+// podman, docker, kubernetes. Doctor checks all three and says what a run
+// would pick, so "works here, fails there" explains itself.
 function containerChecks(env: DoctorEnv, doc: TestfileDoc | undefined): Check[] {
-  const needs = doc ? containerNeeds(doc) : { needed: false, engines: [] as string[] };
-  const kubernetes = needs.engines.includes("kubernetes");
-  const localEngines = needs.engines.filter((engine) => engine !== "kubernetes");
-  // A Testfile that only uses kubernetes services needs no local engine.
-  if (needs.needed && kubernetes && localEngines.length === 0) return kubernetesChecks(env);
-  const prefix = kubernetes ? kubernetesChecks(env) : [];
-  const candidates = localEngines.length > 0 ? localEngines : ["podman", "docker"];
-  const found = candidates.filter((engine) => env.probe(engine, ["--version"]).ok);
+  const needs = doc ? containerNeeds(doc) : { needed: false };
+  const order = ["podman", "docker", "kubernetes"];
+  const states = new Map(order.map((engine) => [engine, engineState(env, engine)]));
+  const responding = order.filter((engine) => states.get(engine)!.responding);
 
   // Nothing asks for a container: say what is there and move on instead of
   // waking a daemon nothing is going to talk to.
   if (!needs.needed) {
-    const installed = found.length > 0 ? `${found.join(", ")} installed` : "none installed";
+    const available =
+      responding.length > 0 ? `${responding.join(", ")} available` : "none available";
     return [
       {
         name: "container engine",
         status: "ok",
         detail: doc
-          ? `not needed, this Testfile starts no containers (${installed})`
-          : `${installed} (no Testfile to read)`,
+          ? `not needed, this Testfile starts no containers (${available})`
+          : `${available} (no Testfile to read)`,
       },
     ];
   }
 
-  if (found.length === 0) {
-    return [
-      ...prefix,
-      {
-        name: "container engine",
-        status: "fail",
-        detail: `none of ${candidates.join(", ")} found`,
-        hint: `this Testfile runs containers - install ${candidates.join(" or ")}`,
-      },
-    ];
+  const checks: Check[] = [];
+  const pinned = (process.env.TESTFILE_ENGINE ?? "").trim();
+  const picked = pinned !== "" ? pinned : responding[0];
+  for (const engine of order) {
+    const state = states.get(engine)!;
+    // A missing engine is only worth a row when it is the pinned one or
+    // nothing else works; two of the three being absent is the normal case.
+    if (!state.installed && engine !== pinned && responding.length > 0) continue;
+    checks.push({
+      name: `container engine (${engine})`,
+      status: state.responding
+        ? "ok"
+        : engine === pinned || responding.length === 0
+          ? "fail"
+          : "warn",
+      detail:
+        state.detail + (engine === picked && state.responding ? " - this run would use it" : ""),
+      ...(state.responding ? {} : state.hint ? { hint: state.hint } : {}),
+    });
   }
-
-  return [
-    ...prefix,
-    ...found.map((engine) => {
-      const info = env.probe(engine, ["info"]);
-      if (info.ok) {
-        return {
-          name: `container engine (${engine})`,
-          status: "ok" as const,
-          detail: "installed, responding",
-        };
-      }
-      return {
-        name: `container engine (${engine})`,
-        status: "fail" as const,
-        detail: `installed, but "${engine} info" failed: ${info.output}`,
-        hint: engine === "docker" ? "is the Docker daemon running?" : `start the ${engine} machine`,
-      };
-    }),
-  ];
+  if (pinned !== "" && !order.includes(pinned)) {
+    checks.push({
+      name: "engine selection",
+      status: "fail",
+      detail: `TESTFILE_ENGINE is "${pinned}"`,
+      hint: `expected one of ${order.join(", ")}`,
+    });
+  } else if (pinned !== "" && !states.get(pinned)!.responding) {
+    checks.push({
+      name: "engine selection",
+      status: "fail",
+      detail: `TESTFILE_ENGINE pins "${pinned}", which does not respond`,
+      hint: "unset it or fix the engine; without it the first responding engine is used",
+    });
+  } else if (responding.length === 0) {
+    checks.push({
+      name: "engine selection",
+      status: "fail",
+      detail: "this Testfile starts containers, but no engine responds",
+      hint: "install/start podman or docker, or point kubectl at a cluster",
+    });
+  }
+  return checks;
 }
 
 async function portChecks(env: DoctorEnv, doc: TestfileDoc | undefined): Promise<Check[]> {

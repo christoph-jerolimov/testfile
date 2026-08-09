@@ -36,6 +36,17 @@ jobs:
       statuses: write
     steps:
       - uses: actions/checkout@v7
+      # The kubernetes conformance case only runs where kubectl reaches a
+      # cluster, so the Linux leg gets a local kind cluster and the case is
+      # exercised on every change instead of only on developer machines.
+      # (macOS/Windows runners cannot host one; the case skips there, like
+      # the podman case does.) HOME survives the runner's env cleaning, so
+      # tests find the kubeconfig kind writes to ~/.kube/config.
+      - name: Provide a kind cluster for the kubernetes conformance case
+        if: matrix.os == 'ubuntu-latest'
+        uses: helm/kind-action@v1
+        with:
+          wait: 120s
       # The uploaded testfile-run artifact contains the JUnit result
       # (junit.xml) next to the record and logs - no separate reporter or
       # second artifact needed.

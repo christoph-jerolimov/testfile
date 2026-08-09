@@ -1,0 +1,13 @@
+# `engine` left the format: which engine runs a container is the run's
+# choice (--engine / TESTFILE_ENGINE / first available), not the file's.
+version: 0
+test:
+  name: t
+  command: "true"
+  services:
+    db:
+      container:
+        image: docker.io/library/postgres:16
+        engine: podman
+      ready:
+        tcp: 5432

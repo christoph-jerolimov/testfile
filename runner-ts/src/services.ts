@@ -10,20 +10,72 @@ import { parseDurationMs } from "./util.js";
 
 export type ServiceStatus = "pending" | "starting" | "ready" | "stopping" | "stopped" | "failed";
 
-let cachedEngine: string | undefined;
+// Which engine runs the containers is decided by whoever runs the tests,
+// not by the Testfile: --engine beats TESTFILE_ENGINE beats the first
+// engine that actually responds, in this order. "Responds" is stricter
+// than "installed" - a docker CLI without its daemon is not available.
+export type Engine = "podman" | "docker" | "kubernetes";
+export const ENGINES: Engine[] = ["podman", "docker", "kubernetes"];
 
-export function detectEngine(): string {
-  if (!cachedEngine) {
-    for (const candidate of ["podman", "docker"]) {
-      const result = spawnSync(candidate, ["--version"], { stdio: "ignore" });
-      if (result.status === 0) {
-        cachedEngine = candidate;
-        break;
-      }
-    }
-    if (!cachedEngine) throw new Error("no container engine found (tried podman, docker)");
+// An engine answers for its backend, not merely for --version: podman and
+// docker via `info`, kubernetes only when kubectl reaches a cluster.
+function respond(engine: Engine): boolean {
+  const [cmd, args] = engine === "kubernetes" ? ["kubectl", ["cluster-info"]] : [engine, ["info"]];
+  return spawnSync(cmd, args, { stdio: "ignore", timeout: 15_000 }).status === 0;
+}
+
+let prober: (engine: Engine) => boolean = respond;
+let configuredEngine: Engine | undefined;
+let detectedEngine: Engine | undefined;
+
+// The run's explicit choice (--engine or TESTFILE_ENGINE); rejects names
+// that are not engines so a typo fails the run instead of hiding behind
+// auto-detection. Undefined clears the choice.
+export function configureEngine(name: string | undefined, origin: string): void {
+  if (name === undefined || name === "") {
+    configuredEngine = undefined;
+    return;
   }
-  return cachedEngine;
+  if (!(ENGINES as string[]).includes(name)) {
+    throw new Error(`${origin}: unknown engine "${name}", expected ${ENGINES.join(", ")}`);
+  }
+  configuredEngine = name as Engine;
+}
+
+export function detectEngine(): Engine {
+  if (configuredEngine) return configuredEngine;
+  if (!detectedEngine) {
+    detectedEngine = ENGINES.find(prober);
+    if (!detectedEngine) {
+      throw new Error(
+        "no container engine available (podman and docker do not respond, kubectl reaches no cluster)",
+      );
+    }
+  }
+  return detectedEngine;
+}
+
+// Test bodies run locally with the project mounted, which kubernetes cannot
+// provide - so they use the local engines only. An explicit kubernetes
+// choice falls through to whatever local engine is available, the same way
+// the docs promise ("a test body container still runs locally").
+export function detectLocalEngine(): Engine {
+  if (configuredEngine && configuredEngine !== "kubernetes") return configuredEngine;
+  const local = (["podman", "docker"] as Engine[]).find(
+    (engine) => detectedEngine === engine || prober(engine),
+  );
+  if (!local) {
+    throw new Error("a test body container runs locally and needs podman or docker");
+  }
+  return local;
+}
+
+// Seam for the tests: replace how availability is probed, and forget what
+// was detected so far. Called without arguments it restores the real probe.
+export function setEngineProbeForTests(probe?: (engine: Engine) => boolean): void {
+  prober = probe ?? respond;
+  detectedEngine = undefined;
+  configuredEngine = undefined;
 }
 
 function execCapture(
@@ -127,7 +179,6 @@ export function sharedServiceKey(def: ServiceDef, scopes: Scopes, cwd: string): 
     container: container
       ? {
           image: resolveTemplate(container.image, scopes, where),
-          engine: container.engine,
           context: opt(container.context),
           namespace: opt(container.namespace),
           ports: (container.ports ?? []).map((p) => resolveTemplate(p, scopes, where)),
@@ -251,8 +302,7 @@ export class ServiceInstance extends EventEmitter {
 
   private async startContainer(scopes: Scopes, where: string, signal: AbortSignal): Promise<void> {
     const container = this.def.container!;
-    const engine =
-      container.engine && container.engine !== "auto" ? container.engine : detectEngine();
+    const engine = detectEngine();
     if (engine === "kubernetes") {
       await this.startKubernetes(container, scopes, where, signal);
       return;

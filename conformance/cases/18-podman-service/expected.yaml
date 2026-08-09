@@ -1,10 +1,14 @@
 spec:
   - Containers
+  - Engine selection
   - Readiness (ready)
 # Container services via podman: a run-level service with a published
 # random port (tcp readiness + reachable from a test) and a test-scoped
 # container with a log readiness check. Skipped where podman is missing.
 requires: [podman]
+# The engine is the run's choice: this case pins it through the environment.
+env:
+  TESTFILE_ENGINE: podman
 exitCode: 0
 status: passed
 tests:

@@ -46,8 +46,9 @@ variable combination.
 
 Tests may depend on **services** — long-running processes the tests need,
 such as the web server or app under test, or databases in specific versions.
-Services run as local processes or as containers (podman/docker locally, or
-as pods on a Kubernetes cluster). The runner starts
+Services run as local processes or as containers — podman/docker locally,
+or as pods on a Kubernetes cluster; which engine is the choice of whoever
+runs the suite, never of the document. The runner starts
 them before the dependent tests, waits until they are **ready** (HTTP check,
 TCP check, or a log pattern on stdout/stderr), and **gracefully stops** them
 afterwards — including when the user aborts the run with Ctrl+C.
@@ -304,7 +305,6 @@ runner marks the service as failed and aborts the dependent tests.
 | Field     | Type            | Description |
 | --------- | --------------- | ----------- |
 | `image`   | string (req.)   | Image reference, e.g. `docker.io/library/postgres:16`. |
-| `engine`  | enum            | `auto` (default: podman if available, else docker), `podman`, `docker`, `kubernetes` (see [Kubernetes](#kubernetes)). `auto` never picks kubernetes; it must be asked for. |
 | `ports`   | array of string | `"HOST:CONTAINER"` mappings; the host part may be a template like `"${{ ports.db }}:5432"`. |
 | `env`     | map             | Environment inside the container. |
 | `volumes` | array of string | `"HOST:CONTAINER[:OPTIONS]"` mounts. |
@@ -312,12 +312,38 @@ runner marks the service as failed and aborts the dependent tests.
 | `network` | string          | Attach to this named container network, creating it if needed (networks are left in place after the run). The service name becomes a network alias, so services on the same network reach each other by name. |
 | `entrypoint` | array of string | Override the image entrypoint. |
 | `command` | array of string | Override the image command. |
+| `context`, `namespace` | string | Only read when the run's engine is kubernetes: which kubeconfig context / namespace to run in (the namespace must exist). Defaults: kubectl's own. |
+
+A container definition never names an engine — a Testfile describes *what*
+runs, and the machine running it decides *how*.
+
+### Engine selection
+
+Which engine runs the containers is decided per run, in this order:
+
+1. an explicit CLI choice (`testfile start --engine <name>`),
+2. the `TESTFILE_ENGINE` environment variable (read from the runner's own
+   environment, not the isolated test environment),
+3. otherwise the first of **podman, docker, kubernetes** — in this order —
+   that *responds*: podman and docker via their `info` command, kubernetes
+   only when kubectl reaches a cluster. Merely being installed is not
+   enough, and the answer is cached for the rest of the run.
+
+An explicit choice that is not one of the three names fails the run rather
+than falling back. When no engine responds and the suite starts containers,
+the affected services and tests fail with a message naming all three.
+
+Test bodies (`container:` on a test) are the exception: they mount the
+project and therefore always run on a **local** engine. A run whose engine
+is kubernetes (chosen or detected) runs test bodies on the first local
+engine that responds, and fails them with a clear message when neither
+podman nor docker does.
 
 ### Kubernetes
 
-With `engine: kubernetes` the service runs as a **Pod** on whatever cluster
-the kubeconfig points at (overridable per service with `context` and
-`namespace`; the namespace must exist). The pod is created with
+When the run's engine is `kubernetes` the service runs as a **Pod** on
+whatever cluster the kubeconfig points at (overridable per service with
+`context` and `namespace`; the namespace must exist). The pod is created with
 `restartPolicy: Never` — the runner owns the lifecycle, and a service that
 dies must be reported as failed, not restarted behind the runner's back.
 

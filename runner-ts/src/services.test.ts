@@ -3,7 +3,14 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { buildContainerRunArgs, ServiceInstance } from "./services.js";
+import {
+  buildContainerRunArgs,
+  configureEngine,
+  detectEngine,
+  detectLocalEngine,
+  ServiceInstance,
+  setEngineProbeForTests,
+} from "./services.js";
 import { Session } from "./session.js";
 import type { Scopes } from "./template.js";
 
@@ -159,4 +166,76 @@ test("service needs are validated: unknown names and cycles", () => {
       ),
     /cyclic service needs/,
   );
+});
+
+// --- engine selection ------------------------------------------------------
+// The engine is chosen by whoever runs the tests: --engine beats
+// TESTFILE_ENGINE beats the first responding engine, in podman, docker,
+// kubernetes order. Probing is injected here, so no engine needs to exist.
+
+test("detection walks podman, docker, kubernetes and takes the first that responds", () => {
+  try {
+    setEngineProbeForTests(() => true);
+    assert.equal(detectEngine(), "podman");
+    setEngineProbeForTests((engine) => engine !== "podman");
+    assert.equal(detectEngine(), "docker");
+    setEngineProbeForTests((engine) => engine === "kubernetes");
+    assert.equal(detectEngine(), "kubernetes");
+    setEngineProbeForTests(() => false);
+    assert.throws(() => detectEngine(), /no container engine available/);
+  } finally {
+    setEngineProbeForTests();
+  }
+});
+
+test("the detected engine is remembered for the rest of the run", () => {
+  try {
+    let probes = 0;
+    setEngineProbeForTests(() => {
+      probes++;
+      return true;
+    });
+    detectEngine();
+    detectEngine();
+    assert.equal(probes, 1, "one probe answers every later call");
+  } finally {
+    setEngineProbeForTests();
+  }
+});
+
+test("a configured engine wins without probing anything", () => {
+  try {
+    setEngineProbeForTests(() => assert.fail("an explicit choice must not probe"));
+    configureEngine("docker", "--engine");
+    assert.equal(detectEngine(), "docker");
+  } finally {
+    setEngineProbeForTests();
+  }
+});
+
+test("a typo in the engine name fails the run instead of hiding behind detection", () => {
+  try {
+    assert.throws(
+      () => configureEngine("dokcer", "TESTFILE_ENGINE"),
+      /TESTFILE_ENGINE: unknown engine "dokcer", expected podman, docker, kubernetes/,
+    );
+  } finally {
+    setEngineProbeForTests();
+  }
+});
+
+test("test bodies use a local engine even when the run picked kubernetes", () => {
+  try {
+    // explicit kubernetes: the body falls through to the local chain
+    setEngineProbeForTests((engine) => engine === "docker");
+    configureEngine("kubernetes", "--engine");
+    assert.equal(detectEngine(), "kubernetes");
+    assert.equal(detectLocalEngine(), "docker");
+    // nothing local at all: the body cannot run, with a reason
+    setEngineProbeForTests((engine) => engine === "kubernetes");
+    configureEngine("kubernetes", "--engine");
+    assert.throws(() => detectLocalEngine(), /runs locally and needs podman or docker/);
+  } finally {
+    setEngineProbeForTests();
+  }
 });

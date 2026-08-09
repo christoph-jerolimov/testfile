@@ -1,6 +1,6 @@
 import { resolve as resolvePath } from "node:path";
 import type { TestContainerDef } from "./model.js";
-import { detectEngine } from "./services.js";
+import { detectLocalEngine } from "./services.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
 
 // Running a test's body inside a container (like a GitHub Actions job
@@ -31,15 +31,11 @@ export function buildTestContainerArgs(
   scopes: Scopes,
   where: string,
   shellArgv: string[],
-  detect: () => string = detectEngine,
+  // Test bodies mount the project, which a cluster cannot - so even a run
+  // whose engine is kubernetes uses a local engine here.
+  detect: () => string = detectLocalEngine,
 ): TestContainerPlan {
-  const engine = def.engine && def.engine !== "auto" ? def.engine : detect();
-  if (engine === "kubernetes") {
-    throw new Error(
-      `${where}: the kubernetes engine runs services in a cluster; a test body needs the ` +
-        "project mounted and runs locally (use podman or docker here)",
-    );
-  }
+  const engine = detect();
 
   // The whole project is mounted, not just the test's workdir, so relative
   // paths that reach outside it (a monorepo's root config) still resolve.

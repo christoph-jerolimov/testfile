@@ -5,6 +5,7 @@ import { HISTORY_DIR } from "../history.js";
 import { loadTestfile } from "../loader.js";
 import { writeReport, type ReporterKind } from "../report.js";
 import { ConsoleReporter } from "../reporter.js";
+import { configureEngine } from "../services.js";
 import { Session } from "../session.js";
 import { color } from "../util.js";
 import { watchDirectory, WatchScheduler } from "../watch.js";
@@ -59,6 +60,7 @@ export function registerStart(program: Command): void {
     output: string;
     variant: string[];
     label: string[];
+    engine?: string;
   }
 
   addFilterOptions(
@@ -96,6 +98,11 @@ export function registerStart(program: Command): void {
       )
       .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
       .option("--output <file>", 'report target file, or "-" for stdout', "-")
+      .option(
+        "--engine <name>",
+        "container engine for this run: podman, docker or kubernetes " +
+          "(default: $TESTFILE_ENGINE, else the first of the three that responds)",
+      )
       .description("Start the test suite (the default command)"),
   ).action(async (path: string, options: RunFlags) => {
     let session: Session;
@@ -111,6 +118,10 @@ export function registerStart(program: Command): void {
       ) {
         throw new Error(`unknown --reporter "${options.reporter}", expected junit or json`);
       }
+      // The engine is the run's choice, not the file's: the flag beats the
+      // environment, and with neither the first responding engine is used.
+      if (options.engine !== undefined) configureEngine(options.engine, "--engine");
+      else configureEngine(process.env.TESTFILE_ENGINE, "TESTFILE_ENGINE");
       const { path: file, doc } = loadTestfile(path);
       session = new Session(doc, dirname(file), {
         failFast: options.failFast,

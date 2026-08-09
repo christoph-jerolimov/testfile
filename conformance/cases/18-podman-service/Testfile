@@ -5,7 +5,6 @@ services:
   httpd:
     container:
       image: docker.io/library/busybox:1.36
-      engine: podman
       ports:
         - "${{ ports.web }}:8080"
       command: ["httpd", "-f", "-p", "8080"]
@@ -28,7 +27,6 @@ test:
         logger:
           container:
             image: docker.io/library/busybox:1.36
-            engine: podman
             command: ["sh", "-c", "echo logger-ready; sleep 60"]
           ready:
             log: logger-ready

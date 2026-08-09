@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { after, test } from "node:test";
 import {
   buildKubernetesManifests,
   classifyPodStatus,
@@ -11,7 +11,12 @@ import {
   type KubectlStream,
 } from "./kubernetes.js";
 import { OutputBuffer } from "./output.js";
-import { ServiceInstance, sharedServiceKey } from "./services.js";
+import {
+  configureEngine,
+  ServiceInstance,
+  setEngineProbeForTests,
+  sharedServiceKey,
+} from "./services.js";
 import type { Scopes } from "./template.js";
 
 const scopes: Scopes = { env: {}, ports: { db: 55432 }, matrix: { postgres: "16" } };
@@ -127,7 +132,7 @@ test("pod status boils down to waiting, running or gone", () => {
 });
 
 test("the shared-service key tells namespaces and contexts apart", () => {
-  const base = { container: { image: "img", engine: "kubernetes" as const } };
+  const base = { container: { image: "img" } };
   const a = sharedServiceKey(base, scopes, "/p");
   const b = sharedServiceKey(
     { container: { ...base.container, namespace: "other" } },
@@ -224,7 +229,7 @@ function makeService(kubectl: FakeKubectl, overrides: object = {}) {
   const deaths: string[] = [];
   const service = new KubernetesService(
     "db",
-    { image: "img", ports: ["${{ ports.db }}:5432"], engine: "kubernetes", ...overrides },
+    { image: "img", ports: ["${{ ports.db }}:5432"], ...overrides },
     {
       output,
       scopes,
@@ -375,13 +380,17 @@ test("stop deletes the pod and its Service without waiting, with the grace perio
 });
 
 // --- through the real ServiceInstance -------------------------------------
+// The engine is the run's choice now, so these runs choose kubernetes the
+// way a user would: configuration, not a field in the service.
 
 test("a kubernetes service goes ready through the normal readiness machinery", async () => {
+  configureEngine("kubernetes", "test");
+  after(() => setEngineProbeForTests());
   const kubectl = new FakeKubectl();
   const instance = new ServiceInstance(
     "db",
     {
-      container: { image: "img", engine: "kubernetes", ports: ["${{ ports.db }}:5432"] },
+      container: { image: "img", ports: ["${{ ports.db }}:5432"] },
       ready: { log: "accepting connections", interval: "10ms", timeout: "2s" },
     },
     kubectl,
@@ -411,12 +420,10 @@ test("a kubernetes service goes ready through the normal readiness machinery", a
 });
 
 test("a pod that dies while ready fails the instance and aborts dependents", async () => {
+  configureEngine("kubernetes", "test");
+  after(() => setEngineProbeForTests());
   const kubectl = new FakeKubectl();
-  const instance = new ServiceInstance(
-    "db",
-    { container: { image: "img", engine: "kubernetes" } },
-    kubectl,
-  );
+  const instance = new ServiceInstance("db", { container: { image: "img" } }, kubectl);
   let aborted = 0;
   instance.onUnexpectedExit = () => aborted++;
   await instance.start(
