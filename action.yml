@@ -46,7 +46,7 @@ inputs:
     required: false
     default: ""
   labels:
-    description: 'Extra labels to record with the run, separated by commas or newlines (for example "nightly, slow"). Recorded alongside the automatic ones; viewers filter runs by them.'
+    description: 'Extra labels to record with the run, as key=value pairs separated by commas or newlines (for example "tier=nightly, owner=infra"; entries without a "=" are skipped). Recorded alongside the automatic ones; viewers filter runs by them.'
     required: false
     default: ""
   auto-labels:

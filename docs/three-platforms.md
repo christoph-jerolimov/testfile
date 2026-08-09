@@ -12,7 +12,10 @@ Actions, and ends with a **single run** you can open in the viewer — one
 verdict, one duration, every test tagged with the platform it ran on.
 
 It is the setup this repository uses for itself; the finished workflow is
-[`.github/workflows/ci.yaml`](https://github.com/christoph-jerolimov/testfile/blob/main/.github/workflows/ci.yaml).
+[`.github/workflows/ci.yaml`](https://github.com/christoph-jerolimov/testfile/blob/main/.github/workflows/ci.yaml)
+(which adds two extras this tour skips: [per-test commit
+statuses](./github-action#a-status-per-test) and a kind cluster for the
+kubernetes conformance case).
 
 ## 1. A Testfile that says what needs Linux
 
@@ -109,10 +112,12 @@ them into a single run folder, which it uploads like any other run:
           fi
           dir=$(ls -d .testfile/runs/*-merged | head -1)
           echo "dir=$dir" >> "$GITHUB_OUTPUT"
+          echo "id=$(basename "$dir")" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v7
         with:
           name: testfile-run-merged
           path: ${{ steps.merge.outputs.dir }}
+          if-no-files-found: error
       - name: Fail when a platform failed
         if: steps.merge.outputs.passed != 'true'
         run: exit 1

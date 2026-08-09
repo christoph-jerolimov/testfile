@@ -236,10 +236,11 @@ export class Runner extends EventEmitter {
             where,
             this.secrets,
           );
-          // precedence: parent env < forwarded < env file(s) < own env
+          // precedence: parent env < forwarded < secrets < env file(s) < own env
           const merged = {
             ...withMatrix.env,
             ...forwarded,
+            ...testSecrets,
             ...nodeFileEnv,
             ...resolveEnvMap(test.def.env, withMatrix, where),
           };

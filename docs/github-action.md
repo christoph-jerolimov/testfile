@@ -33,14 +33,14 @@ against your repository's Testfile. The job fails when tests fail.
 | `max-parallel` | – | Global cap on concurrently running tests. |
 | `reporter` / `output` | – | Write [machine-readable results](./cli#machine-readable-reports) (`junit` or `json`). |
 | `node-version` | `22` | Node.js version for the runner. |
-| `annotations` | `true` | Emit GitHub annotations for failed tests — each failure appears on the PR with the tail of its log. |
+| `annotations` | `true` | Emit GitHub annotations for failed and aborted tests — each appears on the PR with the last 15 lines of its log. |
 | `summary` | `true` | Write a job-summary table of the run's results (status, duration and notes per test). |
 | `statuses` | `false` | Report one [commit status per test](#a-status-per-test) — needs `permissions: statuses: write`. |
 | `status-prefix` | `Testfile: ` | Prefix of every status context, so the per-test statuses group together. |
 | `token` | `github.token` | Token the commit statuses are written with. |
-| `upload-run` | `true` | Upload the recorded run (`.testfile/runs/<id>` as a `.tgz`) as a build artifact. |
+| `upload-run` | `true` | Upload the recorded run folder (`.testfile/runs/<id>`) as a build artifact — GitHub wraps it in a zip. |
 | `artifact-name` | `testfile-run` | Name of the uploaded run artifact. |
-| `variants` | – | What tells this run apart from the other legs of a matrix, as `key=value` pairs separated by commas or newlines (e.g. `platform=ubuntu-latest`). Recorded in `run.yaml`; [merging](./cli#merging-runs) needs it. |
+| `variants` | – | What tells this run apart from the other legs of a matrix, as `key=value` pairs separated by commas or newlines (e.g. `platform=ubuntu-latest`; whitespace is stripped, so values cannot contain spaces). Recorded in `run.yaml`; [merging](./cli#merging-runs) needs it. |
 | `labels` | – | Extra [labels](./cli#labelling-runs) to record, as `key=value` pairs separated by commas or newlines (e.g. `tier=nightly, owner=infra`). Merged with the automatic ones; a key you set yourself wins. |
 | `auto-labels` | `true` | Label the run with the GitHub context — see below. |
 
@@ -53,7 +53,7 @@ value; the runner takes them one `--label key=value` at a time.
 
 | Key | Value |
 | --- | ----- |
-| `trigger` | how the workflow started: `manual` (a `workflow_dispatch`), `schedule` (a cron job), `push`, `pull_request`, or GitHub's own name for any other event |
+| `trigger` | how the workflow started: `manual` (a `workflow_dispatch` or `repository_dispatch`), `schedule` (a cron job), `push`, `pull_request`, or GitHub's own name for any other event |
 | `branch` | the branch the run used — on a pull request the **source** branch, not the ephemeral merge ref |
 | `base` | pull requests only: the **target** branch |
 | `pr` | pull requests only: the pull request number |
@@ -120,9 +120,10 @@ JUnit results for your test-report tooling:
 ```
 
 When tests fail, the action annotates the workflow run (and the PR's
-files/checks views) with one error per failed test carrying the last lines
-of its log, plus a summary notice — no extra configuration needed. The job
-summary shows a results table for every run, passing or failing.
+files/checks views) with one error per failed or aborted test carrying the
+last 15 lines of its log, plus a summary notice — no extra configuration
+needed. The job summary shows a results table for every run, passing or
+failing.
 
 ## A status per test
 
@@ -156,7 +157,9 @@ That produces one status per test, named after the test's path behind the
 | `Testfile: ci/checks/unit` | failure | `failed in 2.0s` |
 | `Testfile: ci/checks/e2e` | success | `skipped` |
 
-Each links back to the workflow run. A few details worth knowing:
+An aborted test (or a status the reporter does not recognize) maps to the
+`error` state. Each status links back to the workflow run (when the run id
+is available). A few details worth knowing:
 
 - **Only the tests get a status**, not the `sequence` and `parallel` groups
   around them — a group's result is the aggregate its children already
@@ -173,14 +176,22 @@ Each links back to the workflow run. A few details worth knowing:
   `Testfile: ci/checks/lint (platform=ubuntu-latest)` and the legs stop
   overwriting each other. Without it the last leg to finish wins.
 - **Writing a status never fails the build.** A token without
-  `statuses: write` gets one warning in the log, not a red job.
+  `statuses: write` gets one warning in the log, not a red job — and the
+  remaining statuses of that run are not attempted, so with a bad token no
+  statuses appear at all rather than a partial set. Transient network
+  failures are counted and warned about separately.
+- **GitHub Enterprise Server works**: the reporter honours
+  `GITHUB_API_URL` and `GITHUB_SERVER_URL`.
 
 Because the contexts are stable, they can be used as required checks — pick
 `Testfile: ci/checks/unit` in the branch protection rules and a pull request
 cannot merge while that one test is red, whatever the rest of the suite
 does. Keep in mind that a test which stops being selected (by a filter, or
 by `changed`) stops reporting its status too, and a required check that
-never arrives blocks the merge.
+never arrives blocks the merge. GitHub caps a status context at 255
+characters and its description at 140 — longer ones are truncated with `…`,
+so a very deep test path plus a long prefix and variants may produce a
+context that differs from the one you would type into a branch rule.
 
 ## Bringing CI runs home
 
@@ -271,4 +282,6 @@ Two things to know before you do:
   platform-specific tooling needs the same `if` treatment.
 
 This repository's own [CI](https://github.com/christoph-jerolimov/testfile/blob/main/.github/workflows/ci.yaml)
-is exactly that job: one Testfile, three platforms.
+is that job — one Testfile, three platforms — plus a merge job combining
+the three runs and a kind cluster on the Linux leg for the kubernetes
+conformance case.

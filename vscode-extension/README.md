@@ -6,7 +6,8 @@ format and runner.
 ## Features
 
 - **Schema validation & completion** for `Testfile` / `testfile.yaml` /
-  `testfile.yml` (via the bundled JSON schema; needs the
+  `testfile.yml`, and for recorded `run.yaml` files under `.testfile/runs/`
+  (via the bundled JSON schemas; needs the
   [YAML extension](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)).
   `Testfile` files are associated with YAML automatically.
 - **Run from the editor**: a `▶ run` code lens above every test runs it (with
@@ -15,17 +16,22 @@ format and runner.
   `Testfile: Run All Tests` runs everything.
 - **Testfile Runs** view in the explorer: the recorded runs from
   `.testfile/runs/` with per-test status, duration and one-click access to the
-  recorded logs. The view refreshes automatically when new runs are recorded.
+  recorded logs. The view refreshes automatically when new runs are
+  recorded (`Testfile: Refresh Runs` forces it).
 - **`Testfile: Check This Machine (doctor)`** runs `testfile doctor` in the
   terminal: what this Testfile needs (container engine, fixed ports, shells,
   git, a writable `.testfile/`) and what of it is missing.
-- Shortcuts to the other frontends: `Testfile: Open the TUI` and
+- Shortcuts to the other frontends: `Testfile: Open the Viewer TUI` and
   `Testfile: Serve the Web Viewer`.
 
 ## Settings
 
-- `testfile.command` — the CLI to invoke (default `testfile`). Point it at
-  `node /path/to/runner-ts/dist/cli.js` when working inside this repository.
+- `testfile.command` — the runner CLI to invoke (default `testfile`). Point
+  it at `node /path/to/runner-ts/dist/cli.js` when working inside this
+  repository.
+- `testfile.viewerCommand` — the viewer CLI the TUI/serve shortcuts invoke
+  (default `testfile-viewer`). Point it at
+  `node /path/to/viewer-ts/dist/cli.js` when working inside this repository.
 
 ## Installing
 

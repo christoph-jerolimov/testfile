@@ -7,7 +7,8 @@ description: Commands, scripts, sequences, parallel groups and failure handling.
 # Writing tests
 
 A test — the root one or any nested one — must contain **exactly one** of
-`command`, `script`, `sequence` or `parallel`.
+`command`, `script`, `sequence`, `parallel`, [`include`](#composing-testfiles)
+or [`foreach`](#one-test-per-folder-or-file).
 
 ## Commands and scripts
 
@@ -129,7 +130,9 @@ test:
 
 Children run concurrently; `maxParallel` caps how many run at once. A failing
 child does not cancel its siblings — the group waits for all children and
-fails if any of them failed.
+fails if any of them failed. (The exception is
+[`--fail-fast`](./cli-reference#testfile-start-path), which aborts the whole
+run at the first failure.)
 
 ### Dependencies inside a parallel group
 
@@ -154,8 +157,10 @@ test:
 
 `unit` and `e2e` start as soon as `build` passed (in parallel with each
 other); `report` waits for both. If a needed test fails, its dependents are
-skipped. Unknown names, ambiguous names and cycles are rejected when the
-Testfile is loaded.
+skipped — and the skip cascades: a test needing a needs-skipped sibling is
+skipped too. A sibling skipped by its `if` condition, or deselected by
+filters, counts as satisfied instead. Unknown names, ambiguous names and
+cycles are rejected when the Testfile is loaded.
 
 ## Tolerating failures
 
@@ -187,9 +192,13 @@ test:
 ```
 
 Included tests run with the included file's directory as working
-directory, keep their own `env` and `services` (scoped to the embedded
-tests), and their named `ports` merge into the root file's ports.
-Includes nest; cycles and conflicting port definitions are rejected.
+directory (`workdir` cannot be set on an include test), keep their own
+`env` and `services` (scoped to the embedded tests; `env` on the include
+test wins over the included file's values), and their named `ports` merge
+into the root file's ports — so two files declaring the same `random` port
+share one allocation. An included file's top-level `envFile`, `forwardEnv`
+and `secrets` are ignored; declare those inside its tests. Includes nest;
+cycles and conflicting port definitions are rejected.
 
 ## One test per folder or file
 
@@ -232,7 +241,7 @@ The long form selects what is matched and what to skip:
 - name: fixtures
   foreach:
     glob: test/cases/*
-    folder: false          # default true
+    folder: false          # default true; at least one of the two must stay on
     file: true             # default false
     ignore:
       - test/cases/broken  # exact match ...
@@ -260,9 +269,10 @@ next run:
   command: npm run test:unit
 ```
 
-The runner hashes the matched files' content together with the test's
-configuration; when nothing changed since the last **passing** run, the test
-is reported as passed with a `cached` marker instead of re-running.
+`inputs` goes on `command`/`script` tests only — a group's result is its
+children's. The runner hashes the matched files' content together with the
+test's configuration; when nothing changed since the last **passing** run,
+the test is reported as passed with a `cached` marker instead of re-running.
 Failures are never cached, and any change to the files, the command, the
 env or the matrix combination re-runs the test. `testfile start --no-cache`
 forces execution (and refreshes the cache); combined with
@@ -341,8 +351,11 @@ failures and Ctrl+C:
 ```
 
 Hooks take one `command` or `script` plus optional `env`, `workdir` and
-`timeout`, and they run after the test's services are ready. A failing
-setup fails the test and skips its body (teardown still runs); a failing
+`timeout`, and they run after the test's services are ready. They always
+run with `sh` **on the host** — a test-level `shell` does not apply to
+them, and neither does a [test container](#running-a-test-in-a-container),
+so whatever a hook calls must exist outside the image. A failing setup
+fails the test and skips its body (teardown still runs); a failing
 teardown fails an otherwise passing test. On groups, hooks wrap all
 children; with a matrix they run per instance.
 
@@ -428,7 +441,8 @@ A tag on a group applies to all tests below it. Run a subset with
 ## Timeouts, env, workdir
 
 Every test can carry a free-form `description`, and can set a `timeout`
-(fails the test and everything nested below it when exceeded), `env`
+(fails the test and everything nested below it when exceeded — on a test
+with a `matrix` it applies per instance, not to the whole fan-out), `env`
 (merged over the parent's environment, child wins) and `workdir` (relative
 to the Testfile):
 

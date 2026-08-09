@@ -76,7 +76,6 @@
       "required": [
         "runs"
       ],
-      "additionalProperties": false,
       "properties": {
         "runs": {
           "type": "array",
@@ -89,7 +88,6 @@
               "startedAt",
               "durationMs"
             ],
-            "additionalProperties": false,
             "properties": {
               "id": {
                 "type": "string"
@@ -116,7 +114,7 @@
                 "format": "date-time"
               },
               "durationMs": {
-                "type": "number",
+                "type": "integer",
                 "minimum": 0
               }
             }
@@ -133,10 +131,6 @@
           }
         }
       }
-    },
-    "name": {
-      "description": "Display name of the project, from the Testfile's `name`.",
-      "type": "string"
     },
     "env": {
       "description": "The resolved top-level `env` of the Testfile (may be empty). Secret values are masked.",

@@ -61,6 +61,8 @@ afterwards — including when the user aborts the run with Ctrl+C.
 | `name`     | string | no       | Display name of the project/Testfile. |
 | `env`      | map    | no       | Environment variables for everything in this file. |
 | `envFile`  | string/array | no | Dotenv file(s), relative to the Testfile, loaded for the whole run. See [Env files](#env-files). |
+| `forwardEnv` | array | no      | Host variables (names or `*` patterns) forwarded into the isolated test environment. See [Environment](#environment-and-templates). |
+| `secrets`  | array  | no       | Host variables forwarded *and* masked in everything recorded. See [Secrets](#secrets). |
 | `ports`    | map    | no       | Named ports, see [Ports](#ports). |
 | `services` | map    | no       | Services for the whole run, see [Services](#services). |
 | `test`     | test   | yes      | The root test. |
@@ -90,6 +92,8 @@ Common fields available on every test:
 | `if`              | string   | Condition deciding whether the test (and its nested tests) runs, see [Conditions](#conditions). A false condition marks the test `skipped` without failing the parent. |
 | `env`             | map      | Environment variables, merged over the parent's environment (child wins). |
 | `envFile`         | string/array | Dotenv file(s), relative to the test's working directory, loaded for this test and its nested tests. See [Env files](#env-files). |
+| `forwardEnv`      | array    | Host variables (names or `*` patterns) forwarded into this test and its nested tests. See [Environment](#environment-and-templates). |
+| `secrets`         | array    | Host variables forwarded *and* masked for this test and its nested tests. See [Secrets](#secrets). |
 | `workdir`         | string   | Working directory for this test and its nested tests, relative to the Testfile (or absolute). |
 | `timeout`         | duration | Abort and fail this test (and its children) after this time. |
 | `continueOnError` | boolean  | The failure of this test is reported but does not fail the parent group. Default `false`. |
@@ -98,11 +102,13 @@ Common fields available on every test:
 | `services`        | map      | Services scoped to this test and its nested tests, see [Services](#services). |
 | `matrix`          | map      | Matrix expansion, see [Matrix](#matrix). |
 | `maxParallel`     | integer  | Only together with `parallel`: cap on concurrently running children. Default: unlimited. |
-| `needs`           | array    | Only on children of a `parallel` group: names of sibling tests that must finish first, turning the group into a DAG. The test starts once all named siblings passed or were skipped; if one failed, the test is skipped. References must name existing, unambiguous siblings and must not form cycles. |
+| `needs`           | array    | Only on children of a `parallel` group: names of sibling tests that must finish first, turning the group into a DAG. The test starts once all named siblings passed, were skipped by their `if` condition, or were removed by filters. A sibling that failed — or was itself skipped because of its own `needs` — skips this test too, so skips cascade down a chain. References must name existing, unambiguous siblings and must not form cycles. |
 | `artifacts`       | array    | Glob patterns, relative to the test's working directory, of files the test produces (coverage, screenshots, reports). Runners copy matching files into the recorded run — also when the test failed. |
 | `inputs`          | array    | Only on `command`/`script` tests: glob patterns, relative to the test's working directory, of the files the test depends on. Enables [result caching](#result-caching). |
 | `setup`           | hook     | Runs after the test's services are ready and before its body. A failing setup skips the body and fails the test; teardown still runs. See [Hooks](#hooks). |
 | `teardown`        | hook     | Always runs after the test's body — on success, failure and abort — before the test's services stop. A failing teardown fails an otherwise passing test. See [Hooks](#hooks). |
+| `container`       | object   | Runs this test's body (and the bodies of nested tests) inside a container image, see [Test containers](#containers). |
+| `template`        | test     | Only together with `foreach`: the test generated per match, see [Foreach](#foreach). |
 
 ### Execution semantics
 
@@ -193,9 +199,13 @@ Rules:
   embedded tests (`workdir` cannot be set on an include test).
 - The included file's top-level `env` and `services` are scoped to the
   embedded tests; `env` set on the include test wins over the included
-  file's values.
+  file's values. The included file's top-level `envFile`, `forwardEnv` and
+  `secrets` are **ignored** — declare those on the include test (or in the
+  included file's tests) instead.
 - The included file's `ports` merge into the including document's `ports`.
-  Two definitions of the same port name with different values are an error.
+  Two definitions of the same port name with different values are an error,
+  and two files declaring the same `random` port name share one allocated
+  port.
 - Other fields on the include test (`name`, `tags`, `if`, `timeout`,
   `setup`/`teardown`, `matrix`, ...) apply to the embedded tests as usual.
 
@@ -266,7 +276,9 @@ ports:
 ```
 
 `random` asks the runner to allocate a currently free TCP port. The resolved
-number is available everywhere as `${{ ports.NAME }}`.
+number is available everywhere as `${{ ports.NAME }}`. Port names (like env
+variable names) match `[A-Za-z_][A-Za-z0-9_]*`; service names additionally
+allow `-`.
 
 ## Services
 
@@ -278,19 +290,24 @@ A service is an object with **exactly one** of:
 | `script`    | string | Run a local process with this shell script (`sh -e`). |
 | `container` | object | Run a container, see below. |
 
-plus the common fields `description`, `env`, `workdir`, `ready` and `stop`.
+plus the common fields `description`, `shared`, `needs`, `env`, `workdir`,
+`ready` and `stop`. `needs` names services in the same map that must be
+**ready** before this one starts (a health-gated `depends_on`); unknown
+names, self-references and cycles are rejected when the document loads.
 
 Services declared at the top level start before the root test and stop after
 the whole run. Services declared on a test start before that test (after the
 parent's services) and stop when the test finishes. Services of one `services`
 map are started concurrently; tests only start after **all** of their services
 (including inherited ones) reported ready. Services are stopped in reverse
-start order. Service names are also visible in the TUI so the user can switch
-to their output.
+start order. Service output is recorded next to the run (see
+[RESULTS.md](RESULTS.md)), so viewers can show each service's log by name.
 
 A service with `shared: true` is started once per **resolved
-configuration** (name plus command/script/container, env, workdir after
-template resolution) and reference-counted: matrix instances or parallel
+configuration** — the name plus every configuration field after template
+resolution (command/script, env, workdir, and for containers image, ports,
+env, volumes, entrypoint, command, network, pull, context and namespace) —
+and reference-counted: matrix instances or parallel
 tests whose resolved config is identical reuse the running instance, which
 stops after the last of them finished. Configs that differ — e.g. a matrix
 variable in the image or env — still get their own instance. A shared
@@ -305,10 +322,10 @@ runner marks the service as failed and aborts the dependent tests.
 | Field     | Type            | Description |
 | --------- | --------------- | ----------- |
 | `image`   | string (req.)   | Image reference, e.g. `docker.io/library/postgres:16`. |
-| `ports`   | array of string | `"HOST:CONTAINER"` mappings; the host part may be a template like `"${{ ports.db }}:5432"`. |
+| `ports`   | array of string | `"HOST:CONTAINER"` mappings; the host part may be a template like `"${{ ports.db }}:5432"`, the container part must be a literal port. |
 | `env`     | map             | Environment inside the container. |
 | `volumes` | array of string | `"HOST:CONTAINER[:OPTIONS]"` mounts. |
-| `pull`    | enum            | `always`, `missing` (default) or `never`: when to pull the image. |
+| `pull`    | enum            | `always`, `missing` or `never`: when to pull the image. Unset defers to the engine's own default — effectively `missing`, except that kubernetes always pulls `:latest`/untagged images. |
 | `network` | string          | Attach to this named container network, creating it if needed (networks are left in place after the run). The service name becomes a network alias, so services on the same network reach each other by name. |
 | `entrypoint` | array of string | Override the image entrypoint. |
 | `command` | array of string | Override the image command. |
@@ -316,6 +333,16 @@ runner marks the service as failed and aborts the dependent tests.
 
 A container definition never names an engine — a Testfile describes *what*
 runs, and the machine running it decides *how*.
+
+A test's own body can also run in a container (`container:` on a test,
+applying to it and everything nested below it). A test container shares
+`image`, `env`, `volumes`, `pull` and `network` with the table above, but
+differs where mounting the project matters: `workdir` is the mount point of
+the project inside the container (default `/workspace`), `network` defaults
+to `host` so services stay reachable on localhost, `options` passes extra
+engine flags (e.g. `--user 1000:1000`) — and there are no `ports`,
+`entrypoint`, `command`, `context` or `namespace`. Test containers always
+run on a local engine (see [Engine selection](#engine-selection)).
 
 ### Engine selection
 
@@ -327,11 +354,13 @@ Which engine runs the containers is decided per run, in this order:
 3. otherwise the first of **podman, docker, kubernetes** — in this order —
    that *responds*: podman and docker via their `info` command, kubernetes
    only when kubectl reaches a cluster. Merely being installed is not
-   enough, and the answer is cached for the rest of the run.
+   enough, and the first responding engine is cached for the rest of the
+   run.
 
 An explicit choice that is not one of the three names fails the run rather
 than falling back. When no engine responds and the suite starts containers,
-the affected services and tests fail with a message naming all three.
+the affected services and tests fail with a message naming everything that
+was tried.
 
 Test bodies (`container:` on a test) are the exception: they mount the
 project and therefore always run on a **local** engine. A run whose engine
@@ -369,11 +398,20 @@ Requirements a runner must meet:
 - **Logs are streamed** into the service's log (readiness `log` patterns
   match on them, and they land in the run folder like any service log). A
   dropped log stream or port-forward is re-established while the pod still
-  runs; a pod that is gone marks the service failed and aborts dependents.
+  runs — with a retry cap, so a stream that keeps dropping eventually fails
+  the service; a pod that is gone marks the service failed and aborts
+  dependents.
+- **Bounded waiting**: an image pull stuck in backoff counts as failed
+  after a short grace period (the reference runner uses 30 s), and waiting
+  for the pod to run at all has a generous fixed cap (5 min) that is
+  independent of the readiness timeout — readiness only starts once the
+  pod runs.
 - **Cleanup**: stopping deletes the pod and its Service, passing the `stop`
   timeout as the grace period, without waiting for termination. Everything
-  created carries the label `app.kubernetes.io/managed-by: testfile`, so
-  leftovers of a crashed runner are findable.
+  created carries the label `app.kubernetes.io/managed-by: testfile`
+  (plus `testfile/…` labels identifying the run, service and pod — the pod
+  label is the Service's selector), so leftovers of a crashed runner are
+  findable.
 
 `volumes` and `network` are errors with this engine: host paths mean
 nothing on a cluster, and services in one namespace already reach each
@@ -392,8 +430,8 @@ service and aborts the dependent tests.
 
 | Field  | Type             | Description |
 | ------ | ---------------- | ----------- |
-| `http` | string or object | Ready when the URL answers. String form: URL, any 2xx passes. Object form: `url` (required), `method` (default `GET`), `status` (default: any 2xx). |
-| `tcp`  | value or object  | Ready when a TCP connect succeeds. Plain form: a port on localhost (number or template string). Object form: `host` (default `localhost`), `port`. |
+| `http` | string or object | Ready when the URL answers. String form: URL, any 2xx passes. Object form: `url` (required), `method` (default `GET`), `status` (default: any 2xx). A single attempt is capped at 5s. |
+| `tcp`  | value or object  | Ready when a TCP connect succeeds. Plain form: a port on localhost (number or template string). Object form: `host` (default `localhost`), `port`. A single connect attempt is capped at 2s. |
 | `log`  | string or object | Ready when the service output matches a regular expression. String form: pattern, matched on both streams. Object form: `pattern` (required), `stream` (`stdout`, `stderr`, `any`; default `any`). |
 | `exec` | string or object | Ready when the shell command exits with code 0 (e.g. `pg_isready`, `redis-cli ping`). Runs in the service's environment and working directory; a single attempt is capped at 10s. |
 | `delay`    | duration | Wait before the first check. |
@@ -404,9 +442,9 @@ service and aborts the dependent tests.
 
 | Field     | Type     | Description |
 | --------- | -------- | ----------- |
-| `signal`  | string   | Signal sent to the process (group). Default `SIGTERM`. |
-| `timeout` | duration | Grace period before escalating to `SIGKILL`. Default `10s`. Containers are stopped via the engine's `stop` with the same timeout. |
-| `command` | string   | Run this shell command to stop the service instead of sending a signal. |
+| `signal`  | string   | Signal sent to the process (group), `SIG*` names only. Default `SIGTERM`. |
+| `timeout` | duration | Grace period before escalating to `SIGKILL`. Default `10s`. Containers and pods are stopped via the engine with the same timeout, rounded up to whole seconds (minimum 1s). |
+| `command` | string   | Run this shell command to stop the service. For a local process it replaces the signal (escalation to `SIGKILL` still happens if the service outlives the grace period); a container or pod is additionally stopped through its engine afterwards. |
 
 Graceful shutdown is guaranteed on normal completion, on failure, and when
 the user interrupts the runner (first Ctrl+C: graceful stop of tests and

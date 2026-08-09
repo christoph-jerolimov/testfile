@@ -22,7 +22,7 @@ every command with all of its arguments and options.
 
 ```sh
 # the runner
-testfile init [path]         # create a starter Testfile (from package.json)
+testfile init [path]         # create a starter Testfile (from what the project has)
 testfile start [path]        # run the test suite (default command)
 testfile start --verbose     # also stream service output
 testfile start --fail-fast   # abort everything at the first failure
@@ -34,6 +34,8 @@ testfile start --variant platform=linux   # tag the run (for merging later)
 testfile validate [path]     # validate against the JSON schema
 testfile doctor [path]       # check this machine against what the file needs
 testfile inspect [path]      # print the expanded suite, incl. matrix instances
+testfile tags [path]         # list the tags the suite uses
+testfile changes [path]      # which tests a change selection would run
 testfile completion bash     # shell completions (bash, zsh, fish)
 
 # the viewer (read-only over .testfile/)
@@ -46,6 +48,7 @@ testfile-viewer serve              # localhost REST API + web viewer
 testfile-viewer archive <cmd>      # pack/import recorded runs as archives
 testfile-viewer s3 <cmd>           # push/pull/list runs in an S3 bucket
 testfile-viewer github <cmd>       # sync/list GitHub Actions run artifacts
+testfile-viewer gitlab <cmd>       # sync/list GitLab CI job artifacts
 ```
 
 Tab completion for commands and flags:
@@ -99,7 +102,7 @@ $ testfile doctor
   ↳ stop what listens on 8080, or declare "web: random" and template the value
 ✔ .testfile/                 /home/me/app/.testfile is writable
 
-7 failed, 0 warning(s), 14 checks
+7 failed, 0 warning(s), 13 checks
 ```
 
 What it looks at:
@@ -185,14 +188,18 @@ testfile start --reporter json --output results.json
 testfile start --reporter json           # ... or to stdout
 ```
 
-The JUnit XML contains one `<testcase>` per executed test (group path as
-classname) with `<failure>` elements carrying the merged log and
-`<skipped/>` markers; the JSON report is the same record that the run's
-`run.yaml` stores. In watch mode the report is rewritten after every re-run.
+The JUnit XML contains one `<testcase>` per **leaf** test — its name is the
+last path segment, the parent path becomes the classname; groups aggregate,
+they don't get testcases — with `<failure>` elements carrying the merged
+log and `<skipped/>` markers; the JSON report is the same record that the
+run's `run.yaml` stores. In watch mode the report is rewritten after every
+re-run.
 
-Everything else a command prints is available as JSON too, always through
-the same `--json [file]` flag: a file name writes there, the bare flag
-writes to stdout, so a command can be piped straight into `jq`.
+What the inspection commands print is available as JSON too, through the
+same `--json [file]` flag: a file name writes there, the bare flag writes
+to stdout, so a command can be piped straight into `jq`. (The commands
+below all take it; action commands like `merge`, `serve` or the sync
+commands don't.)
 
 ```sh
 testfile inspect --json | jq '.tests[].path'   # what a filtered run would execute
@@ -226,8 +233,8 @@ run first.
 `path` may be a Testfile or a directory containing one (`Testfile`,
 `testfile.yaml` or `testfile.yml`); it defaults to the current directory.
 
-Exit codes: `0` all tests passed · `1` failures or a service that would not
-start · `130` interrupted.
+Exit codes: `0` all tests passed (or everything skipped) · `1` failures or
+a service that would not start · `130` interrupted.
 
 ## Filtering
 
@@ -444,8 +451,8 @@ views, switched with `1`/`2`:
    selected test's executions across all runs as a table.
 
 Both views watch `.testfile/runs/` — runs recorded by other processes
-(say, a `testfile start` in a second terminal, or `testfile-viewer runs
-sync`) appear live. `--view results` opens on the results view.
+(say, a `testfile start` in a second terminal, or a `testfile-viewer
+github sync`) appear live. `--view results` opens on the results view.
 
 Keys: `↑`/`↓` (`k`/`j`) select · enter toggles details/merged log (runs
 view) · `?` in-log search with `n`/`N` · `w` wrap · PgUp/PgDn (`u`/`d`) or
@@ -453,30 +460,33 @@ the mouse wheel scroll the log pane · `q` quits.
 
 ## Run history
 
-Every run — CLI and TUI alike — is recorded in a `.testfile/` folder next to
+Every `testfile start` is recorded in a `.testfile/` folder next to
 the Testfile (the folder ignores itself via a generated `.gitignore`). Each
 run is a self-contained folder:
 
 ```
 .testfile/
   runs/<run-id>/
-    run.yaml           # the run's record
-    junit.xml          # the run as JUnit XML, for CI tooling
-    tests/<test>.log   # merged stdout+stderr per test
-    services/<svc>.log # log of each started service
+    run.yaml            # the run's record
+    junit.xml           # the run as JUnit XML, for CI tooling
+    tests/<test>.log    # merged stdout+stderr per test
+    services/<svc>.log  # log of each started service
+    artifacts/<test>/…  # files collected via `artifacts:`
 ```
 
 `run.yaml` stores the run's start time, duration, status
 (passed/failed/aborted), exit code, whether it was cancelled, the env
-variables and ports provided by the Testfile, which tests were selected, and
-the status/duration/log of every test that ran. Each test also records
-**when** it started — `startedAt` as a timestamp and `startedAfterMs` as
-the distance from the start of the run — so a run can be laid out on a
-timeline without guessing. Run ids start with the run's
-UTC timestamp, so folders sort chronologically; the last 50 runs are kept
-and older run folders are pruned automatically. (Histories written by older
-runners as one `runs.yaml` index are migrated to per-run files on first
-use.)
+variables and ports provided by the Testfile, which tests were selected,
+the [labels and variants](#labelling-runs) attached to the run, the
+Testfile's whole test tree (`suite`, including tests this run did not
+execute), the started services, and the status/duration/log of every test
+that ran. Each test also records **when** it started — `startedAt` as a
+timestamp and `startedAfterMs` as the distance from the start of the run —
+so a run can be laid out on a timeline without guessing. Run ids start
+with the run's UTC timestamp (second granularity — order runs by
+`startedAt` when it matters); the last 50 runs are kept and older run
+folders are pruned automatically. (Histories written by older runners as
+one `runs.yaml` index are migrated to per-run files on first use.)
 
 Browse the history from the command line:
 
@@ -677,6 +687,7 @@ narrows anything is the time window:
 | ------ | ---------- | ------- |
 | **Started** | runs — `7 days`, `30 days`, `90 days`, `all` | last **30 days** |
 | **Status** | runs / tests, multi-select (several values are an OR) | everything |
+| **Labels** | runs, multi-select over the recorded [labels](#labelling-runs) (`branch=main`-style) | everything |
 | **Variants** | runs, multi-select over `platform=linux`-style labels; a merged run matches when *any* of its legs does | everything |
 | **Tags** | tests, multi-select over the tags of the recorded [suite tree](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md) — nested tests inherit the tags of their groups | everything |
 | **flaky only** | tests, an on/off chip: keeps only tests the [flaky rule](#run-history) calls flaky — 25% to 75% of their last 20 results failed. Broken tests are badged but not matched by this chip | off |

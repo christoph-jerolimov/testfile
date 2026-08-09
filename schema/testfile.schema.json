@@ -326,7 +326,7 @@
           "minimum": 1
         },
         "needs": {
-          "description": "Only on children of a 'parallel' group: names of sibling tests that must finish first. The test starts once all named siblings passed (or were skipped); if one failed, this test is skipped. References must be unambiguous and cycle-free.",
+          "description": "Only on children of a parallel group: the test starts once all named siblings passed (or were skipped by their `if` condition, or removed by filters). A sibling that failed - or was itself skipped because of its own needs - skips this test too, so skips cascade down a chain.",
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,

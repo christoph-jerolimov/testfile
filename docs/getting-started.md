@@ -32,8 +32,8 @@ converts them, so the first version is rarely empty:
 | Source | Becomes |
 | ------ | ------- |
 | `package.json` scripts | tests for `lint`, `typecheck`, `test`, `test:*`, `build` |
-| `compose.yaml` / `docker-compose.yaml` | `services` — image, ports (as [random ports](./env-and-ports#named-ports)), env, volumes, `healthcheck` → [`ready`](./services#readiness-checks), `depends_on` → [`needs`](./services#service-dependencies) |
-| `.github/workflows/*.yaml` | one test per job, its `run:` steps as a sequence (`uses:` steps are dropped) |
+| `compose.yaml` / `docker-compose.yaml` | `services` — image, ports (as [random ports](./env-and-ports#named-ports)), env, volumes, command/entrypoint, `healthcheck` → [`ready`](./services#readiness-checks), `depends_on` → [`needs`](./services#service-dependencies); a published port without a healthcheck becomes a `tcp` check |
+| `.github/workflows/*.yaml` | one test per job, its `run:` steps as a sequence (`uses:` steps are dropped). Auto-detection picks the first workflow it finds; pass others with `--from` |
 | `Makefile`, `Taskfile.yaml`, `justfile` | tests for targets that look like checks (`test`, `lint`, `check`, `e2e`, …) |
 
 ```sh
@@ -43,14 +43,14 @@ testfile init --no-detect              # package.json scripts only
 ```
 
 The conversion is deliberately best-effort: anything that could not be
-translated — a service without a health check, dropped action steps, a
+translated — a service with neither health check nor ports, dropped action steps, a
 build matrix — is written into the file as a `# note:` comment and printed,
 so you know where to look. Read the result before trusting it.
 
 ## 2. Run it
 
 ```sh
-npx testfile start
+npx @testfile/runner start
 ```
 
 The runner finds the Testfile in the current directory, runs the suite and
