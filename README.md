@@ -3,20 +3,8 @@
 [![CI](https://github.com/christoph-jerolimov/testfile/actions/workflows/ci.yaml/badge.svg)](https://github.com/christoph-jerolimov/testfile/actions/workflows/ci.yaml)
 
 **Testfile** is a declarative YAML format (`Testfile` / `testfile.yaml` /
-`testfile.yml`) that
-describes how a project runs its tests:
-
-- Tests form a nested **suite**: each test runs a `command` or `script`, or
-  groups nested tests in `sequence` or `parallel`; a **matrix** expands one
-  test into many combinations.
-- Tests can declare **services** they depend on — the app under test, a
-  database in a specific version — as local processes or **containers**.
-  Which engine runs them (podman, docker, or pods on a kubernetes cluster)
-  is chosen by whoever runs the tests, not by the file. The runner starts
-  them, waits for a **ready** signal (HTTP check, TCP port, or a log
-  pattern), and **gracefully stops** them, even on Ctrl+C.
-- **Env vars, named ports** (including random free ports) and matrix values
-  are injected through `${{ ... }}` templates.
+`testfile.yml`) that describes how a project runs its tests — one file that
+works the same on every laptop and in every CI.
 
 ```yaml
 version: 0
@@ -38,6 +26,56 @@ test:
         BASE_URL: http://localhost:${{ ports.web }}
       command: npm run test:e2e
 ```
+
+## Features
+
+**The format** —
+[nested suites](https://christoph-jerolimov.github.io/testfile/docs/writing-tests)
+of `sequence`/`parallel` groups; a
+[matrix](https://christoph-jerolimov.github.io/testfile/docs/matrix)
+expands one test into many combinations; `foreach` generates a test per
+matching folder or file; `include` composes monorepos from per-package
+Testfiles. Conditions (`if` with `&&`/`||`), tags, timeouts, retries,
+`continueOnError`, DAG ordering with `needs`, and `setup`/`teardown`
+hooks. `${{ env/ports/matrix }}` templates with `||` defaults. A JSON
+schema for validation and editor completion — and the whole format is
+pinned by a [normative spec](spec/) plus a runner-independent
+[conformance suite](conformance/), so other runners can implement it.
+
+**Services & environment** — tests declare the
+[services](https://christoph-jerolimov.github.io/testfile/docs/services)
+they need (the app under test, databases in specific versions) as local
+processes or containers; which engine runs them — podman, docker, or
+**pods on a kubernetes cluster** with ports forwarded to localhost — is
+chosen by whoever runs the tests, never by the file. Readiness by HTTP,
+TCP, log pattern or command; service-to-service `depends_on`-style
+`needs`; instances shared across a matrix; graceful stop, also on Ctrl+C.
+Test bodies can run [inside a container](https://christoph-jerolimov.github.io/testfile/docs/writing-tests#running-a-test-in-a-container)
+too. The [environment is isolated](https://christoph-jerolimov.github.io/testfile/docs/env-and-ports):
+explicit `forwardEnv`, env files and first-class `secrets` with masking,
+named ports with per-run random allocation.
+
+**Running** — [filters](https://christoph-jerolimov.github.io/testfile/docs/cli#filtering)
+by name, tag or matrix value; re-run `--failed`; git-aware `--changed`
+selection; `--shard i/n` across machines; watch mode and a cache-aware
+`--dry-run`. [Result caching](https://christoph-jerolimov.github.io/testfile/docs/writing-tests#result-caching)
+by declared `inputs`, collected artifacts, JUnit/JSON reports. Every run
+is recorded — `run.yaml`, per-test logs with timing for a timeline,
+service logs — and `testfile doctor` checks a machine against what the
+file needs before a run finds out the hard way. `testfile init` imports
+what a project already has (package.json scripts, docker-compose, GitHub
+workflows, Makefiles). Shell completions included.
+
+**CI & viewing** — a [GitHub Action](https://christoph-jerolimov.github.io/testfile/docs/github-action)
+with PR annotations, a job summary, an optional **commit status per
+test** and the run uploaded as an artifact; ready-made snippets for
+GitLab, Jenkins, Buildkite and CircleCI. The read-only viewer serves the
+recorded runs: a runs table, run diffs, flaky/broken verdicts, a terminal
+UI and a [local web viewer](https://christoph-jerolimov.github.io/testfile/docs/cli#the-web-viewer)
+with label/status/variant filters and a timeline. Runs travel: pack them
+as archives, push/pull via S3, sync straight from GitHub Actions or
+GitLab CI, and merge platform legs into a single verdict. Plus a VS Code
+extension with schema validation, run-from-editor and a runs view.
 
 ## Repository layout
 

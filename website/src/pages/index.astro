@@ -121,23 +121,28 @@ test:
         <ul>
           <li>Nested tests: <a href={`${base}/docs/writing-tests#sequences`}>sequences</a> and <a href={`${base}/docs/writing-tests#parallel-groups`}>parallel groups</a></li>
           <li><a href={`${base}/docs/matrix`}>Matrix expansion</a> across versions and variants</li>
+          <li><a href={`${base}/docs/writing-tests#one-test-per-folder-or-file`}>One test per folder/file</a> with <code>foreach</code></li>
+          <li><a href={`${base}/docs/writing-tests#composing-testfiles`}>Includes</a> for monorepos</li>
           <li><a href={`${base}/docs/writing-tests#conditional-tests`}>Conditions</a>, <a href={`${base}/docs/writing-tests#tags`}>tags</a> and per-test <a href={`${base}/docs/writing-tests#timeouts-env-workdir`}>timeouts</a></li>
           <li><a href={`${base}/docs/writing-tests#retries`}>Retries</a> and tolerated failures</li>
           <li><a href={`${base}/docs/writing-tests#setup-and-teardown`}>Setup &amp; teardown</a> hooks, DAG ordering with <code>needs</code></li>
-          <li><a href={`${base}/docs/writing-tests#composing-testfiles`}>Includes</a> for monorepos</li>
           <li><a href={`${base}/docs/env-and-ports#templates`}>Template expressions</a> with defaults</li>
           <li><a href="https://github.com/christoph-jerolimov/testfile/blob/main/schema/testfile.schema.json">JSON schema</a> validation &amp; editor autocompletion</li>
+          <li>A <a href={`${base}/spec/testfile`}>normative spec</a> with a runner-independent conformance suite</li>
         </ul>
       </div>
       <div class="group">
         <h3>Services &amp; environment</h3>
         <ul>
-          <li>Processes or containers (podman/docker) as <a href={`${base}/docs/services`}>services</a></li>
+          <li>Processes or containers as <a href={`${base}/docs/services`}>services</a> — the run picks the engine</li>
+          <li>podman, docker, or <a href={`${base}/docs/services#services-on-a-kubernetes-cluster`}>pods on a kubernetes cluster</a></li>
           <li>Readiness by HTTP, TCP, log line or command</li>
-          <li><a href={`${base}/docs/env-and-ports`}>Random ports</a> for parallel-safe runs</li>
+          <li><a href={`${base}/docs/services#service-dependencies`}>Service dependencies</a>, health-gated like <code>depends_on</code></li>
           <li>Services shared across matrix instances</li>
+          <li><a href={`${base}/docs/writing-tests#running-a-test-in-a-container`}>Test bodies in containers</a>, project mounted</li>
+          <li><a href={`${base}/docs/env-and-ports`}>Random ports</a> for parallel-safe runs</li>
           <li><a href={`${base}/docs/env-and-ports#an-isolated-environment`}>Isolated environment</a> with explicit <code>forwardEnv</code></li>
-          <li><a href={`${base}/docs/env-and-ports#env-files-and-secrets`}>Env files</a> with secret masking</li>
+          <li><a href={`${base}/docs/env-and-ports#env-files-and-secrets`}>Env files &amp; secrets</a> with masking</li>
           <li>Graceful teardown, also on Ctrl+C</li>
         </ul>
       </div>
@@ -146,13 +151,14 @@ test:
         <ul>
           <li><a href={`${base}/docs/cli#filtering`}>Filters</a> by name, tag or matrix value</li>
           <li>Re-run what broke (<code>--failed</code>) or what <a href={`${base}/docs/writing-tests#change-based-selection`}>changed</a></li>
-          <li><a href={`${base}/docs/writing-tests#result-caching`}>Result caching</a> with <code>inputs</code></li>
+          <li><a href={`${base}/docs/writing-tests#result-caching`}>Result caching</a> with <code>inputs</code>, <a href={`${base}/docs/cli#sharding-across-machines`}>sharding</a> across machines</li>
           <li><a href={`${base}/docs/cli#watch-mode`}>Watch mode</a> and cache-aware <code>--dry-run</code></li>
           <li><a href={`${base}/docs/cli#machine-readable-reports`}>JUnit &amp; JSON reports</a>, collected <a href={`${base}/docs/writing-tests#artifacts`}>artifacts</a></li>
-          <li><a href={`${base}/docs/github-action`}>GitHub Action</a> with PR annotations &amp; job summary</li>
-          <li><a href={`${base}/docs/cli#the-tui`}>TUI</a>, <a href={`${base}/docs/cli#the-web-viewer`}>web viewer</a> and <a href={`${base}/docs/cli#tags`}>tag inventory</a></li>
-          <li>Flaky-test detection, run diffs, <a href={`${base}/docs/cli#sharing-runs`}>run sharing</a> via S3 or GitHub</li>
-          <li>VS Code extension and shell completions</li>
+          <li><a href={`${base}/docs/github-action`}>GitHub Action</a>: annotations, job summary, a <a href={`${base}/docs/github-action#a-status-per-test`}>status per test</a></li>
+          <li><a href={`${base}/docs/ci-systems`}>GitLab, Jenkins, Buildkite &amp; CircleCI</a> recipes</li>
+          <li><a href={`${base}/docs/cli#the-tui`}>TUI</a> and <a href={`${base}/docs/cli#the-web-viewer`}>web viewer</a> with timeline, diffs &amp; flaky detection</li>
+          <li><a href={`${base}/docs/cli#sharing-runs`}>Run sharing</a> via S3, GitHub or GitLab; platform runs merged into one</li>
+          <li><a href={`${base}/docs/getting-started#4-editor-support`}>VS Code extension</a>, <code>testfile init</code> importers, <code>doctor</code>, completions</li>
         </ul>
       </div>
     </div>
