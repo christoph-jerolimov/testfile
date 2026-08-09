@@ -33,7 +33,7 @@ that would not start · `130` interrupted.
 
 ### `testfile start [path]`
 
-Run the test suite (the default command).
+Start the test suite (the default command).
 
 | Option | Description |
 | ------ | ----------- |
@@ -45,6 +45,8 @@ Run the test suite (the default command).
 | `--no-cache` | Ignore cached results; fresh results still refresh the cache. |
 | `--forward-env <pattern>` | Forward matching host env vars into the [isolated test env](./env-and-ports#an-isolated-environment), e.g. `"GITHUB_*"` or `"*"`. *(repeatable)* |
 | `--engine <name>` | Container engine for this run: `podman`, `docker` or `kubernetes`. Default: `$TESTFILE_ENGINE`, else the first of the three that responds. The [Testfile itself never names one](./services#containers). |
+| `--variant <key=value>` | Record what distinguishes this run from a sibling run — e.g. `platform=linux` for one leg of a matrix. Recorded in `run.yaml` and used by [`testfile-viewer merge`](#testfile-viewer-merge-run). *(repeatable)* |
+| `-l, --label <key=value>` | Record a label with the run, e.g. `branch=main`, so it can be [found again later](./cli#labelling-runs). Split at the first `=`; a key may only be given once. *(repeatable)* |
 | `--reporter <kind>` | Write [machine-readable results](./cli#machine-readable-reports) after the run: `junit` or `json`. |
 | `--output <file>` | Report target file, or `-` for stdout (the default). |
 
@@ -71,9 +73,7 @@ previews exactly what a filtered `start` would execute.
 | `--failed` | Only tests that failed (or were aborted) in the last recorded run. |
 | `--changed` | Only tests whose `inputs` match files [changed against the base branch](./writing-tests#change-based-selection), plus local changes. |
 | `--changed-since <ref>` | Base branch/ref for `--changed`, e.g. `origin/main` (implies `--changed`). |
-| `--variant <key=value>` | Record what distinguishes this run from a sibling run — e.g. `platform=linux` for one leg of a matrix. Recorded in `run.yaml` and used by [`testfile-viewer merge`](#testfile-viewer-merge-run). *(repeatable)* |
-| `-l, --label <key=value>` | Record a label with the run, e.g. `branch=main`, so it can be [found again later](./cli#labelling-runs). Split at the first `=`; a key may only be given once. *(repeatable)* |
-| `--shard <i/n>` | Run only this shard of the selected tests, e.g. `2/4`. Time-balanced from the [run history](./cli#run-history) when it has durations, round-robin otherwise. |
+| `--shard <i/n>` | Run only this shard of the selected tests, e.g. `2/4`. Time-balanced from the [run history](./cli#run-history) when at least half the selected tests have a recorded duration, round-robin otherwise. |
 
 ### `testfile tags [path]`
 

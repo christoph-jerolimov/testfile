@@ -25,7 +25,8 @@ group.
 ## Using matrix values
 
 Matrix values are available as `${{ matrix.NAME }}` templates and as
-environment variables `TESTFILE_MATRIX_<NAME>`:
+environment variables `TESTFILE_MATRIX_<NAME>` (the name upper-cased, so
+`matrix.node` becomes `TESTFILE_MATRIX_NODE`):
 
 ```yaml
 test:
@@ -76,4 +77,10 @@ test:
   command: npm run test:db
 ```
 
-Each instance starts (and stops) its own container with its own version.
+Each instance starts (and stops) its own container with its own version —
+unless the service is [`shared: true`](./services#sharing-services), where
+instances with an identical resolved configuration reuse one.
+
+A nested test can carry its own `matrix` too: it inherits the ancestors'
+values and its own combination is merged on top (same-named variables
+shadow the inherited ones).

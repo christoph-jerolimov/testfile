@@ -181,9 +181,12 @@ export function sharedServiceKey(def: ServiceDef, scopes: Scopes, cwd: string): 
           image: resolveTemplate(container.image, scopes, where),
           context: opt(container.context),
           namespace: opt(container.namespace),
+          network: opt(container.network),
+          pull: container.pull,
           ports: (container.ports ?? []).map((p) => resolveTemplate(p, scopes, where)),
           env: resolveEnvMap(container.env, scopes, where),
           volumes: (container.volumes ?? []).map((v) => resolveTemplate(v, scopes, where)),
+          entrypoint: (container.entrypoint ?? []).map((e) => resolveTemplate(e, scopes, where)),
           command: (container.command ?? []).map((a) => resolveTemplate(a, scopes, where)),
         }
       : undefined,

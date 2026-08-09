@@ -17,8 +17,12 @@ The harness (`run.mjs`) runs every case against the runner under test:
 1. The case directory is **copied to a fresh temporary directory**, so cases
    are hermetic and may write files.
 2. The runner is invoked as
-   `<runner> start <dir> --reporter json --output <file>`, with any `env`
-   from `expected.yaml` added to the environment.
+   `<runner> start <dir> [args] --reporter json --output <file>`, with any
+   `env` from `expected.yaml` added to the environment and any `args`
+   string spliced in verbatim (e.g. `--variant` flags). The report file is
+   always `conformance-result.json` inside the copied case directory, and
+   a stale one is deleted before each invocation — a runner must resolve
+   `--output` against its working directory.
 3. The runner's **exit code**, the report's **run status** and the
    **per-test statuses** (matched by test path) are compared against
    `expected.yaml`. A test expectation may additionally pin `cached`
@@ -84,11 +88,15 @@ An optional argument filters cases by substring:
 | Field | Meaning |
 | ----- | ------- |
 | `spec` | The specification sections this case pins — see [coverage](#coverage) below. |
+| `requires` | Tool names that must answer for their backend (see above); otherwise the case is skipped. |
+| `args` | Extra command-line arguments spliced into the runner invocation. |
+| `env` | Extra environment variables set for the runner invocation (e.g. `TESTFILE_ENGINE`). |
 | `exitCode` | Required process exit code. |
 | `status` | Required run status in the report (`passed`, `failed`, `aborted`). |
-| `env` | Extra environment variables set for the runner invocation. |
-| `tests` | List of `{path, status}`; each must appear in the report with that status. |
+| `variants` | Key/value pairs that must appear as the report's `variants`. |
+| `tests` | List of `{path, status}`; each must appear in the report with that status. An entry may additionally pin `cached` and `artifacts` (a file count). |
 | `absentTests` | Paths that must **not** appear in the report (tests that must not have run). |
+| `reruns` | Further invocations in the same working copy, each with its own `exitCode`/`status`/`tests` and an optional `before` shell command. |
 
 ## Coverage
 

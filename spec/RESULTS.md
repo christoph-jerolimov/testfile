@@ -68,8 +68,9 @@ of every record, so editors validate and complete it.
 | `env`        | map     | yes      | The resolved top-level `env` of the Testfile (may be empty). Secret values are masked. |
 | `ports`      | map     | yes      | The resolved named ports (may be empty). |
 | `selected`   | array   | yes      | Test paths the user selected for this run (empty = the whole suite). |
-| `tests`      | array   | yes      | One entry per executed test, in execution order — see below. |
+| `tests`      | array   | yes      | One entry per executed test, in **document order** (a pre-order walk of the suite; groups precede their children). Use `startedAt`/`startedAfterMs` for the temporal order — parallel groups make the two differ. See below. |
 | `services`   | array   | no       | One entry per started service — see below. |
+| `suite`      | object  | no       | The Testfile's test tree, including tests this run did not execute — see [`suite`](#suite). |
 | `junit`      | string  | no       | Relative path of the JUnit XML (`junit.xml`). |
 
 Consumers must ignore unknown fields (producers may add fields in later
@@ -210,15 +211,20 @@ as-is when present.)
 
 ## junit.xml
 
-Every run folder contains the run as JUnit XML: one `<testcase>` per
-**leaf** test (`name` = last path segment, `classname` = parent path),
-`<failure>` elements carrying the test's log, `<skipped/>` markers, and
-counts/timestamps on the suite elements.
+Every run folder a **runner** records contains the run as JUnit XML: one
+`<testcase>` per **leaf** test (`name` = last path segment, `classname` =
+parent path), `<failure>` elements carrying the test's log, `<skipped/>`
+markers, and counts/timestamps on the suite elements. Merged runs (see
+above) carry no `junit.xml` and no `junit` field — which is why the field
+is optional.
 
 ## Secrets
 
-Values loaded from `envFile` files are secrets: producers must mask them
-(`***`) in every recorded log and must not write them into `run.yaml`.
+Values loaded from `envFile` files, and the variables a Testfile names in
+`secrets:` (see the [format specification](README.md)), are secrets:
+producers must mask them (`***`) in every recorded log and must not write
+them into `run.yaml`. (Values shorter than 4 characters are exempt — masking
+them would mark ubiquitous substrings as secret without hiding anything.)
 
 ## Retention and concurrency
 

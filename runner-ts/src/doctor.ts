@@ -426,9 +426,10 @@ function engineState(
 }
 
 // Which engine a run would use is the runner's decision: an explicit
-// TESTFILE_ENGINE (or --engine) wins, otherwise the first responding one of
-// podman, docker, kubernetes. Doctor checks all three and says what a run
-// would pick, so "works here, fails there" explains itself.
+// TESTFILE_ENGINE wins (doctor has no --engine flag; only start does),
+// otherwise the first responding one of podman, docker, kubernetes. Doctor
+// checks all three and says what a run would pick, so "works here, fails
+// there" explains itself.
 function containerChecks(env: DoctorEnv, doc: TestfileDoc | undefined): Check[] {
   const needs = doc ? containerNeeds(doc) : { needed: false };
   const order = ["podman", "docker", "kubernetes"];

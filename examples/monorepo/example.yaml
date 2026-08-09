@@ -6,6 +6,6 @@ summary: >-
   with glob includes, so teams stay independent.
 highlights:
   - "`include: packages/*` expands into one branch per package"
-  - Included files run in their own directory, with their own ports
+  - Included files run in their own directory; their named ports merge into the root's
   - "`inputs` per package: untouched packages come from the cache"
   - Filter to one package with `-n api`

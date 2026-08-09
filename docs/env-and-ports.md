@@ -47,7 +47,7 @@ test:
 Forwarded variables override the runner's defaults (forward `CI` to get
 the host's value), while explicit `env` entries and env files win over
 forwarded values. Ad-hoc forwarding without editing the Testfile:
-`testfile start --forward-env 'GITHUB_*'` (also on `testfile tui`).
+`testfile start --forward-env 'GITHUB_*'`.
 
 ## Environment variables
 
@@ -98,14 +98,17 @@ Files use the usual dotenv format (`KEY=VALUE`, `#` comments, optional
 
 Values loaded from env files are treated as **secrets**: they are masked as
 `***` in the logs recorded under `.testfile/` and never written into
-the recorded `run.yaml` — so tokens and passwords don't end up in your run history.
+the recorded `run.yaml` — so tokens and passwords don't end up in your run
+history. (Values shorter than 4 characters are not masked: they would mark
+ubiquitous substrings as secret without hiding anything.)
 
 ### Secrets from the CI environment
 
 CI systems hand secrets over as environment variables, and the test
 environment is otherwise [isolated](#an-isolated-environment) from the
 host. `secrets` names the variables that carry them — they are forwarded
-*and* masked:
+*and* masked (a name that is unset or empty on the host is simply
+skipped):
 
 ```yaml
 version: 0
@@ -162,13 +165,16 @@ test:
 
 ## Templates
 
-String values anywhere in the file can use `${{ scope.name }}`:
+Most string values in the file can use `${{ scope.name }}` — the
+exceptions are structural fields resolved before the run starts (`include`
+paths, the `foreach` glob, `name`, `tags`, `needs`):
 
 | Scope    | Example              | Value |
 | -------- | -------------------- | ----- |
 | `env`    | `${{ env.HOME }}`    | A variable from the merged environment. |
 | `ports`  | `${{ ports.web }}`   | A resolved named port. |
 | `matrix` | `${{ matrix.node }}` | A matrix variable of the current instance. |
+| `each`   | `${{ each.path }}`   | Only inside a [`foreach` template](./writing-tests#one-test-per-folder-or-file): the current match. Substituted when the file loads, not at run time. |
 
 Defaults use `||` and apply when the reference is undefined or empty:
 
@@ -179,4 +185,6 @@ env:
 ```
 
 Referencing an undefined name *without* a default is an error — typos fail
-fast instead of expanding to an empty string.
+fast instead of expanding to an empty string. (The one exception is
+[`if` conditions](./writing-tests#conditional-tests), where an undefined
+reference resolves to `""` so a condition can probe optional variables.)

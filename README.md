@@ -2,7 +2,8 @@
 
 [![CI](https://github.com/christoph-jerolimov/testfile/actions/workflows/ci.yaml/badge.svg)](https://github.com/christoph-jerolimov/testfile/actions/workflows/ci.yaml)
 
-**Testfile** is a declarative YAML format (`Testfile` / `testfile.yaml`) that
+**Testfile** is a declarative YAML format (`Testfile` / `testfile.yaml` /
+`testfile.yml`) that
 describes how a project runs its tests:
 
 - Tests form a nested **suite**: each test runs a `command` or `script`, or
@@ -51,6 +52,8 @@ test:
 | [`viewer-web/`](viewer-web/) | The React web viewer over recorded runs, served locally by `testfile-viewer serve`. |
 | [`vscode-extension/`](vscode-extension/) | VS Code extension: schema validation, run-from-editor code lenses and the recorded-runs view. |
 | [`conformance/`](conformance/) | Runner-independent conformance suite: cases with expected outcomes that any runner implementation must satisfy. |
+| [`examples/`](examples/) | Complete example projects for common stacks, schema-validated in CI and rendered on the website. |
+| [`ci/`](ci/) | Ready-made pipeline snippets for other CI systems (Jenkins, Buildkite, GitLab, CircleCI). |
 | [`action/`](action/) | Helper scripts of the GitHub Action defined in [`action.yml`](action.yml): annotations, the job summary and the run artifact. |
 
 This repository is an npm-workspaces monorepo and eats its own dog food: its
@@ -69,7 +72,10 @@ npm test --workspace runner-ts
 
 # run this repository's own Testfile with the runner
 node runner-ts/dist/cli.js start        # plain output
-node viewer-ts/dist/cli.js tui          # browse the recorded runs
+
+# build the viewer and browse the recorded runs
+npm run build --workspace viewer-ts
+node viewer-ts/dist/cli.js tui
 
 # build the documentation website
 npm run build --workspace website
@@ -97,9 +103,13 @@ See [docs/github-action.md](docs/github-action.md) for all inputs.
 
 ## Continuous integration
 
-- [`ci.yaml`](.github/workflows/ci.yaml) validates the schema against every
-  example (valid files must pass, invalid ones must be rejected), builds and
-  tests the runner, and builds the website.
+- [`ci.yaml`](.github/workflows/ci.yaml) runs this repository's own
+  Testfile through the bundled action on Linux, macOS and Windows — schema
+  validation, runner build & tests, website build and the conformance suite
+  (with a kind cluster on the Linux leg for the kubernetes case) — and a
+  second job merges the three platform runs into one.
+- [`release-vscode.yaml`](.github/workflows/release-vscode.yaml) packages
+  and publishes the VS Code extension on `vscode-v*` tags.
 - [`deploy-website.yaml`](.github/workflows/deploy-website.yaml) publishes
   the website to GitHub Pages on every push to `main`.
 

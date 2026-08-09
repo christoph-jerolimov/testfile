@@ -143,3 +143,34 @@ test("secrets are forwarded from the host and masked in the record", async () =>
     delete process.env.TESTFILE_TEST_TOKEN;
   }
 });
+
+test("a secret still reaches a test that also loads an env file", async () => {
+  const { Session } = await import("./session.js");
+  const { mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "testfile-secrets-envfile-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  writeFileSync(join(dir, ".env"), "FROM_FILE=loaded\n");
+
+  // The env-file path rebuilds the test environment; the secret must
+  // survive that rebuild (it used to be silently dropped).
+  process.env.TESTFILE_TEST_TOKEN = "s3cr3t-value";
+  try {
+    const session = new Session(
+      {
+        version: 0,
+        test: {
+          name: "root",
+          secrets: ["TESTFILE_TEST_TOKEN"],
+          envFile: ".env",
+          command: 'test "$TESTFILE_TEST_TOKEN" = "s3cr3t-value" && test "$FROM_FILE" = "loaded"',
+        },
+      },
+      dir,
+    );
+    assert.equal(await session.runAll(), "passed");
+  } finally {
+    delete process.env.TESTFILE_TEST_TOKEN;
+  }
+});
