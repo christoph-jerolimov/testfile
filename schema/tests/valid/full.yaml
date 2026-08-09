@@ -39,7 +39,6 @@ test:
         postgres:
           container:
             image: docker.io/library/postgres:${{ matrix.postgres }}
-            engine: podman
             ports:
               - "${{ ports.db }}:5432"
             env:

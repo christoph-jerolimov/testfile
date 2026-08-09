@@ -9,7 +9,6 @@ services:
   httpd:
     container:
       image: docker.io/library/busybox:1.36
-      engine: kubernetes
       ports:
         - "${{ ports.web }}:8080"
       command: ["httpd", "-f", "-p", "8080"]

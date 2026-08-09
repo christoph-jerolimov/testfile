@@ -98,9 +98,10 @@ export interface ServiceDef {
 }
 
 // A container a test's own body runs in (services use ContainerDef).
+// Which engine runs it is the run's choice (--engine / TESTFILE_ENGINE /
+// auto-detection), not the file's.
 export interface TestContainerDef {
   image: string;
-  engine?: "auto" | "podman" | "docker" | "kubernetes";
   env?: EnvMap;
   // Where the project is mounted (default /workspace).
   workdir?: string;
@@ -114,7 +115,6 @@ export interface TestContainerDef {
 
 export interface ContainerDef {
   image: string;
-  engine?: "auto" | "podman" | "docker" | "kubernetes";
   ports?: string[];
   env?: EnvMap;
   volumes?: string[];

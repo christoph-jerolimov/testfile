@@ -116,21 +116,26 @@ test("a folder outside a work tree is reported separately", async () => {
   assert.equal(find(checks, "git repository").status, "warn");
 });
 
-test("a Testfile that runs containers needs an engine", async () => {
+test("a Testfile that runs containers checks all three engines", async () => {
+  delete process.env.TESTFILE_ENGINE;
   const withContainer = doc({
     name: "e2e",
     command: "pytest",
     container: { image: "python:3.12" },
   });
+  // no engine anywhere: every engine gets a row, and the selection fails
   const checks = await runChecks(
     withContainer,
     "/repo",
     machine({ commands: { git: HEALTHY.git, "sh -c exit 0": { ok: true } } }),
   );
-  assert.equal(find(checks, "container engine").status, "fail");
-  assert.match(find(checks, "container engine").hint ?? "", /install podman or docker/);
+  assert.equal(find(checks, "container engine (podman)").status, "fail");
+  assert.equal(find(checks, "container engine (docker)").status, "fail");
+  assert.equal(find(checks, "container engine (kubernetes)").status, "fail");
+  assert.equal(find(checks, "engine selection").status, "fail");
+  assert.match(find(checks, "engine selection").hint ?? "", /podman or docker.*kubectl/);
 
-  // ... and reports the one that is installed but not running
+  // podman installed but dead, nothing else: still a failure, with the reason
   const stopped = await runChecks(
     withContainer,
     "/repo",
@@ -146,17 +151,61 @@ test("a Testfile that runs containers needs an engine", async () => {
   assert.match(engine.detail, /Cannot connect to Podman/);
 });
 
-test("an explicit engine is the only one looked for", () => {
+test("the first responding engine is the one a run would use", async () => {
+  delete process.env.TESTFILE_ENGINE;
+  const withContainer = doc({ name: "e2e", command: "x", container: { image: "node:22" } });
+  // docker responds, podman is absent, kubernetes unreachable
+  const checks = await runChecks(
+    withContainer,
+    "/repo",
+    machine({
+      commands: {
+        ...HEALTHY,
+        "podman --version": { ok: false },
+        "podman info": { ok: false },
+        "docker --version": { ok: true },
+        "docker info": { ok: true },
+        "kubectl version --client": { ok: true },
+        "kubectl cluster-info": { ok: false },
+      },
+    }),
+  );
+  assert.match(find(checks, "container engine (docker)").detail, /this run would use it/);
+  // an unreachable cluster is a warning, not a failure - docker covers the run
+  assert.equal(find(checks, "container engine (kubernetes)").status, "warn");
+  assert.equal(
+    checks.some((c) => c.name === "engine selection"),
+    false,
+  );
+});
+
+test("a pinned engine that does not respond fails the selection", async () => {
+  process.env.TESTFILE_ENGINE = "kubernetes";
+  try {
+    const checks = await runChecks(
+      doc({ name: "e2e", command: "x", container: { image: "node:22" } }),
+      "/repo",
+      machine({ commands: HEALTHY }),
+    );
+    const selection = find(checks, "engine selection");
+    assert.equal(selection.status, "fail");
+    assert.match(selection.detail, /pins "kubernetes"/);
+  } finally {
+    delete process.env.TESTFILE_ENGINE;
+  }
+});
+
+test("any container makes the run need an engine, none names one", () => {
   const needs = containerNeeds(
     doc({
       parallel: [
-        { name: "a", command: "x", container: { image: "node:22", engine: "docker" } },
+        { name: "a", command: "x", container: { image: "node:22" } },
         { name: "b", command: "y" },
       ],
     }),
   );
-  assert.deepEqual(needs, { needed: true, engines: ["docker"] });
-  assert.deepEqual(containerNeeds(doc({ command: "x" })), { needed: false, engines: [] });
+  assert.deepEqual(needs, { needed: true });
+  assert.deepEqual(containerNeeds(doc({ command: "x" })), { needed: false });
 });
 
 test("services in a nested test count as containers too", () => {
@@ -358,7 +407,7 @@ test("without a Testfile only the machine is checked", async () => {
     ["node", "git", "container engine", "ports", ".testfile/"],
   );
   assert.equal(worstOf(checks), "ok");
-  assert.equal(find(checks, "container engine").detail, "podman installed (no Testfile to read)");
+  assert.equal(find(checks, "container engine").detail, "podman available (no Testfile to read)");
   assert.equal(find(checks, "ports").detail, "no Testfile to read");
 });
 

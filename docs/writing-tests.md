@@ -82,7 +82,6 @@ declaration can give a whole branch its toolchain:
 | Field | Description |
 | ----- | ----------- |
 | `image` | Image to run in (required). |
-| `engine` | `auto` (default: podman if available, else docker), `podman`, `docker`. |
 | `workdir` | Mount point of the project inside the container, default `/workspace`. |
 | `env` | Extra variables, on top of the test's own environment. |
 | `volumes` | Additional mounts, e.g. a shared package cache. |

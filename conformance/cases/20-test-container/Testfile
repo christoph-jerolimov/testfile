@@ -6,7 +6,6 @@ test:
     - name: in-container
       container:
         image: docker.io/library/busybox:1.36
-        engine: podman
       script: |
         test -f marker.txt
         echo "$TESTFILE_MARKER" > from-container.txt
@@ -16,7 +15,6 @@ test:
     - name: group
       container:
         image: docker.io/library/busybox:1.36
-        engine: podman
       sequence:
         - name: nested
           command: 'grep -q hello-from-container from-container.txt'

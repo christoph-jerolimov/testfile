@@ -113,7 +113,6 @@ gets its own instance — sharing only kicks in where it is safe.
 ```yaml
 container:
   image: docker.io/library/postgres:16
-  engine: auto            # podman if available, else docker
   pull: missing           # always | missing | never
   network: testnet        # created if needed; service name = network alias
   ports:
@@ -126,8 +125,19 @@ container:
   command: ["./start.sh"]
 ```
 
-`engine: auto` prefers podman and falls back to docker. It never picks
-kubernetes — that engine has to be asked for.
+Note what is *not* here: an engine. The Testfile describes what runs; which
+engine runs it — podman, docker or kubernetes — is decided by whoever runs
+the tests:
+
+1. `testfile start --engine podman` (or `docker`, or `kubernetes`),
+2. else the `TESTFILE_ENGINE` environment variable,
+3. else the first of podman, docker, kubernetes that actually **responds**
+   — a docker CLI whose daemon is down, or a kubectl without a reachable
+   cluster, is skipped, not picked.
+
+The same file runs under podman on one laptop, docker in CI and a cluster
+in staging, without an edit. `testfile doctor` checks all three engines and
+says which one a run on this machine would use.
 
 With `network`, service containers can talk to each other directly: each
 container joins the named network with its service name as alias, so an app
@@ -136,16 +146,17 @@ ports. The network is created on first use and left in place after the run.
 
 ## Services on a Kubernetes cluster
 
-`engine: kubernetes` runs the service as a pod on whatever cluster your
-kubeconfig points at — a remote one, or a local kind/minikube. Nothing else
-about the Testfile changes:
+When the run's engine is kubernetes — `--engine kubernetes`,
+`TESTFILE_ENGINE=kubernetes`, or nothing local responding while kubectl
+reaches a cluster — services run as pods on whatever cluster your
+kubeconfig points at, a remote one or a local kind/minikube. Nothing about
+the Testfile changes:
 
 ```yaml
 services:
   db:
     container:
       image: docker.io/library/postgres:16
-      engine: kubernetes
       namespace: ci          # optional; must exist (kubectl's default otherwise)
       context: staging       # optional kubeconfig context
       ports:

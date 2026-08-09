@@ -552,16 +552,6 @@
           "type": "string",
           "minLength": 1
         },
-        "engine": {
-          "description": "Container engine to use. 'auto' picks podman if available, otherwise docker. 'kubernetes' runs the service as a pod on the cluster the kubeconfig points at, with the declared ports forwarded to localhost.",
-          "enum": [
-            "auto",
-            "podman",
-            "docker",
-            "kubernetes"
-          ],
-          "default": "auto"
-        },
         "ports": {
           "description": "Port mappings as \"HOST:CONTAINER\". The host part may be a template, e.g. \"${{ ports.db }}:5432\".",
           "type": "array",
@@ -596,11 +586,11 @@
         },
         "context": {
           "type": "string",
-          "description": "kubernetes engine only: kubeconfig context to use. Default: kubectl's current context."
+          "description": "Runs on kubernetes only: kubeconfig context to use. Default: kubectl's current context. (Which engine runs the containers is the run's choice - testfile start --engine, TESTFILE_ENGINE, or the first engine that responds.)"
         },
         "namespace": {
           "type": "string",
-          "description": "kubernetes engine only: namespace to run in (must exist). Default: the context's namespace."
+          "description": "Runs on kubernetes only: namespace to run in (must exist). Default: the context's namespace."
         },
         "entrypoint": {
           "description": "Override the image entrypoint.",
@@ -807,14 +797,6 @@
           "description": "Image to run the test in, e.g. docker.io/library/golang:1.23.",
           "type": "string",
           "minLength": 1
-        },
-        "engine": {
-          "description": "Container engine: 'auto' (default: podman if available, else docker), 'podman', 'docker'. The kubernetes engine is for services only - a test body needs the project mounted and runs locally.",
-          "enum": [
-            "auto",
-            "podman",
-            "docker"
-          ]
         },
         "env": {
           "description": "Extra environment variables for the container, on top of the test's own environment.",

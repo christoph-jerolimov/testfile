@@ -44,6 +44,7 @@ Run the test suite (the default command).
 | `-w, --watch` | Re-run the selection whenever files change ([watch mode](./cli#watch-mode)). |
 | `--no-cache` | Ignore cached results; fresh results still refresh the cache. |
 | `--forward-env <pattern>` | Forward matching host env vars into the [isolated test env](./env-and-ports#an-isolated-environment), e.g. `"GITHUB_*"` or `"*"`. *(repeatable)* |
+| `--engine <name>` | Container engine for this run: `podman`, `docker` or `kubernetes`. Default: `$TESTFILE_ENGINE`, else the first of the three that responds. The [Testfile itself never names one](./services#containers). |
 | `--reporter <kind>` | Write [machine-readable results](./cli#machine-readable-reports) after the run: `junit` or `json`. |
 | `--output <file>` | Report target file, or `-` for stdout (the default). |
 
@@ -123,9 +124,11 @@ GitHub workflow steps and Make/Task/just targets.
 Check this machine against what the Testfile needs, before a run finds out
 the hard way: Node.js version, git (and whether the folder is inside a work
 tree), every `shell:` the tests invoke, every executable a `command:` starts
-(on `PATH`, or as a relative/absolute path), a container engine when the file
-starts containers, the fixed `ports:` and a writable `.testfile/`. Exits `1`
-when a check fails; warnings (a missing git, for instance) do not.
+(on `PATH`, or as a relative/absolute path), the container engines when the
+file starts containers — podman, docker and kubernetes are all checked, and
+the report says which one [a run would pick](./services#containers) — the
+fixed `ports:` and a writable `.testfile/`. Exits `1` when a check fails;
+warnings (a missing git, for instance) do not.
 
 | Option | Description |
 | ------ | ----------- |

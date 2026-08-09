@@ -25,14 +25,13 @@ function plan(def: Parameters<typeof buildTestContainerArgs>[0], hostCwd = PROJE
   );
 }
 
-test("without an engine the detected one is used", () => {
+test("the engine comes from the run, not the file", () => {
+  // the file has no say: whatever the injected detection resolves is used
   assert.equal(plan({ image: "node:22" }).engine, "docker");
-  assert.equal(plan({ image: "node:22", engine: "auto" }).engine, "docker");
-  assert.equal(plan({ image: "node:22", engine: "podman" }).engine, "podman");
 });
 
 test("the project is mounted and the shell runs inside the image", () => {
-  const result = plan({ image: "golang:1.23", engine: "docker" });
+  const result = plan({ image: "golang:1.23" });
   assert.equal(result.engine, "docker");
   assert.equal(result.workdir, DEFAULT_WORKDIR);
   const args = result.args.join(" ");
@@ -83,11 +82,7 @@ test("workdir, volumes, pull, network, options and env are honored", () => {
   assert.match(args, /-e EXTRA=yes/);
 });
 
-test("templates are resolved and kubernetes is rejected", () => {
-  const result = plan({ image: "app:${{ ports.web }}", engine: "podman" });
+test("templates are resolved", () => {
+  const result = plan({ image: "app:${{ ports.web }}" });
   assert.ok(result.args.includes("app:5001"));
-  assert.throws(
-    () => plan({ image: "x", engine: "kubernetes" }),
-    /test body needs the project mounted/,
-  );
 });
