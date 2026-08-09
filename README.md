@@ -9,10 +9,11 @@ describes how a project runs its tests:
   groups nested tests in `sequence` or `parallel`; a **matrix** expands one
   test into many combinations.
 - Tests can declare **services** they depend on — the app under test, a
-  database in a specific version — as local processes or **containers**
-  (podman/docker today, kubernetes planned). The runner starts them, waits
-  for a **ready** signal (HTTP check, TCP port, or a log pattern), and
-  **gracefully stops** them, even on Ctrl+C.
+  database in a specific version — as local processes or **containers**.
+  Which engine runs them (podman, docker, or pods on a kubernetes cluster)
+  is chosen by whoever runs the tests, not by the file. The runner starts
+  them, waits for a **ready** signal (HTTP check, TCP port, or a log
+  pattern), and **gracefully stops** them, even on Ctrl+C.
 - **Env vars, named ports** (including random free ports) and matrix values
   are injected through `${{ ... }}` templates.
 
