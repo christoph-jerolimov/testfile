@@ -720,7 +720,9 @@ indented, with the results of this run on it. Groups collapse (and
 leg under its node, and a test the run never reached — filtered out,
 skipped by a condition, or never started because something before it
 failed — keeps its place, greyed and marked `not run`. Records written
-before `suite` existed fall back to the tree their test paths imply.
+before `suite` existed fall back to the tree their test paths imply. Any
+row with a log is clickable as a whole — the `show` link is just its
+label — and opens that test's log below the tree.
 
 Both tables have a filter bar above them. Nothing is selected in the
 multi-selects to begin with, which shows everything; the only default that

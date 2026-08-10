@@ -43,6 +43,7 @@ function RowCells({
             title={artifact}
             target="_blank"
             rel="noreferrer"
+            onClick={(event) => event.stopPropagation()}
           >
             {fileName(artifact)}
           </a>
@@ -104,7 +105,11 @@ export function SuiteTree({
               return (
                 <tr
                   key={`${row.path} ${result?.origin ?? index}`}
-                  className={`${selected ? "selected" : ""} ${row.notRun ? "not-run" : ""}`}
+                  className={`${selected ? "selected" : ""} ${row.notRun ? "not-run" : ""} ${
+                    result?.log ? "clickable" : ""
+                  }`}
+                  // the whole row selects the test, not only the "show" link
+                  onClick={result?.log ? () => onLog(row.path) : undefined}
                 >
                   <td className="mono">
                     <span className="tree-name" style={{ paddingLeft: `${row.depth * 1.1}rem` }}>
@@ -113,7 +118,10 @@ export function SuiteTree({
                           className="twisty"
                           aria-expanded={!collapsed.has(row.path)}
                           aria-label={`${collapsed.has(row.path) ? "expand" : "collapse"} ${row.path}`}
-                          onClick={() => toggle(row.path)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggle(row.path);
+                          }}
                         >
                           {collapsed.has(row.path) ? "▸" : "▾"}
                         </button>
