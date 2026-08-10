@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { RunRecord } from "../runrecord.js";
-import { describeRun, recordedTests, runsTable, timelineRows } from "./model.js";
+import {
+  describeRun,
+  recordedTests,
+  relatedServices,
+  suiteRows,
+  testOverview,
+  testRunsFor,
+  timelineRows,
+} from "./model.js";
 
 function run(overrides: Partial<RunRecord> = {}): RunRecord {
   return {
@@ -19,30 +27,76 @@ function run(overrides: Partial<RunRecord> = {}): RunRecord {
   };
 }
 
-test("the runs table only shows a variants column when there is one", () => {
-  const plain = runsTable([run()]);
-  assert.ok(!plain.header.includes("VARIANTS"));
-
-  const withVariants = runsTable([
-    run({ variants: { platform: "linux" } }),
-    run({
-      id: "20260101-100100-bb02",
-      merged: {
-        runs: [
-          { id: "a", status: "passed", startedAt: "2026-01-01T10:00:00.000Z", durationMs: 5 },
-          { id: "b", status: "passed", startedAt: "2026-01-01T10:00:01.000Z", durationMs: 5 },
-        ],
-        variants: { platform: ["linux", "windows"] },
-      },
-    }),
-  ]);
-  assert.ok(withVariants.header.includes("VARIANTS"));
-  assert.match(withVariants.rows[0], /platform=linux/);
-  assert.match(
-    withVariants.rows[1],
-    /platform=linux\|windows/,
-    "a merged run lists what it combined",
+test("suiteRows walks the recorded tree in order, with depths", () => {
+  const record = run({
+    suite: {
+      path: "ci",
+      name: "ci",
+      kind: "sequence",
+      children: [
+        { path: "ci/build", name: "build", kind: "command" },
+        {
+          path: "ci/test",
+          name: "test",
+          kind: "parallel",
+          children: [{ path: "ci/test/unit", name: "unit", kind: "command" }],
+        },
+      ],
+    },
+    tests: [
+      { path: "ci/build", status: "passed", durationMs: 100 },
+      { path: "ci/test/unit", status: "failed", durationMs: 200 },
+    ],
+  });
+  const rows = suiteRows(record);
+  assert.deepEqual(
+    rows.map((row) => `${row.depth}:${row.path}`),
+    ["0:ci", "1:ci/build", "1:ci/test", "2:ci/test/unit"],
   );
+  // recorded results attach to their tree nodes; pure groups stay blank
+  assert.equal(rows[1].status, "passed");
+  assert.equal(rows[2].status, undefined);
+  assert.equal(rows[3].durationMs, 200);
+});
+
+test("suiteRows derives a tree from slash-paths when no tree was recorded", () => {
+  const rows = suiteRows(
+    run({
+      tests: [
+        { path: "ci/build", status: "passed" },
+        { path: "ci/test/unit", status: "passed" },
+      ],
+    }),
+  );
+  assert.deepEqual(
+    rows.map((row) => `${row.depth}:${row.path}`),
+    ["0:ci", "1:ci/build", "1:ci/test", "2:ci/test/unit"],
+  );
+});
+
+test("testRunsFor lists one path's executions, or every test's", () => {
+  const history = {
+    runs: [
+      run({
+        id: "r2",
+        tests: [
+          { path: "ci/unit", status: "failed", durationMs: 50, log: "logs/unit.log" },
+          { path: "ci/lint", status: "passed" },
+        ],
+      }),
+      run({ id: "r1", tests: [{ path: "ci/unit", status: "passed", cached: true }] }),
+    ],
+  } as unknown as Parameters<typeof testRunsFor>[0];
+
+  const one = testRunsFor(history, "ci/unit");
+  assert.deepEqual(
+    one.map((row) => `${row.runId}:${row.status}`),
+    ["r2:failed", "r1:passed"],
+  );
+  assert.equal(one[0].hasLog, true);
+  assert.equal(one[1].cached, true);
+
+  assert.equal(testRunsFor(history).length, 3, "no path means every recorded execution");
 });
 
 test("a merged run describes its legs and tags every test", () => {
@@ -119,6 +173,75 @@ test("a test shorter than one cell still gets a visible bar", () => {
     10,
   );
   assert.equal(rows[1].bar, "         █");
+});
+
+test("relatedServices follows the suite tree: node + ancestors, else all", () => {
+  const record = run({
+    suite: {
+      path: "ci",
+      name: "ci",
+      kind: "sequence",
+      services: ["db"],
+      children: [
+        { path: "ci/api", name: "api", kind: "command", services: ["redis"] },
+        { path: "ci/lint", name: "lint", kind: "command" },
+      ],
+    },
+    services: [{ name: "db" }, { name: "redis" }, { name: "mail" }],
+  });
+
+  assert.deepEqual(
+    relatedServices(record, "ci/api").map((s) => s.name),
+    ["db", "redis"],
+    "a test relates the services declared on its node and its ancestors",
+  );
+  assert.deepEqual(
+    relatedServices(record, "ci/lint").map((s) => s.name),
+    ["db"],
+    "a node without its own services still inherits the ancestors'",
+  );
+  assert.equal(
+    relatedServices(record, undefined).length,
+    3,
+    "no path (the run itself) relates every service",
+  );
+  assert.equal(
+    relatedServices(run({ services: [{ name: "db" }] }), "ci/unit").length,
+    1,
+    "without a recorded tree every service stays related",
+  );
+});
+
+test("testOverview describes one execution, artifacts and services included", () => {
+  const record = run({
+    suite: {
+      path: "ci",
+      name: "ci",
+      kind: "sequence",
+      children: [{ path: "ci/unit", name: "unit", kind: "command", services: ["db"] }],
+    },
+    services: [{ name: "db", status: "stopped" }, { name: "mail" }],
+    tests: [
+      {
+        path: "ci/unit",
+        status: "failed",
+        durationMs: 900,
+        startedAfterMs: 100,
+        artifacts: ["artifacts/ci-unit/report.html"],
+      },
+    ],
+  });
+  const lines = testOverview(record, "ci/unit").map((line) => line.text);
+  assert.ok(lines.some((line) => line.startsWith("status:") && line.includes("failed")));
+  assert.ok(lines.some((line) => line.includes("+100ms")));
+  assert.ok(lines.some((line) => line.includes("artifacts/ci-unit/report.html")));
+  assert.ok(lines.some((line) => line.trim().startsWith("db (stopped)")));
+  assert.ok(!lines.some((line) => line.includes("mail")), "unrelated services stay off the page");
+
+  assert.deepEqual(
+    testOverview(record, "ci/nope").map((line) => line.text),
+    ["not executed in this run"],
+  );
 });
 
 test("the recorded-tests view carries each test's verdict", () => {

@@ -213,7 +213,7 @@ Interactive [terminal UI](./cli#the-tui) over the recorded runs; watches
 
 | Option | Description |
 | ------ | ----------- |
-| `--view <view>` | Initial view: `runs` (default) or `results`. |
+| `--view <view>` | Initial tab: `runs` (default) or `tests` (`results` is accepted as an alias). |
 | `--name <name>` | Display name shown in the header. |
 
 ### `testfile-viewer serve [path]`

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { groupPaths, suiteRowsOf, visibleRows } from "./suite.js";
+import { groupPaths, relatedServices, suiteRowsOf, visibleRows } from "./suite.js";
 import type { RunRecord } from "./types.js";
 
 const base: RunRecord = {
@@ -121,4 +121,30 @@ test("paths outside the recorded suite are appended, not dropped", () => {
   const rows = suiteRowsOf(extra);
   assert.equal(rows[rows.length - 1]?.path, "other/thing");
   assert.equal(rows.length, 6);
+});
+
+test("relatedServices follows the suite tree: node + ancestors, else all", () => {
+  const record: RunRecord = {
+    ...withSuite,
+    services: [
+      { name: "db", status: "stopped", log: "services/db.log" },
+      { name: "mail", status: "stopped" },
+    ],
+  };
+  assert.deepEqual(
+    relatedServices(record, "ci/checks/e2e").map((s) => s.name),
+    ["db"],
+    "a test relates the services declared on its node and its ancestors",
+  );
+  assert.deepEqual(
+    relatedServices(record, "ci/unit").map((s) => s.name),
+    ["db", "mail"],
+    "a node that declares nothing relates every service rather than none",
+  );
+  assert.equal(
+    relatedServices({ ...record, suite: undefined }, "ci/unit").length,
+    2,
+    "without a recorded tree every service stays related",
+  );
+  assert.equal(relatedServices(withSuite, "ci/unit").length, 0, "no services, nothing related");
 });

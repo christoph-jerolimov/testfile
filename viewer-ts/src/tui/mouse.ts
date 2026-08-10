@@ -34,6 +34,26 @@ export function parseWheelEvents(data: string): WheelEvent[] {
   return events;
 }
 
+export interface ClickEvent {
+  // 1-based terminal cell coordinates of the press.
+  x: number;
+  y: number;
+}
+
+// Left-button presses (button 0, possibly with modifier bits 4/8/16 set).
+// Releases ("m") are ignored: selection should react on press, like every
+// terminal UI does.
+export function parseClickEvents(data: string): ClickEvent[] {
+  const events: ClickEvent[] = [];
+  for (const match of data.matchAll(SGR_MOUSE)) {
+    if (match[4] !== "M") continue;
+    const button = Number.parseInt(match[1], 10);
+    if ((button & 0b11000011) !== 0) continue; // not a plain left press
+    events.push({ x: Number.parseInt(match[2], 10), y: Number.parseInt(match[3], 10) });
+  }
+  return events;
+}
+
 // True when a chunk of input (as Ink's useInput receives it) is a mouse
 // report rather than a keypress - those must not trigger key bindings.
 export function isMouseSequence(input: string): boolean {

@@ -13,6 +13,7 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
+    "@tanstack/react-table": "^9.1.2",
     "commander": "^15.0.0",
     "ink": "^7.1.1",
     "react": "^19.2.8",

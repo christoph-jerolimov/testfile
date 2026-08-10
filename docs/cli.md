@@ -43,7 +43,7 @@ testfile-viewer runs               # table of recorded runs (default command)
 testfile-viewer inspect run <id>   # one run in detail
 testfile-viewer diff <a> <b>       # compare two runs
 testfile-viewer merge <run...>     # combine shards / platform runs into one
-testfile-viewer tui                # terminal UI: runs + results, watching
+testfile-viewer tui                # terminal UI: runs + tests, watching
 testfile-viewer serve              # localhost REST API + web viewer
 testfile-viewer archive <cmd>      # pack/import recorded runs as archives
 testfile-viewer s3 <cmd>           # push/pull/list runs in an S3 bucket
@@ -438,25 +438,48 @@ A nested summary with per-test durations is printed at the end.
 
 ## The TUI
 
-`testfile-viewer tui` opens a read-only two-pane terminal UI over the
-recorded runs (it never starts tests — that is `testfile start`'s job). Two
-views, switched with `1`/`2`:
+`testfile-viewer tui` opens a read-only terminal UI over the recorded runs
+(it never starts tests — that is `testfile start`'s job). It is a
+multi-page interface, mirroring the [web viewer](#the-web-viewer): pages
+navigate forward, `esc` walks back, and a breadcrumb on top says where you
+are.
 
-1. **runs** — a table of every recorded run (started, status, duration,
-   per-status counts); the right pane shows the selected run's details —
-   status, env, ports, per-test results, services — and toggles to the
-   merged log with enter.
-2. **results** — every test that appears in a recorded run, with latest
-   status and aggregated pass/fail counts; the right pane shows the
-   selected test's executions across all runs as a table.
+The **index page** has two tabs, switched with `tab` (or `1`/`2`):
 
-Both views watch `.testfile/runs/` — runs recorded by other processes
+1. **Runs** — a table of every recorded run (started, status, duration,
+   variants, per-status counts), filtered with `/`, taking all the space.
+   Enter (or a click) on a row opens that run's page.
+2. **Tests** — two tables side by side. The left lists every test path
+   that ever ran (plus an "All tests" row on top) and acts as the filter;
+   the right lists the matching executions across all runs. `←`/`→` (or
+   enter and `esc`) jump between the tables; enter or a click on an
+   execution opens that test page.
+
+The **run page** shows the suite as a tree table on the left — the run's
+tests with status, duration and start offset, groups indented — and, for
+the selected row, a tab view on the right: *Overview* (the run or test
+metadata), *Log* (the merged run log, or the selected test's log) and one
+tab per related service log. The **test page** (one test in one run) shows
+the same tab view full width; both pages breadcrumb their way back.
+
+Every table sorts: `s` cycles the sort column, `r` reverses it, and the
+header shows `▲`/`▼`. `↑`/`↓`, PgUp/PgDn, `g`/`G` and the mouse wheel move
+the cursor; clicking a row selects it. Log panes search with `/` (walk the
+hits with `n`/`N`) and toggle wrapping with `w`. In tab views, `tab` cycles
+the tabs.
+
+The status line at the bottom always lists the shortcuts of whatever is
+focused; `?` opens an overlay with every shortcut on the page. `q` (or
+`ctrl-c`) quits.
+
+On terminals narrower than 80 columns the side-by-side panels collapse:
+only the left table is shown, and enter opens the details as their own
+page instead.
+
+Every page watches `.testfile/runs/` — runs recorded by other processes
 (say, a `testfile start` in a second terminal, or a `testfile-viewer
-github sync`) appear live. `--view results` opens on the results view.
-
-Keys: `↑`/`↓` (`k`/`j`) select · enter toggles details/merged log (runs
-view) · `?` in-log search with `n`/`N` · `w` wrap · PgUp/PgDn (`u`/`d`) or
-the mouse wheel scroll the log pane · `q` quits.
+github sync`) appear live. `--view tests` opens on the Tests tab
+(`--view results` still works as an alias).
 
 ## Run history
 
@@ -634,7 +657,7 @@ testfile-viewer github sync owner/repo --artifact testfile-run --exact
 
 Already-imported runs are skipped, so `sync` is incremental — run it again
 any time to top up the local history with the newest CI results. The TUI's
-[runs and results views](#the-tui) pick imported runs up live.
+[runs and tests views](#the-tui) pick imported runs up live.
 
 ## The web viewer
 
@@ -649,8 +672,10 @@ testfile-viewer serve --port 8080
 - **Runs**: a table of all recorded runs; selecting one shows its details,
   the suite tree with this run's results on it, and the logs (merged or per
   test).
-- **Results**: every recorded test with aggregated pass/fail counts and
-  its executions across all runs.
+- **Tests**: every recorded test with aggregated pass/fail counts and
+  its executions across all runs; clicking an execution opens its own
+  page — that test in that run, with an overview, the test's log and one
+  tab per related service log.
 - **Logs** read like logs: the colour a tool wrote (the runner asks for it —
   see [an isolated environment](./env-and-ports#an-isolated-environment)) is
   rendered rather than printed as escape sequences, and every log has a
@@ -703,7 +728,7 @@ The count on the right says how much survived (`4 of 27 runs`) and clears
 the filters again. A run or test opened by link stays visible even when the
 filters would hide it — the link should not silently open something else.
 
-The two views the CLI already had are on the same pages. In **Results**,
+The two views the CLI already had are on the same pages. In **Tests**,
 each test carries a **history sparkline** — one block per recorded run,
 newest on the right, so a test that alternates green and red looks
 different from one that simply broke — and a `flaky` or `broken` badge
@@ -726,8 +751,12 @@ reloaded — and the browser's back button walks through it:
 | ---- | ----- |
 | `/` or `/runs` | the runs table with the newest run |
 | `/runs/<id>` | that run's detail |
-| `/results` | the results table |
-| `/results/<test/path>` | that test's executions — the test path keeps its slashes, so the URL reads like the test does |
+| `/tests` | the tests table |
+| `/tests/<test/path>` | that test's executions — the test path keeps its slashes, so the URL reads like the test does |
+| `/runs/<id>/tests/<test/path>` | one execution: that test in that run, as its own page |
+
+(The tests tab used to be called *results*; `/results/...` links keep
+working.)
 
 An id or test path that no longer exists falls back to the newest run
 (respectively the first test) instead of an error page.

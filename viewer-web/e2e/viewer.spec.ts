@@ -174,8 +174,8 @@ test("a merged run shows its legs and one row per variant", async ({ page }) => 
   await expect(page).toHaveScreenshot("merged-run.png");
 });
 
-test("results view aggregates tests across runs", async ({ page }) => {
-  await page.locator("nav button", { hasText: "Results" }).click();
+test("tests view aggregates tests across runs", async ({ page }) => {
+  await page.locator("nav button", { hasText: "Tests" }).click();
 
   const rows = page.locator(".list tbody tr");
   await expect(rows).toHaveCount(3); // ci, ci/build, ci/unit
@@ -193,7 +193,36 @@ test("results view aggregates tests across runs", async ({ page }) => {
   await expect(detail).toContainText("ci/unit");
   await expect(detail.locator("tbody tr")).toHaveCount(4);
 
-  await expect(page).toHaveScreenshot("results.png");
+  await expect(page).toHaveScreenshot("tests.png");
+});
+
+test("an execution opens its own page: that test in that run", async ({ page }) => {
+  await page.locator("nav button", { hasText: "Tests" }).click();
+  await page.locator(".list tbody tr").filter({ hasText: "ci/unit" }).click();
+  // the newest execution in the detail table leads to the test page
+  await page.locator(".detail tbody tr").first().click();
+  await expect(page).toHaveURL("/runs/20260102-090000-fx02/tests/ci/unit");
+
+  // breadcrumb back out, tabs across: overview, the log, related services
+  await expect(page.locator(".breadcrumb")).toContainText("Tests");
+  await expect(page.locator(".breadcrumb")).toContainText("ci/unit");
+  await expect(page.locator(".breadcrumb")).toContainText("20260102-090000-fx02");
+  await expect(page.locator(".tabs button.active")).toHaveText("Overview");
+  await expect(page.locator("main.single .meta")).toContainText("failed");
+
+  await page.locator(".tabs button", { hasText: "Test log" }).click();
+  await expect(page.locator("main.single .log")).toContainText("boom: expected 4 to equal 5");
+  await expect(page).toHaveScreenshot("test-page.png");
+
+  // the breadcrumb's run link lands on the run's own page
+  await page.locator(".breadcrumb button", { hasText: "20260102-090000-fx02" }).click();
+  await expect(page).toHaveURL("/runs/20260102-090000-fx02");
+});
+
+test("the tests tab used to be called results; old links keep working", async ({ page }) => {
+  await page.goto("/results/ci/unit");
+  await expect(page.locator("nav button", { hasText: "Tests" })).toHaveClass(/active/);
+  await expect(page.locator(".detail")).toContainText("executions of");
 });
 
 test("every selection is a link that can be shared and reloaded", async ({ page }) => {
@@ -202,8 +231,8 @@ test("every selection is a link that can be shared and reloaded", async ({ page 
   await expect(page.locator(".detail")).toContainText("20260101-120000-fx01");
 
   // a test path keeps its slashes, so the URL reads like the test does
-  await page.goto("/results/ci/unit");
-  await expect(page.locator("nav button", { hasText: "Results" })).toHaveClass(/active/);
+  await page.goto("/tests/ci/unit");
+  await expect(page.locator("nav button", { hasText: "Tests" })).toHaveClass(/active/);
   const detail = page.locator(".detail");
   await expect(detail).toContainText("executions of");
   await expect(detail).toContainText("ci/unit");
@@ -220,7 +249,7 @@ test("every selection is a link that can be shared and reloaded", async ({ page 
   await page.goBack();
   await expect(page).toHaveURL("/runs");
   await page.goBack();
-  await expect(page).toHaveURL("/results/ci/unit");
+  await expect(page).toHaveURL("/tests/ci/unit");
   await expect(page.locator(".detail")).toContainText("executions of");
 });
 
@@ -301,8 +330,8 @@ test("runs carry their labels and can be filtered by them", async ({ page }) => 
   await expect(page.locator(".list tbody tr").first()).toContainText("2026-01-02");
 });
 
-test("the results table filters by status, tag and text", async ({ page }) => {
-  await page.locator("nav button", { hasText: "Results" }).click();
+test("the tests table filters by status, tag and text", async ({ page }) => {
+  await page.locator("nav button", { hasText: "Tests" }).click();
   await expect(page.locator(".filter-count")).toContainText("3 tests");
 
   // tags come from the recorded suite tree, not from the test results
@@ -317,7 +346,7 @@ test("the results table filters by status, tag and text", async ({ page }) => {
 });
 
 test("a verdict needs enough results, so the small fixture gets none", async ({ page }) => {
-  await page.locator("nav button", { hasText: "Results" }).click();
+  await page.locator("nav button", { hasText: "Tests" }).click();
   await expect(page.locator(".filter-count")).toContainText("3 tests");
 
   // ci and ci/unit each passed and failed here, but with 4 results apiece
@@ -386,7 +415,7 @@ test("every column sorts, both ways", async ({ page }) => {
   await expect(page).toHaveScreenshot("sorted.png");
 
   // sorting is per table: the results tab has its own
-  await page.locator("nav button", { hasText: "Results" }).click();
+  await page.locator("nav button", { hasText: "Tests" }).click();
   await page.locator(".list th button", { hasText: "Failed" }).click();
   const tests = page.locator(".list tbody tr");
   await expect(tests.first()).toContainText("ci/build");
