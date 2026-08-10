@@ -446,9 +446,10 @@ are.
 
 The **index page** has two tabs, switched with `tab` (or `1`/`2`):
 
-1. **Runs** — a table of every recorded run (started, status, duration,
-   variants, per-status counts), filtered with `/`, taking all the space.
-   Enter (or a click) on a row opens that run's page.
+1. **Runs** — a table of every recorded run (started, run id, status,
+   duration, passed/failed counts, the remaining statuses spelled out, and
+   variants), filtered with `/`, taking the full terminal width. Enter (or
+   a click) on a row opens that run's page.
 2. **Tests** — two tables side by side. The left lists every test path
    that ever ran (plus an "All tests" row on top) and acts as the filter;
    the right lists the matching executions across all runs. `←`/`→` (or
@@ -458,14 +459,19 @@ The **index page** has two tabs, switched with `tab` (or `1`/`2`):
 The **run page** shows the suite as a tree table on the left — the run's
 tests with status, duration and start offset, groups indented — and, for
 the selected row, a tab view on the right: *Overview* (the run or test
-metadata), *Log* (the merged run log, or the selected test's log) and one
-tab per related service log. The **test page** (one test in one run) shows
-the same tab view full width; both pages breadcrumb their way back.
+metadata, ending with the last 20 lines of the log), *Log* (the merged run
+log, or the selected test's log) and one tab per related service log. The
+**test page** (one test in one run) shows the same tab view full width;
+both pages breadcrumb their way back — and walking back with `esc` lands
+exactly where you left: the same cursor row, scroll position and tab.
 
 Every table sorts: `s` cycles the sort column, `r` reverses it, and the
 header shows `▲`/`▼`. `↑`/`↓`, PgUp/PgDn, `g`/`G` and the mouse wheel move
-the cursor; clicking a row selects it. Log panes search with `/` (walk the
-hits with `n`/`N`) and toggle wrapping with `w`. In tab views, `tab` cycles
+the cursor; clicking a row selects it. Log panes have a visible cursor
+line: `↑`/`↓` move it (the view scrolls with it), `shift+↑`/`↓` grow a
+selection, `ctrl-c` copies the selection to the clipboard (OSC 52 — the
+terminal has to allow it), `←`/`→` pan long lines, `w` toggles wrapping,
+and `/` searches (walk the hits with `n`/`N`). In tab views, `tab` cycles
 the tabs.
 
 The status line at the bottom always lists the shortcuts of whatever is

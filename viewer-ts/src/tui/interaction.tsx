@@ -3,6 +3,8 @@
 //
 // - Escape walks a stack: the most recently claimed handler (a search box,
 //   a focused right panel) gets it; with no claims the app pops the page.
+// - Ctrl-C walks the same kind of stack: a log pane with a selection
+//   copies it; with no claims the app exits.
 // - While a text input is open, global single-letter keys ("q", "?") must
 //   not fire; the input flag suppresses them.
 import React, { createContext, useContext, useEffect, useMemo, useRef } from "react";
@@ -10,6 +12,8 @@ import React, { createContext, useContext, useEffect, useMemo, useRef } from "re
 interface Interaction {
   claimEscape(id: string, handler: () => void): () => void;
   handleEscape(): boolean;
+  claimCtrlC(id: string, handler: () => void): () => void;
+  handleCtrlC(): boolean;
   setTextInput(id: string, active: boolean): void;
   textInputActive(): boolean;
 }
@@ -22,6 +26,7 @@ export function InteractionProvider({
   children: React.ReactNode;
 }): React.ReactElement {
   const escapes = useRef<{ id: string; handler: () => void }[]>([]);
+  const copies = useRef<{ id: string; handler: () => void }[]>([]);
   const inputs = useRef(new Set<string>());
   const api = useMemo<Interaction>(
     () => ({
@@ -33,6 +38,18 @@ export function InteractionProvider({
       },
       handleEscape() {
         const top = escapes.current[escapes.current.length - 1];
+        if (!top) return false;
+        top.handler();
+        return true;
+      },
+      claimCtrlC(id, handler) {
+        copies.current = [...copies.current.filter((e) => e.id !== id), { id, handler }];
+        return () => {
+          copies.current = copies.current.filter((e) => e.id !== id);
+        };
+      },
+      handleCtrlC() {
+        const top = copies.current[copies.current.length - 1];
         if (!top) return false;
         top.handler();
         return true;
@@ -64,6 +81,17 @@ export function useEscape(id: string, active: boolean, handler: () => void): voi
   useEffect(() => {
     if (!active) return;
     return interaction.claimEscape(id, () => latest.current());
+  }, [interaction, id, active]);
+}
+
+// Claims ctrl-c while `active`; the handler runs instead of the app exit.
+export function useCtrlC(id: string, active: boolean, handler: () => void): void {
+  const interaction = useInteraction();
+  const latest = useRef(handler);
+  latest.current = handler;
+  useEffect(() => {
+    if (!active) return;
+    return interaction.claimCtrlC(id, () => latest.current());
   }, [interaction, id, active]);
 }
 

@@ -1,6 +1,7 @@
 Testfile[2m › [22mTests[2m › [22mci/build[1m[2m › [22m20260105-113000-bb02[22m
 [2m Overview [22m  [7m[1m Log [22m[27m  [2m ⚙ db [22m  [2m ⚙ web [22m
-$ npm run e2e
+[2m [22m
+[7m$ npm run e2e[27m
 41 tests passed
 boom: expected 4 to equal 5
   at math.test.ts:12
@@ -26,5 +27,4 @@ boom: expected 4 to equal 5
 
 
 
-
- [36mtab[39m[2m next tab ·[22m [36m↑↓ pgup/pgdn[39m[2m scroll ·[22m [36mw[39m[2m wrap ·[22m [36m/[39m[2m search ·[22m [36mn/N[39m[2m next/prev match ·[22m [36m?[39m[2m help ·[22m [36mq[39m[2m quit[22m
+ [36mtab[39m[2m next tab ·[22m [36m↑↓ pgup/pgdn[39m[2m move ·[22m [36mshift+↑↓[39m[2m select ·[22m [36mctrl-c[39m[2m copy selection ·[22m [36m←→[39m[2m pan ·[22m [36mw[39m[2m wrap ·[22m [36m/[39m[2m s…[22m

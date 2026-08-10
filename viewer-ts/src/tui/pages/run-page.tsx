@@ -62,11 +62,12 @@ export function RunPage({
 
   const run = history.runs.find((r) => r.id === runId);
 
+  // → focuses the detail; ←/→ inside it pan the log, so the way back from
+  // the detail is escape (claimed below), not the left arrow.
   useInput(
     (input, key) => {
       if (isMouseSequence(input)) return;
-      if (key.leftArrow && !narrow) setSide("table");
-      else if (key.rightArrow && !narrow) setSide("detail");
+      if (key.rightArrow && !narrow && side === "table") setSide("detail");
     },
     { isActive: run !== undefined },
   );
@@ -85,7 +86,9 @@ export function RunPage({
   const tree = suiteRows(run);
   const bodyHeight = rows - 2 - 3;
   const width = columns - 1;
-  const leftWidth = narrow ? width : Math.max(32, Math.floor(width * 0.42));
+  // Wide enough that the tree's fixed columns (status, duration, start)
+  // never overflow and truncate at the right edge.
+  const leftWidth = narrow ? width : Math.max(46, Math.floor(width * 0.45));
   const rightWidth = width - leftWidth - 1;
   // The selected node's path; the tree root means "the run itself".
   const path = selected && selected.depth > 0 ? selected.path : undefined;
@@ -94,6 +97,7 @@ export function RunPage({
     <DataTable
       id="run-tree"
       title="Suite"
+      stateKey={`run-tree:${runId}`}
       data={tree}
       columns={TREE_COLUMNS}
       height={bodyHeight}

@@ -14,6 +14,7 @@ import { PageShell, SplitPanel, TabStrip, useScreen } from "../panels.js";
 import { useShortcuts } from "../statusbar.js";
 import { DataTable, type ColumnSpec } from "../table.js";
 import { statusGlyph, verdictColor } from "../theme.js";
+import { useViewState } from "../view-state.js";
 
 function runVariants(run: RunRecord): string {
   return run.merged
@@ -21,6 +22,20 @@ function runVariants(run: RunRecord): string {
         .map(([key, values]) => `${key}=${values.join("|")}`)
         .join(", ") || `merged (${run.merged.runs.length})`
     : variantLabel(run.variants);
+}
+
+function statusCount(run: RunRecord, status: string): number {
+  return run.tests.filter((test) => test.status === status).length;
+}
+
+// Every status beyond passed/failed, spelled out: "2 skipped, 1 aborted".
+function otherSummary(run: RunRecord): string {
+  const counts = new Map<string, number>();
+  for (const test of run.tests) {
+    if (test.status === "passed" || test.status === "failed") continue;
+    counts.set(test.status, (counts.get(test.status) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([status, n]) => `${n} ${status}`).join(", ");
 }
 
 function testSummary(run: RunRecord): string {
@@ -37,6 +52,7 @@ const RUN_COLUMNS: ColumnSpec<RunRecord>[] = [
     value: (run) => run.startedAt,
     text: (run) => run.startedAt.replace("T", " ").slice(0, 19),
   },
+  { id: "run", header: "RUN", width: 20, value: (run) => run.id },
   {
     id: "status",
     header: "STATUS",
@@ -53,8 +69,31 @@ const RUN_COLUMNS: ColumnSpec<RunRecord>[] = [
     value: (run) => run.durationMs,
     text: (run) => formatMs(run.durationMs),
   },
-  { id: "variants", header: "VARIANTS", width: 18, value: runVariants },
-  { id: "tests", header: "TESTS", value: testSummary },
+  {
+    id: "passed",
+    header: "PASSED",
+    width: 6,
+    align: "right",
+    value: (run) => statusCount(run, "passed"),
+    text: (run) => String(statusCount(run, "passed") || ""),
+    color: (run) => (statusCount(run, "passed") > 0 ? "green" : undefined),
+  },
+  {
+    id: "failed",
+    header: "FAILED",
+    width: 6,
+    align: "right",
+    value: (run) => statusCount(run, "failed"),
+    text: (run) => String(statusCount(run, "failed") || ""),
+    color: (run) => (statusCount(run, "failed") > 0 ? "red" : undefined),
+  },
+  {
+    id: "others",
+    header: "OTHERS",
+    value: (run) => otherSummary(run),
+    dim: () => true,
+  },
+  { id: "variants", header: "VARIANTS", value: runVariants },
 ];
 
 // The runs tab: filter line + the table taking all the space.
@@ -215,7 +254,7 @@ function TestsTab({
 }): React.ReactElement {
   const navigation = useNavigation();
   const { narrow } = useScreen();
-  const [focus, setFocus] = useState<"left" | "right">("left");
+  const [focus, setFocus] = useViewState<"left" | "right">("tests:focus", "left");
   const [selected, setSelected] = useState<TestFilterRow | undefined>();
 
   const tests = useMemo<TestFilterRow[]>(() => {
@@ -276,6 +315,7 @@ function TestsTab({
     <DataTable
       id="test-runs-table"
       title="Executions"
+      stateKey={`executions:${selected?.path ?? "all"}`}
       data={executions}
       columns={TEST_RUN_COLUMNS}
       height={height}
@@ -302,12 +342,12 @@ export function IndexPage({
   initialTab?: "runs" | "tests";
 }): React.ReactElement {
   const { rows, columns } = useScreen();
-  const [tab, setTab] = useState<"runs" | "tests">(initialTab);
+  const [tab, setTab] = useViewState<"runs" | "tests">("index:tab", initialTab);
 
   useInput(
     (input, key) => {
       if (isMouseSequence(input)) return;
-      if (key.tab) setTab((current) => (current === "runs" ? "tests" : "runs"));
+      if (key.tab) setTab(tab === "runs" ? "tests" : "runs");
       else if (input === "1") setTab("runs");
       else if (input === "2") setTab("tests");
     },

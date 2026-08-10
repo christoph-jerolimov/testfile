@@ -80,6 +80,7 @@ export function TestRunsPage({
       <DataTable
         id="test-runs-page"
         title="Executions"
+        stateKey={`executions:${path ?? "all"}`}
         data={testRunsFor(history, path)}
         columns={EXECUTION_COLUMNS}
         height={rows - 2 - 3}

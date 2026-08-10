@@ -59,6 +59,7 @@ export function timelineRows(run: RunRecord, cells = 24): TimelineRow[] {
 // (failures on the stderr stream so they stand out).
 export function describeRun(run: RunRecord): OutputLine[] {
   const lines: OutputLine[] = [
+    { text: `run:       ${run.id}`, stream: "system" },
     { text: `started:   ${run.startedAt}`, stream: "system" },
     { text: `duration:  ${formatMs(run.durationMs)}`, stream: "system" },
     { text: `status:    ${run.status} (exit code ${run.exitCode})`, stream: "system" },
@@ -190,25 +191,6 @@ export function findMatches(lines: readonly OutputLine[], query: string): number
   return out;
 }
 
-// The scroll value that centers the given line in a window of `height`.
-export function scrollToLine(totalLines: number, height: number, line: number): number {
-  return Math.max(0, totalLines - line - Math.ceil(height / 2));
-}
-
-// Slices the tail of a log for display: scroll = 0 follows the end, larger
-// values scroll back. Returns the window plus how many lines are above it.
-export function logWindow<T>(
-  lines: T[],
-  height: number,
-  scroll: number,
-): { window: T[]; above: number } {
-  const maxScroll = Math.max(0, lines.length - height);
-  const clamped = Math.min(scroll, maxScroll);
-  const end = lines.length - clamped;
-  const start = Math.max(0, end - height);
-  return { window: lines.slice(start, end), above: start };
-}
-
 // --- v2 pages -------------------------------------------------------------
 
 // One row of the suite tree table on the run page: the recorded tree when
@@ -329,14 +311,18 @@ export function testOverview(run: RunRecord, path: string): OutputLine[] {
   }
   const lines: OutputLine[] = [
     { text: `test:      ${test.path}`, stream: "system" },
-    { text: `run:       ${run.id} (${run.startedAt})`, stream: "system" },
+    { text: `run:       ${run.id}`, stream: "system" },
+    { text: `started:   ${run.startedAt}`, stream: "system" },
     {
       text: `status:    ${test.status}${test.cached ? " (cached)" : ""}`,
       stream: test.status === "failed" || test.status === "aborted" ? "stderr" : "system",
     },
   ];
   if (test.startedAfterMs !== undefined) {
-    lines.push({ text: `started:   +${formatMs(test.startedAfterMs)}`, stream: "system" });
+    lines.push({
+      text: `offset:    +${formatMs(test.startedAfterMs)} into the run`,
+      stream: "system",
+    });
   }
   if (test.durationMs !== undefined) {
     lines.push({ text: `duration:  ${formatMs(test.durationMs)}`, stream: "system" });
