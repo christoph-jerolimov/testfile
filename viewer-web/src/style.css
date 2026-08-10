@@ -307,6 +307,45 @@ tr.selected td {
   margin-left: 0.4rem;
 }
 
+.muted {
+  color: var(--dim);
+}
+
+/* The pinned "All tests" entry above the tests table. */
+.all-tests-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.45rem 0.4rem;
+  cursor: pointer;
+}
+
+.all-tests-row:hover {
+  background: var(--panel-2);
+}
+
+.all-tests-row.selected {
+  background: var(--panel-2);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+/* the per-status counts of the runs table */
+.count-passed {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.count-failed {
+  color: var(--red);
+  font-weight: 600;
+}
+
 /* secondary line under a test path, e.g. the run/cache reason */
 .muted.small {
   color: var(--dim);

@@ -193,6 +193,12 @@ test("a merged run shows its legs and one row per variant", async ({ page }) => 
 test("tests view aggregates tests across runs", async ({ page }) => {
   await page.locator("nav button", { hasText: "Tests" }).click();
 
+  // without a selection the "All tests" row is active: every execution,
+  // with a Test column saying which test each row is
+  await expect(page.locator(".all-tests-row")).toHaveClass(/selected/);
+  await expect(page.locator(".detail h2")).toContainText("executions of all tests");
+  await expect(page.locator(".detail th", { hasText: "Test" })).toBeVisible();
+
   const rows = page.locator(".list tbody tr");
   await expect(rows).toHaveCount(3); // ci, ci/build, ci/unit
 
@@ -439,6 +445,7 @@ test("every column sorts, both ways", async ({ page }) => {
   await expect(tests.first()).not.toContainText("ci/build");
 
   // and the executions table on the right sorts on its own
+  await page.goto("/tests/ci");
   await page.locator(".detail th button", { hasText: "Duration" }).click();
   const durations = page.locator(".detail tbody tr");
   await expect(durations.first()).toContainText("3.1s");

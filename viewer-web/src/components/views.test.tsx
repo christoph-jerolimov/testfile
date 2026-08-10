@@ -67,8 +67,11 @@ test("a run outside the default window is hidden, but a link still opens it", ()
 test("the tests view opens the test from the URL", () => {
   const markup = renderToStaticMarkup(<TestsView runs={runs} selected="ci/unit" />);
   assert.match(markup, /executions of <span class="mono">ci\/unit/);
-  const first = renderToStaticMarkup(<TestsView runs={runs} />);
-  assert.match(first, /executions of <span class="mono">ci</);
+  // no path in the URL means the "All tests" row is what shows
+  const all = renderToStaticMarkup(<TestsView runs={runs} />);
+  assert.match(all, /executions of <span class="mono">all tests/);
+  assert.match(all, /class="all-tests-row selected"/);
+  assert.match(all, />Test</, "the executions table gains a Test column");
 });
 
 test("the tests table carries a history sparkline and a verdict badge", () => {
@@ -89,7 +92,7 @@ test("the tests table carries a history sparkline and a verdict badge", () => {
       { path: "ci/unit", status: index === 0 ? "passed" : "failed" },
     ];
   }
-  const verdicts = renderToStaticMarkup(<TestsView runs={judged} />);
+  const verdicts = renderToStaticMarkup(<TestsView runs={judged} selected="ci" />);
   // ci is flaky: one row plus the heading, since it is the selected test
   assert.equal(verdicts.match(/class="badge flaky"/g)?.length, 2);
   assert.equal(verdicts.match(/class="badge broken"/g)?.length, 1, "ci/unit, in its row");
@@ -112,14 +115,15 @@ test("a lone run has nothing to compare against", () => {
 
 test("every column of both tables is a sort button", () => {
   const runsMarkup = renderToStaticMarkup(<RunsView runs={runs} />);
-  // Started, Status, Duration, Tests - no variants in this fixture
-  assert.equal(runsMarkup.match(/class="sort /g)?.length, 4);
+  // Started, Run, Status, Duration, Passed, Failed, Others - no variants
+  // in this fixture
+  assert.equal(runsMarkup.match(/class="sort /g)?.length, 7);
   assert.match(runsMarkup, /aria-sort="descending"/, "newest run first to begin with");
   assert.match(runsMarkup, /title="sort by startedAt"/);
 
   const resultsMarkup = renderToStaticMarkup(<TestsView runs={runs} />);
-  // the list table (6) plus the executions table (5)
-  assert.equal(resultsMarkup.match(/class="sort /g)?.length, 11);
+  // the list table (6) plus the all-tests executions table (6)
+  assert.equal(resultsMarkup.match(/class="sort /g)?.length, 12);
   assert.match(resultsMarkup, /aria-sort="ascending"/, "tests read by path to begin with");
 });
 

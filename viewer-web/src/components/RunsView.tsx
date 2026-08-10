@@ -8,13 +8,7 @@ import {
   variantOptions,
   type RunFilter,
 } from "../filters.js";
-import {
-  countSummary,
-  formatMs,
-  mergedVariantLabel,
-  startedLabel,
-  variantLabel,
-} from "../format.js";
+import { formatMs, mergedVariantLabel, startedLabel, variantLabel } from "../format.js";
 import { navigate } from "../router.js";
 import type { RunRecord } from "../types.js";
 import { columnHelper, DataTable, type Column } from "./DataTable.js";
@@ -31,10 +25,18 @@ function runVariants(run: RunRecord): string {
 
 const helper = columnHelper<RunRecord>();
 
-// The number of tests a run recorded, so "Tests" sorts by size rather than
-// by the text of its summary.
-function testCount(run: RunRecord): number {
-  return run.tests.length;
+function statusCount(run: RunRecord, status: string): number {
+  return run.tests.filter((test) => test.status === status).length;
+}
+
+// Every status beyond passed/failed, spelled out: "2 skipped, 1 aborted".
+function otherSummary(run: RunRecord): string {
+  const counts = new Map<string, number>();
+  for (const test of run.tests) {
+    if (test.status === "passed" || test.status === "failed") continue;
+    counts.set(test.status, (counts.get(test.status) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([status, n]) => `${n} ${status}`).join(", ");
 }
 
 function runColumns(showVariants: boolean): Column<RunRecord>[] {
@@ -44,6 +46,11 @@ function runColumns(showVariants: boolean): Column<RunRecord>[] {
       sortFn: "datetime",
       meta: { className: "mono" },
       cell: (info) => startedLabel(info.getValue()),
+    }),
+    helper.accessor("id", {
+      header: "Run",
+      sortFn: "alphanumeric",
+      meta: { className: "mono" },
     }),
     helper.accessor("status", {
       header: "Status",
@@ -70,11 +77,25 @@ function runColumns(showVariants: boolean): Column<RunRecord>[] {
     );
   }
   columns.push(
-    helper.accessor(testCount, {
-      id: "tests",
-      header: "Tests",
+    helper.accessor((run) => statusCount(run, "passed"), {
+      id: "passed",
+      header: "Passed",
       sortFn: "basic",
-      cell: (info) => countSummary(info.row.original),
+      cell: (info) =>
+        info.getValue() > 0 ? <span className="count-passed">{info.getValue()}</span> : null,
+    }),
+    helper.accessor((run) => statusCount(run, "failed"), {
+      id: "failed",
+      header: "Failed",
+      sortFn: "basic",
+      cell: (info) =>
+        info.getValue() > 0 ? <span className="count-failed">{info.getValue()}</span> : null,
+    }),
+    helper.accessor(otherSummary, {
+      id: "others",
+      header: "Others",
+      sortFn: "alphanumeric",
+      cell: (info) => (info.getValue() ? <span className="muted">{info.getValue()}</span> : null),
     }),
   );
   return columns;
