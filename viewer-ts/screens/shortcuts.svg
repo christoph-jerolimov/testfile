@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="864" height="594" viewBox="0 0 864 594">
+<rect width="100%" height="100%" fill="#1e1e2e" rx="8"/>
+<g font-family="Menlo, Consolas, 'DejaVu Sans Mono', monospace" font-size="14">
+<text y="26" xml:space="preserve"><tspan x="12.0" fill="#d4d4d8" textLength="67.2" lengthAdjust="spacingAndGlyphs">Testfile</tspan><tspan x="79.2" fill="#d4d4d8" textLength="25.2" lengthAdjust="spacingAndGlyphs" font-weight="bold" opacity="0.55"> › </tspan><tspan x="104.4" fill="#d4d4d8" textLength="75.6" lengthAdjust="spacingAndGlyphs">Shortcuts</tspan></text>
+<text y="45" xml:space="preserve"><tspan x="20.4" fill="#d4d4d8" textLength="151.2" lengthAdjust="spacingAndGlyphs" font-weight="bold">Keyboard shortcuts</tspan></text>
+<text y="83" xml:space="preserve"><tspan x="20.4" fill="#d4d4d8" textLength="84.0" lengthAdjust="spacingAndGlyphs" font-weight="bold">Everywhere</tspan></text>
+<text y="102" xml:space="preserve"><tspan x="37.2" fill="#29b8db" textLength="100.8" lengthAdjust="spacingAndGlyphs">?           </tspan><tspan x="138.0" fill="#d4d4d8" textLength="33.6" lengthAdjust="spacingAndGlyphs">help</tspan></text>
+<text y="121" xml:space="preserve"><tspan x="37.2" fill="#29b8db" textLength="100.8" lengthAdjust="spacingAndGlyphs">q           </tspan><tspan x="138.0" fill="#d4d4d8" textLength="33.6" lengthAdjust="spacingAndGlyphs">quit</tspan></text>
+<text y="140" xml:space="preserve"><tspan x="37.2" fill="#29b8db" textLength="100.8" lengthAdjust="spacingAndGlyphs">esc         </tspan><tspan x="138.0" fill="#d4d4d8" textLength="33.6" lengthAdjust="spacingAndGlyphs">back</tspan></text>
+<text y="577" xml:space="preserve"><tspan x="12.0" fill="#f5f543" textLength="193.2" lengthAdjust="spacingAndGlyphs"> press any key to close</tspan></text>
+</g></svg>

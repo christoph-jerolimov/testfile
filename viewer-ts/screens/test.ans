@@ -1,0 +1,30 @@
+Testfile[2m › [22mTests[2m › [22mci/build[1m[2m › [22m20260105-113000-bb02[22m
+[7m[1m Overview [22m[27m  [2m Log [22m  [2m ⚙ db [22m  [2m ⚙ web [22m
+[36m[2mtest:      ci/build[22m[39m
+[36m[2mrun:       20260105-113000-bb02 (2026-01-05T11:30:00.000Z)[22m[39m
+[36m[2mstatus:    passed (cached)[22m[39m
+[36m[2mstarted:   +200ms[22m[39m
+[36m[2mduration:  21.0s[22m[39m
+[36m[2m [22m[39m
+[36m[2mservices:[22m[39m
+  db (stopped)
+  web (stopped)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [36m↑↓ pgup/pgdn[39m[2m scroll ·[22m [36mw[39m[2m wrap ·[22m [36m/[39m[2m search ·[22m [36mn/N[39m[2m next/prev match ·[22m [36mtab[39m[2m next tab ·[22m [36m?[39m[2m help ·[22m [36mq[39m[2m quit[22m

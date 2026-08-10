@@ -1,0 +1,30 @@
+Testfile[2m › [22mRuns[1m[2m › [22m20260105-113000-bb02[22m
+[2m2026-01-05 11:30:00 · failed · 1m38s · esc back[22m
+[1mTEST         STATUS     DURATION    START[22m [1m Overview [22m  [2m Log [22m  [2m ⚙ db [22m  [2m ⚙ web [22m
+ci           [31m✘ failed [39m     1m17s     +0ms [36m[2mtest:      ci/checks/unit[22m[39m
+  build      [32m✔ passed [39m     21.0s   +200ms [36m[2mrun:       20260105-113000-bb02 (2026-01-05T11:30:00.000Z[22m[39m
+  checks     [31m✘ failed [39m      1m6s   +21.4s [36m[2mstatus:    passed[22m[39m
+    lint     [32m✔ passed [39m      8.0s   +21.5s [36m[2mstarted:   +21.5s[22m[39m
+[7m    unit     [32m✔ passed [39m      1m4s   +21.5s[27m [36m[2mduration:  1m4s[22m[39m
+    e2e      [31m✘ failed [39m      1m6s   +21.6s [36m[2m [22m[39m
+                                          [36m[2mservices:[22m[39m
+                                            db (stopped)
+                                            web (stopped)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [36m↑↓ pgup/pgdn[39m[2m navigate ·[22m [36ms[39m[2m sort column ·[22m [36mr[39m[2m reverse ·[22m [36menter/→[39m[2m to details ·[22m [36m?[39m[2m help ·[22m [36mq[39m[2m quit[22m
