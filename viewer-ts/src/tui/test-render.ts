@@ -6,6 +6,13 @@ import { EventEmitter } from "node:events";
 import { render as inkRender } from "ink";
 import type React from "react";
 
+// Tests assert on text; under the runner color is forced on (FORCE_COLOR),
+// so the frames carry SGR codes that would break every plain-text match.
+function stripStyles(frame: string): string {
+  // eslint-disable-next-line no-control-regex
+  return frame.replace(/\u001b\[[0-9;]*m/g, "");
+}
+
 class FakeStdout extends EventEmitter {
   readonly columns = 100;
   readonly rows = 30;
@@ -16,7 +23,8 @@ class FakeStdout extends EventEmitter {
     this.last = frame;
     return true;
   };
-  lastFrame = (): string | undefined => this.last;
+  lastFrame = (): string | undefined =>
+    this.last === undefined ? undefined : stripStyles(this.last);
 }
 
 class FakeStdin extends EventEmitter {
