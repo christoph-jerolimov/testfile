@@ -125,6 +125,12 @@ function escapeXml(text: string): string {
 
 // The frame as one standalone SVG. Cell metrics are fixed: the captures are
 // deterministic, so the images are diffable like any other screenshot.
+// The image dimensions a frame of this size renders at - shared with the
+// PNG rasterization, which needs a matching viewport.
+export function svgSize(columns: number, rows: number): { width: number; height: number } {
+  return { width: Math.ceil(columns * 8.4 + 24), height: rows * 19 + 24 };
+}
+
 export function ansiToSvg(
   frame: string,
   options: { columns: number; rows: number; theme?: Theme },
@@ -133,8 +139,7 @@ export function ansiToSvg(
   const cellWidth = 8.4;
   const lineHeight = 19;
   const pad = 12;
-  const width = Math.ceil(options.columns * cellWidth + pad * 2);
-  const height = options.rows * lineHeight + pad * 2;
+  const { width, height } = svgSize(options.columns, options.rows);
   const parts: string[] = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
     `<rect width="100%" height="100%" fill="${palette.background}" rx="8"/>`,
