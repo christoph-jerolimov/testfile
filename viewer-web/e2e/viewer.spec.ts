@@ -238,6 +238,28 @@ test("an execution opens its own page: that test in that run", async ({ page }) 
   await expect(page).toHaveURL("/runs/20260102-090000-fx02");
 });
 
+test("a merged run's test page has one log tab per leg", async ({ page }) => {
+  await page.goto("/runs/20251231-080000-fx00/tests/ci/unit");
+  // one Test log tab per leg, told apart by the leg's variants
+  const linux = page.locator(".tabs button", { hasText: "Test log (platform=linux)" });
+  const windows = page.locator(".tabs button", { hasText: "Test log (platform=windows)" });
+  await expect(linux).toBeVisible();
+  await expect(windows).toBeVisible();
+
+  // the overview repeats the run's labels and tails each leg's log
+  await expect(page.locator("main.single .labels")).toContainText("branch=main");
+  const tails = page.locator("main.single pre.log.tail");
+  await expect(tails).toHaveCount(2);
+  await expect(tails.first()).toContainText("41 tests passed");
+  await expect(tails.last()).toContainText("path separator mismatch");
+
+  // each tab is that leg's own log, not the first match on the path
+  await windows.click();
+  await expect(page.locator("main.single pre.log")).toContainText("path separator mismatch");
+  await linux.click();
+  await expect(page.locator("main.single pre.log")).toContainText("41 tests passed");
+});
+
 test("the tests tab used to be called results; old links keep working", async ({ page }) => {
   await page.goto("/results/ci/unit");
   await expect(page.locator("nav button", { hasText: "Tests" })).toHaveClass(/active/);

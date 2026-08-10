@@ -689,7 +689,11 @@ testfile-viewer serve --port 8080
 - **Tests**: every recorded test with aggregated pass/fail counts and
   its executions across all runs; clicking an execution opens its own
   page — that test in that run, with an overview, the test's log and one
-  tab per related service log.
+  tab per related service log. On a merged run the page shows every leg:
+  one `Test log (platform=linux)`-style tab per leg (services too, when
+  the legs recorded them), and the overview repeats the run's labels and
+  ends with the last 20 lines of each leg's log — where a failure
+  usually says why.
 - **Logs** read like logs: the colour a tool wrote (the runner asks for it —
   see [an isolated environment](./env-and-ports#an-isolated-environment)) is
   rendered rather than printed as escape sequences, and every log has a
