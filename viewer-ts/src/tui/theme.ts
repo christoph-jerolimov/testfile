@@ -15,6 +15,18 @@ export function statusGlyph(status: Status | string): { glyph: string; color?: s
   return STATUS_GLYPH[status] ?? { glyph: "?", color: "gray" };
 }
 
+// Verdicts of the flaky rule, colored like their severity reads.
+export const VERDICT_COLOR: Record<string, string | undefined> = {
+  healthy: "green",
+  flaky: "yellow",
+  broken: "red",
+  unknown: undefined,
+};
+
+export function verdictColor(verdict: string | undefined): string | undefined {
+  return verdict === undefined ? undefined : VERDICT_COLOR[verdict];
+}
+
 // Below this width the side-by-side layouts stop working; pages show one
 // panel and push the other as its own page instead.
 export const NARROW_COLUMNS = 80;
