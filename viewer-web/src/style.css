@@ -311,6 +311,22 @@ tr.selected td {
   color: var(--dim);
 }
 
+/* Label keys with many values collapse into one dropdown each. */
+.filter-select {
+  font: inherit;
+  font-size: 0.8rem;
+  background: var(--panel-2);
+  color: var(--dim);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+}
+
+.filter-select.on {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 /* The pinned "All tests" entry above the tests table. */
 .all-tests-row {
   display: block;

@@ -37,6 +37,79 @@ export function MultiSelect({
   );
 }
 
+// How many values a label key may have before its chips become a dropdown.
+const CHIP_LIMIT = 3;
+
+// The labels filter: chips while a key has few values, a dropdown once it
+// has more than CHIP_LIMIT - a branch or sha key would otherwise flood the
+// bar with one chip per value. A dropdown picks one value per key ("any"
+// clears it); chips keep their multi-select behavior.
+export function LabelSelect({
+  options,
+  selected,
+  onChange,
+}: {
+  // key=value strings, as labelOptions() lists them.
+  options: string[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+}): React.ReactElement | null {
+  if (options.length === 0) return null;
+  const byKey = new Map<string, string[]>();
+  for (const option of options) {
+    const at = option.indexOf("=");
+    const key = at === -1 ? option : option.slice(0, at);
+    byKey.set(key, [...(byKey.get(key) ?? []), option]);
+  }
+  const chips = [...byKey.values()].filter((values) => values.length <= CHIP_LIMIT).flat();
+  const dropdowns = [...byKey.entries()].filter(([, values]) => values.length > CHIP_LIMIT);
+  const toggle = (option: string): void =>
+    onChange(
+      selected.includes(option)
+        ? selected.filter((value) => value !== option)
+        : [...selected, option],
+    );
+  const pick = (key: string, option: string): void =>
+    onChange([
+      ...selected.filter((value) => !value.startsWith(`${key}=`) && value !== key),
+      ...(option ? [option] : []),
+    ]);
+  return (
+    <div className="filter-group">
+      <span className="filter-label">Labels</span>
+      {chips.map((option) => (
+        <button
+          key={option}
+          className={`chip ${selected.includes(option) ? "on" : ""}`}
+          aria-pressed={selected.includes(option)}
+          onClick={() => toggle(option)}
+        >
+          {option}
+        </button>
+      ))}
+      {dropdowns.map(([key, values]) => {
+        const active = selected.find((value) => values.includes(value)) ?? "";
+        return (
+          <select
+            key={key}
+            className={`filter-select ${active ? "on" : ""}`}
+            aria-label={`filter by ${key}`}
+            value={active}
+            onChange={(event) => pick(key, event.target.value)}
+          >
+            <option value="">{key}: any</option>
+            {values.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        );
+      })}
+    </div>
+  );
+}
+
 // A single on/off chip, for filters that are a yes/no rather than a choice.
 export function Toggle({
   label,

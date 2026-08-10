@@ -732,7 +732,7 @@ narrows anything is the time window:
 | ------ | ---------- | ------- |
 | **Started** | runs — `7 days`, `30 days`, `90 days`, `all` | last **30 days** |
 | **Status** | runs / tests, multi-select (several values are an OR) | everything |
-| **Labels** | runs, multi-select over the recorded [labels](#labelling-runs) (`branch=main`-style) | everything |
+| **Labels** | runs, multi-select over the recorded [labels](#labelling-runs) (`branch=main`-style); a key with more than 3 values becomes a dropdown instead of a chip per value | everything |
 | **Variants** | runs, multi-select over `platform=linux`-style labels; a merged run matches when *any* of its legs does | everything |
 | **Tags** | tests, multi-select over the tags of the recorded [suite tree](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md) — nested tests inherit the tags of their groups | everything |
 | **flaky only** | tests, an on/off chip: keeps only tests the [flaky rule](#run-history) calls flaky — 25% to 75% of their last 20 results failed. Broken tests are badged but not matched by this chip | off |

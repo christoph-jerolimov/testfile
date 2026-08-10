@@ -98,6 +98,23 @@ test("the tests table carries a history sparkline and a verdict badge", () => {
   assert.equal(verdicts.match(/class="badge broken"/g)?.length, 1, "ci/unit, in its row");
 });
 
+test("a label key with many values becomes a dropdown, few stay chips", () => {
+  const labelled = Array.from({ length: 5 }, (_, i) => {
+    const record = run(`2026010${i}-000000-lb`, hoursAgo(i + 1), "passed");
+    record.labels = { branch: `feature-${i}`, tier: i % 2 === 0 ? "nightly" : "hourly" };
+    return record;
+  });
+  const markup = renderToStaticMarkup(<RunsView runs={labelled} />);
+  // 5 branch values: one dropdown with an "any" entry and every value
+  assert.match(markup, /aria-label="filter by branch"/);
+  assert.match(markup, /branch: any<\/option>/);
+  assert.match(markup, /<option value="branch=feature-0"/);
+  assert.doesNotMatch(markup, /aria-pressed="false">branch=feature-0/, "no chip per branch");
+  // 2 tier values: chips, no dropdown
+  assert.match(markup, /aria-pressed="false">tier=nightly/);
+  assert.doesNotMatch(markup, /aria-label="filter by tier"/);
+});
+
 test("a run detail offers the runs it can be compared with", () => {
   const markup = renderToStaticMarkup(<RunsView runs={runs} />);
   assert.match(markup, /aria-label="compare with"/);
