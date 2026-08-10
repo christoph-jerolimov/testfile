@@ -28,6 +28,9 @@ export default defineConfig({
     baseURL: externalUrl ?? `http://127.0.0.1:${port}`,
     viewport: { width: 1200, height: 800 },
     deviceScaleFactor: 1,
+    // The viewer follows the system theme and defaults to dark; the tests
+    // run dark, and the screenshot helper flips to light per shot.
+    colorScheme: "dark",
     ...(chromium ? { launchOptions: { executablePath: chromium } } : {}),
   },
   expect: {

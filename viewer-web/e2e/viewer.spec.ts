@@ -1,4 +1,14 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+// Every view is shot twice: in the dark theme the suite runs in, and once
+// more with the light scheme emulated - the viewer follows the system
+// preference, so both looks are pinned.
+async function screenshots(page: Page, name: string): Promise<void> {
+  await expect(page).toHaveScreenshot(`${name}-dark.png`);
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page).toHaveScreenshot(`${name}-light.png`);
+  await page.emulateMedia({ colorScheme: "dark" });
+}
 
 // Runs against the committed fixture in e2e/fixture: three recorded runs of
 // an "e2e-fixture" suite - an older passing one, a newer failing one, and a
@@ -39,7 +49,7 @@ test("runs view lists the history and opens the newest run", async ({ page }) =>
   await expect(detail).toContainText("service db");
   await expect(detail.locator(".log")).toContainText("boom: expected 4 to equal 5");
 
-  await expect(page).toHaveScreenshot("runs.png");
+  await screenshots(page, "runs");
 });
 
 test("a single test log opens from the run detail", async ({ page }) => {
@@ -53,7 +63,7 @@ test("a single test log opens from the run detail", async ({ page }) => {
   await expect(log).toContainText("boom: expected 4 to equal 5");
   await expect(log).not.toContainText("===", { timeout: 1000 });
 
-  await expect(page).toHaveScreenshot("test-log.png");
+  await screenshots(page, "test-log");
 });
 
 test("the log renders ANSI colour instead of printing it", async ({ page }) => {
@@ -67,6 +77,12 @@ test("the log renders ANSI colour instead of printing it", async ({ page }) => {
   await expect(failed).toHaveCSS("font-weight", "600");
   const passed = log.locator("span", { hasText: "41 tests passed" }).last();
   await expect(passed).toHaveCSS("color", "rgb(61, 220, 132)");
+
+  // the ANSI palette follows the theme: the same spans re-colour in light
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(failed).toHaveCSS("color", "rgb(207, 34, 46)");
+  await expect(passed).toHaveCSS("color", "rgb(17, 99, 41)");
+  await page.emulateMedia({ colorScheme: "dark" });
 });
 
 test("the log can be searched, wrapped and followed", async ({ page }) => {
@@ -95,7 +111,7 @@ test("the log can be searched, wrapped and followed", async ({ page }) => {
   await page.getByRole("button", { name: "previous match" }).click();
   await expect(page.locator(".log-hits")).toContainText("2 of 2");
 
-  await expect(page).toHaveScreenshot("log-search.png");
+  await screenshots(page, "log-search");
 
   await page.getByPlaceholder("find in log").fill("nothing here");
   await expect(page.locator(".log-hits")).toContainText("no match");
@@ -144,7 +160,7 @@ test("what a run kept can be opened from the page", async ({ page }) => {
   );
   expect(escaped.status()).toBe(400);
 
-  await expect(page).toHaveScreenshot("artifacts.png");
+  await screenshots(page, "artifacts");
 });
 
 test("older runs can be selected", async ({ page }) => {
@@ -171,7 +187,7 @@ test("a merged run shows its legs and one row per variant", async ({ page }) => 
   await expect(unit.nth(0)).toContainText("platform=linux");
   await expect(unit.nth(1)).toContainText("platform=windows");
 
-  await expect(page).toHaveScreenshot("merged-run.png");
+  await screenshots(page, "merged-run");
 });
 
 test("tests view aggregates tests across runs", async ({ page }) => {
@@ -193,7 +209,7 @@ test("tests view aggregates tests across runs", async ({ page }) => {
   await expect(detail).toContainText("ci/unit");
   await expect(detail.locator("tbody tr")).toHaveCount(4);
 
-  await expect(page).toHaveScreenshot("tests.png");
+  await screenshots(page, "tests");
 });
 
 test("an execution opens its own page: that test in that run", async ({ page }) => {
@@ -212,7 +228,7 @@ test("an execution opens its own page: that test in that run", async ({ page }) 
 
   await page.locator(".tabs button", { hasText: "Test log" }).click();
   await expect(page.locator("main.single .log")).toContainText("boom: expected 4 to equal 5");
-  await expect(page).toHaveScreenshot("test-page.png");
+  await screenshots(page, "test-page");
 
   // the breadcrumb's run link lands on the run's own page
   await page.locator(".breadcrumb button", { hasText: "20260102-090000-fx02" }).click();
@@ -319,7 +335,7 @@ test("runs carry their labels and can be filtered by them", async ({ page }) => 
   await expect(page.locator(".list tbody tr")).toHaveCount(1);
   await expect(page.locator(".list tbody tr").first()).toContainText("2025-12-31");
 
-  await expect(page).toHaveScreenshot("labels.png");
+  await screenshots(page, "labels");
 
   await page.getByRole("button", { name: "clear filters" }).click();
   await page.getByRole("button", { name: "all", exact: true }).click();
@@ -359,7 +375,7 @@ test("a verdict needs enough results, so the small fixture gets none", async ({ 
   await expect(page.locator(".filter-count")).toContainText("0 of 3 tests");
   await expect(page.locator(".list tbody")).toContainText("no test matches the filters");
 
-  await expect(page).toHaveScreenshot("flaky.png");
+  await screenshots(page, "flaky");
 
   await page.getByRole("button", { name: "clear filters" }).click();
   await expect(page.locator(".list tbody tr")).toHaveCount(3);
@@ -379,7 +395,7 @@ test("a run can be compared with the one before it", async ({ page }) => {
   await expect(diff).toContainText("2.2s → 40ms");
   await expect(diff.locator(".faster")).toBeVisible();
 
-  await expect(page).toHaveScreenshot("run-diff.png");
+  await screenshots(page, "run-diff");
 
   // comparing a run with itself is not offered, and picking another run
   // drops the comparison
@@ -412,7 +428,7 @@ test("every column sorts, both ways", async ({ page }) => {
   await page.locator(".list th button", { hasText: "Duration" }).click();
   await expect(rows.first()).toContainText("9.5s");
 
-  await expect(page).toHaveScreenshot("sorted.png");
+  await screenshots(page, "sorted");
 
   // sorting is per table: the results tab has its own
   await page.locator("nav button", { hasText: "Tests" }).click();
@@ -448,7 +464,7 @@ test("a run lays its tests out on a timeline", async ({ page }) => {
   await expect(page.locator(".detail .log")).toContainText("boom: expected 4 to equal 5");
   await expect(page.locator(".detail .log")).not.toContainText("===", { timeout: 1000 });
 
-  await expect(page).toHaveScreenshot("timeline.png");
+  await screenshots(page, "timeline");
 
   // a merged run puts every leg on one axis: windows started 5 minutes in
   await page.locator("nav button", { hasText: "Runs" }).click();
@@ -482,7 +498,7 @@ test("the run detail is the suite tree, including what never ran", async ({ page
   // services keep their own table below the tree
   await expect(detail.locator("table.services")).toContainText("service db");
 
-  await expect(page).toHaveScreenshot("suite-tree.png");
+  await screenshots(page, "suite-tree");
 });
 
 test("groups collapse and expand", async ({ page }) => {

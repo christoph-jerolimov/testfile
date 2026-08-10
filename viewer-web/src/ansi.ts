@@ -20,32 +20,16 @@ export interface AnsiSpan {
 }
 
 // The palette of the viewer itself, so a coloured log looks like it belongs
-// to the page it is on. Black is lifted off the background: a log that prints
-// black on the default background is unreadable, everywhere.
-const BASE = [
-  "#3b424d",
-  "#ff5c69",
-  "#3ddc84",
-  "#ffc857",
-  "#4cc2ff",
-  "#c792ea",
-  "#57d1c9",
-  "#d7dee8",
-];
+// to the page it is on - via CSS variables, so it follows the light and the
+// dark theme (the values live in style.css). Black is lifted off the
+// background: a log that prints black on the default background is
+// unreadable, everywhere.
+const NAMES = ["black", "red", "green", "yellow", "blue", "magenta", "cyan", "white"];
+const BASE = NAMES.map((name) => `var(--ansi-${name})`);
+const BRIGHT = NAMES.map((name) => `var(--ansi-bright-${name})`);
 
-const BRIGHT = [
-  "#6b7482",
-  "#ff8b94",
-  "#7ceaae",
-  "#ffdd94",
-  "#8ad8ff",
-  "#dcb6f5",
-  "#8ee6df",
-  "#ffffff",
-];
-
-const DEFAULT_FG = "#d7dee8";
-const DEFAULT_BG = "#0b0e13";
+const DEFAULT_FG = "var(--log-fg)";
+const DEFAULT_BG = "var(--log-bg)";
 
 function hex(red: number, green: number, blue: number): string {
   return `#${[red, green, blue].map((value) => value.toString(16).padStart(2, "0")).join("")}`;
