@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { githubRunArchives, syncFromGithub } from "../transfer/index.js";
+import { githubRunArchives, lineProgress, syncFromGithub } from "../transfer/index.js";
 import { color, pad } from "../util.js";
 import { commandFailed, reportImport, resolveHistoryBase, wantsJson, writeJson } from "./shared.js";
 
@@ -62,6 +62,7 @@ export function registerGithub(program: Command): void {
         artifact: options.artifact,
         exact: options.exact,
         token: githubToken(),
+        progress: lineProgress(),
       });
       if (result.archives === 0) console.log(color(90, nothingFound(options)));
       reportImport(result);

@@ -665,6 +665,14 @@ Already-imported runs are skipped, so `sync` is incremental — run it again
 any time to top up the local history with the newest CI results. The TUI's
 [runs and tests views](#the-tui) pick imported runs up live.
 
+A sync narrates what it does as it works: what it is listing, how many
+artifacts it found (and their size, when the API says), and a
+`[3/12] testfile-run-macos-latest (workflow run …) …` progress line per
+download that tells what each artifact yielded — on a terminal the
+in-flight line updates in place, piped output gets plain lines. The same
+narration covers `gitlab sync` and `s3 pull`; the final summary of
+imported and skipped runs is unchanged.
+
 ## The web viewer
 
 `testfile-viewer serve` starts a small web UI over the recorded runs — the

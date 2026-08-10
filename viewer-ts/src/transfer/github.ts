@@ -10,6 +10,7 @@ import {
   type Exec,
   type ImportResult,
 } from "./archive.js";
+import { noProgress, type SyncProgress } from "./progress.js";
 
 export interface GithubArchive {
   workflowRun: number;
@@ -33,6 +34,8 @@ export interface GithubOptions {
   token: string;
   fetchImpl?: typeof fetch;
   apiBase?: string;
+  // Narrates what the sync does while it works; silent when absent.
+  progress?: SyncProgress;
 }
 
 // Whether an artifact of this name is one of ours.
@@ -117,13 +120,27 @@ export async function syncFromGithub(
   exec: Exec = defaultExec,
 ): Promise<ImportResult & { archives: number }> {
   const doFetch = options.fetchImpl ?? fetch;
+  const progress = options.progress ?? noProgress();
+  progress.note(
+    `listing the last ${options.latest} completed workflow run${options.latest === 1 ? "" : "s"} of ${options.repo}`,
+  );
   const archives = await githubRunArchives(options);
+  const bytes = archives.reduce((sum, archive) => sum + (archive.sizeBytes ?? 0), 0);
+  progress.plan(
+    archives.length,
+    `run artifact${archives.length === 1 ? "" : "s"} to fetch${
+      bytes > 0 ? ` (${Math.max(1, Math.round(bytes / 1024))} KiB)` : ""
+    }`,
+  );
   const out: ImportResult & { archives: number } = {
     archives: archives.length,
     imported: [],
     skipped: [],
   };
-  for (const archive of archives) {
+  for (const [at, archive] of archives.entries()) {
+    const label = `${archive.name} (workflow run ${archive.workflowRun})`;
+    progress.fetching(at + 1, archives.length, label);
+    const before = { imported: out.imported.length, skipped: out.skipped.length };
     const response = await doFetch(archive.downloadUrl, {
       headers: { authorization: `Bearer ${options.token}`, "user-agent": "testfile-runner" },
       redirect: "follow",
@@ -154,6 +171,13 @@ export async function syncFromGithub(
       } else {
         importExtracted(baseDir, unzipped, out);
       }
+      progress.fetched(
+        at + 1,
+        archives.length,
+        label,
+        out.imported.length - before.imported,
+        out.skipped.length - before.skipped,
+      );
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

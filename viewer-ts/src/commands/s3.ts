@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { s3List, s3Pull, s3Push } from "../transfer/index.js";
+import { defaultExec, lineProgress, s3List, s3Pull, s3Push } from "../transfer/index.js";
 import { color } from "../util.js";
 import {
   commandFailed,
@@ -40,7 +40,9 @@ export function registerS3(program: Command): void {
     .description("Download a run archive from S3 into the local history")
     .action((prefix: string, path: string, options: { run?: string }) => {
       try {
-        reportImport(s3Pull(resolveHistoryBase(path), prefix, options.run));
+        reportImport(
+          s3Pull(resolveHistoryBase(path), prefix, options.run, defaultExec, lineProgress()),
+        );
       } catch (err) {
         commandFailed(err);
       }
