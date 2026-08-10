@@ -40,12 +40,12 @@ test("runs view lists the history and opens the newest run", async ({ page }) =>
   await expect(rows.nth(2)).toContainText("platform=linux|windows");
 
   // the newest run is preselected; its detail shows tests, the cached
-  // marker, the reason lines, the service row and the merged log
+  // marker, the service row and the merged log - the cache reasons live
+  // on each test's own page, not in the tree
   const detail = page.locator(".detail");
   await expect(detail).toContainText("20260102-090000-fx02");
   await expect(detail).toContainText("cached");
-  await expect(detail).toContainText("cache hit: inputs unchanged");
-  await expect(detail).toContainText("cache miss: src/**: 1 changed file (src/math.ts)");
+  await expect(detail).not.toContainText("cache hit: inputs unchanged");
   await expect(detail).toContainText("service db");
   await expect(detail.locator(".log")).toContainText("boom: expected 4 to equal 5");
 
@@ -166,8 +166,13 @@ test("older runs can be selected", async ({ page }) => {
   await expect(detail).toContainText("20260101-120000-fx01");
   // the selection is in the URL, not only in the component
   await expect(page).toHaveURL("/runs/20260101-120000-fx01");
-  await expect(detail).toContainText("cache miss: no stored passing result");
   await expect(detail.locator(".log")).toContainText("build finished");
+
+  // the cache reason moved off the tree, onto the test's own page
+  await page.goto("/runs/20260101-120000-fx01/tests/ci/build");
+  await expect(page.locator("main.single .meta")).toContainText(
+    "cache miss: no stored passing result",
+  );
 });
 
 test("a merged run shows its legs and one row per variant", async ({ page }) => {
@@ -228,6 +233,10 @@ test("an execution opens its own page: that test in that run", async ({ page }) 
   await expect(page.locator(".breadcrumb")).toContainText("20260102-090000-fx02");
   await expect(page.locator(".tabs button.active")).toHaveText("Overview");
   await expect(page.locator("main.single .meta")).toContainText("failed");
+  // the cache reason shows here, not in the run's suite tree
+  await expect(page.locator("main.single .meta")).toContainText(
+    "cache miss: src/**: 1 changed file (src/math.ts)",
+  );
 
   await page.locator(".tabs button", { hasText: "Test log" }).click();
   await expect(page.locator("main.single .log")).toContainText("boom: expected 4 to equal 5");

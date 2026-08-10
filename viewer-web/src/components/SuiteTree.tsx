@@ -151,7 +151,6 @@ export function SuiteTree({
                     {result && variantLabel(result.variants) ? (
                       <span className="variant">{variantLabel(result.variants)}</span>
                     ) : null}
-                    {result?.reason ? <div className="muted small">{result.reason}</div> : null}
                   </td>
                   <RowCells
                     row={row}
