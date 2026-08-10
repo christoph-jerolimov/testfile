@@ -10,7 +10,31 @@
   --red: #ff5c69;
   --yellow: #ffc857;
   --magenta: #c792ea;
+  /* Logs keep their terminal look in both themes - the ANSI palette the
+     runner records is drawn on this background. */
+  --log-bg: #0b0e13;
+  --log-fg: #d7dee8;
   font-size: 15px;
+  color-scheme: dark;
+}
+
+/* The light theme: the same tokens, re-valued. The page follows the
+   system preference; without one it stays dark. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f6f8fa;
+    --panel: #ffffff;
+    --panel-2: #eef1f5;
+    --border: #d0d7e0;
+    --text: #1f2733;
+    --dim: #5c6773;
+    --accent: #0969da;
+    --green: #1a7f37;
+    --red: #d1242f;
+    --yellow: #b58a00;
+    --magenta: #8250df;
+    color-scheme: light;
+  }
 }
 
 * {
@@ -276,7 +300,8 @@ h2 {
 }
 
 pre.log {
-  background: #0b0e13;
+  background: var(--log-bg);
+  color: var(--log-fg);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.8rem 1rem;
@@ -307,7 +332,7 @@ pre.log mark {
 
 pre.log mark.on {
   background: var(--yellow);
-  color: #0b0e13;
+  color: var(--log-bg);
 }
 
 /* Above the log: find, wrap, follow, and how long the thing is. */

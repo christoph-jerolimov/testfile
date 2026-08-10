@@ -685,6 +685,9 @@ testfile-viewer serve --port 8080
 - The server watches `.testfile/runs/` and pushes changes to the browser,
   so runs recorded elsewhere (another terminal, `testfile-viewer github sync`)
   appear live.
+- The page follows the system theme — dark and light are both first-class
+  (without a preference it stays dark). Logs keep their terminal look in
+  either theme, so the recorded ANSI colours always read the same.
 
 Above the tree, the run detail draws a **timeline**: one bar per test on a
 single axis, from the start of the run to its end, coloured by outcome —
