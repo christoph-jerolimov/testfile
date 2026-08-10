@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { gitlabRunArchives, syncFromGitlab } from "../transfer/index.js";
+import { gitlabRunArchives, lineProgress, syncFromGitlab } from "../transfer/index.js";
 import { color, pad } from "../util.js";
 import { commandFailed, reportImport, resolveHistoryBase, wantsJson, writeJson } from "./shared.js";
 
@@ -49,6 +49,7 @@ export function registerGitlab(program: Command): void {
           ref: options.ref,
           host: options.host,
           token: gitlabToken(),
+          progress: lineProgress(),
         });
         if (result.archives === 0) {
           console.log(

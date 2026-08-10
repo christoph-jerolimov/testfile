@@ -255,16 +255,31 @@ test(
     });
 
     const target = tempDir();
+    const events: string[] = [];
     const result = await syncFromGithub(target, {
       repo: "o/r",
       latest: 1,
       artifact: "testfile-run",
       token: "tok",
       fetchImpl,
+      progress: {
+        note: (message) => events.push(`note ${message}`),
+        plan: (total, what) => events.push(`plan ${total} ${what}`),
+        fetching: (index, total, label) => events.push(`fetching ${index}/${total} ${label}`),
+        fetched: (index, total, label, imported, skipped) =>
+          events.push(`fetched ${index}/${total} ${label} +${imported} =${skipped}`),
+      },
     });
     assert.equal(result.archives, 1);
     assert.deepEqual(result.imported, [id]);
     assert.equal(new RunHistory(target).runs[0]?.id, id);
+    // the sync narrated what it did, in order
+    assert.deepEqual(events, [
+      "note listing the last 1 completed workflow run of o/r",
+      "plan 1 run artifact to fetch",
+      "fetching 1/1 testfile-run (workflow run 7)",
+      "fetched 1/1 testfile-run (workflow run 7) +1 =0",
+    ]);
 
     // a second sync skips the already-imported run
     const again = await syncFromGithub(target, {

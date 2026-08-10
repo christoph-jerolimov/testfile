@@ -12,6 +12,7 @@ import {
   type Exec,
   type ImportResult,
 } from "./archive.js";
+import { noProgress, type SyncProgress } from "./progress.js";
 
 export interface GitlabArchive {
   pipeline: number;
@@ -33,6 +34,8 @@ export interface GitlabOptions {
   host?: string;
   ref?: string;
   fetchImpl?: typeof fetch;
+  // Narrates what the sync does while it works; silent when absent.
+  progress?: SyncProgress;
 }
 
 function apiBase(options: GitlabOptions): string {
@@ -94,13 +97,24 @@ export async function syncFromGitlab(
   exec: Exec = defaultExec,
 ): Promise<ImportResult & { archives: number }> {
   const doFetch = options.fetchImpl ?? fetch;
+  const progress = options.progress ?? noProgress();
+  progress.note(
+    `listing the last ${options.latest} pipeline${options.latest === 1 ? "" : "s"} of ${options.project}`,
+  );
   const archives = await gitlabRunArchives(options);
+  progress.plan(
+    archives.length,
+    `job artifact${archives.length === 1 ? "" : "s"} to fetch ("${options.job}" jobs)`,
+  );
   const out: ImportResult & { archives: number } = {
     archives: archives.length,
     imported: [],
     skipped: [],
   };
-  for (const archive of archives) {
+  for (const [at, archive] of archives.entries()) {
+    const label = `${archive.jobName} #${archive.job} (pipeline ${archive.pipeline})`;
+    progress.fetching(at + 1, archives.length, label);
+    const before = { imported: out.imported.length, skipped: out.skipped.length };
     const response = await doFetch(archive.downloadUrl, {
       headers: { "private-token": options.token, "user-agent": "testfile-viewer" },
       redirect: "follow",
@@ -131,6 +145,13 @@ export async function syncFromGitlab(
       } else {
         importExtracted(baseDir, unzipped, out);
       }
+      progress.fetched(
+        at + 1,
+        archives.length,
+        label,
+        out.imported.length - before.imported,
+        out.skipped.length - before.skipped,
+      );
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
