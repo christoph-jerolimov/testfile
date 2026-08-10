@@ -13,7 +13,7 @@ import { useNavigation } from "../navigation.js";
 import { PageShell, SplitPanel, TabStrip, useScreen } from "../panels.js";
 import { useShortcuts } from "../statusbar.js";
 import { DataTable, type ColumnSpec } from "../table.js";
-import { statusGlyph } from "../theme.js";
+import { statusGlyph, verdictColor } from "../theme.js";
 
 function runVariants(run: RunRecord): string {
   return run.merged
@@ -43,6 +43,7 @@ const RUN_COLUMNS: ColumnSpec<RunRecord>[] = [
     width: 9,
     value: (run) => run.status,
     text: (run) => `${statusGlyph(run.status).glyph} ${run.status}`,
+    color: (run) => statusGlyph(run.status).color,
   },
   {
     id: "duration",
@@ -153,7 +154,15 @@ const TEST_COLUMNS: ColumnSpec<TestFilterRow>[] = [
   { id: "test", header: "TEST", value: (row) => row.label },
   { id: "runs", header: "RUNS", width: 5, align: "right", value: (row) => row.runs },
   { id: "fails", header: "FAILS", width: 5, align: "right", value: (row) => row.fails },
-  { id: "verdict", header: "VERDICT", width: 8, value: (row) => row.verdict },
+  {
+    id: "verdict",
+    header: "VERDICT",
+    width: 8,
+    value: (row) => row.verdict,
+    color: (row) => verdictColor(row.verdict),
+    // "unknown" is the absence of a verdict; keep it quiet
+    dim: (row) => row.verdict === "unknown",
+  },
 ];
 
 const TEST_RUN_COLUMNS: ColumnSpec<TestRunRow>[] = [
@@ -174,6 +183,7 @@ const TEST_RUN_COLUMNS: ColumnSpec<TestRunRow>[] = [
     width: 9,
     value: (row) => row.status,
     text: (row) => `${statusGlyph(row.status).glyph} ${row.status}`,
+    color: (row) => statusGlyph(row.status).color,
   },
   {
     id: "duration",

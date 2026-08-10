@@ -291,17 +291,35 @@ export function DataTable<T extends RowData>({
         ) : (
           visible.map((row, offset) => {
             const isCursor = from + offset === index;
+            const original = row.original;
+            const cells = columns.map((column) =>
+              cell(
+                column.text?.(original) ?? String(column.value(original) ?? ""),
+                widthOf(column),
+                column.align ?? "left",
+              ),
+            );
+            const used =
+              cells.reduce((sum, text) => sum + text.length, 0) + gap * (cells.length - 1);
             return (
-              <Text key={row.id} inverse={isCursor && focused} bold={isCursor && !focused}>
-                {columns
-                  .map((column) => {
-                    const original = row.original;
-                    const text = column.text?.(original) ?? String(column.value(original) ?? "");
-                    return cell(text, widthOf(column), column.align ?? "left");
-                  })
-                  .join(" ".repeat(gap))
-                  .padEnd(width)
-                  .slice(0, width)}
+              <Text
+                key={row.id}
+                wrap="truncate"
+                inverse={isCursor && focused}
+                bold={isCursor && !focused}
+              >
+                {cells.map((text, at) => {
+                  const column = columns[at]!;
+                  return (
+                    <Text key={column.id}>
+                      {at > 0 ? " ".repeat(gap) : null}
+                      <Text color={column.color?.(original)} dimColor={column.dim?.(original)}>
+                        {text}
+                      </Text>
+                    </Text>
+                  );
+                })}
+                {used < width ? " ".repeat(width - used) : null}
               </Text>
             );
           })

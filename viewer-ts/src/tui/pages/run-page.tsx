@@ -28,6 +28,7 @@ const TREE_COLUMNS: ColumnSpec<SuiteRow>[] = [
     width: 9,
     value: (row) => row.status ?? "",
     text: (row) => (row.status ? `${statusGlyph(row.status).glyph} ${row.status}` : ""),
+    color: (row) => (row.status ? statusGlyph(row.status).color : undefined),
   },
   {
     id: "duration",

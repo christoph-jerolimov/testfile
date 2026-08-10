@@ -53,6 +53,7 @@ const EXECUTION_COLUMNS: ColumnSpec<TestRunRow>[] = [
     width: 9,
     value: (row) => row.status,
     text: (row) => `${statusGlyph(row.status).glyph} ${row.status}`,
+    color: (row) => statusGlyph(row.status).color,
   },
   {
     id: "duration",
