@@ -27,12 +27,6 @@ export function mergedVariantLabel(variants?: Record<string, string[]>): string 
     .join(", ");
 }
 
-export function countSummary(run: RunRecord): string {
-  const counts = new Map<string, number>();
-  for (const test of run.tests) counts.set(test.status, (counts.get(test.status) ?? 0) + 1);
-  return [...counts.entries()].map(([status, n]) => `${n} ${status}`).join(", ");
-}
-
 // How a test's reliability is judged, the same rule
 // `testfile-viewer runs --flaky` uses (viewer-ts/src/runrecord.ts). Only the
 // FLAKY_SAMPLE most recent results count, and below FLAKY_MIN_RESULTS there

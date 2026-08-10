@@ -63,75 +63,96 @@ const testColumns: Column<Aggregate>[] = [
   tests.accessor("occurrences", { header: "Runs", sortFn: "basic" }),
 ];
 
-const executionColumns: Column<Execution>[] = [
-  executions.accessor((entry) => entry.run.id, {
-    id: "run",
-    header: "Run",
-    sortFn: "alphanumeric",
-    meta: { className: "mono" },
-    cell: (info) => (
-      <>
-        {info.getValue()}
-        {variantLabel(info.row.original.test.variants) ? (
-          <span className="variant">{variantLabel(info.row.original.test.variants)}</span>
-        ) : null}
-      </>
-    ),
-  }),
-  executions.accessor((entry) => entry.run.startedAt, {
-    id: "started",
-    header: "Started",
-    sortFn: "datetime",
-    meta: { className: "mono" },
-    cell: (info) => startedLabel(info.getValue()),
-  }),
-  executions.accessor((entry) => entry.test.status, {
-    id: "status",
-    header: "Status",
-    sortFn: "alphanumeric",
-    cell: (info) => <StatusCell status={info.getValue()} cached={info.row.original.test.cached} />,
-  }),
-  executions.accessor((entry) => entry.test.durationMs ?? 0, {
-    id: "duration",
-    header: "Duration",
-    sortFn: "basic",
-    cell: (info) => formatMs(info.row.original.test.durationMs),
-  }),
-  executions.accessor((entry) => (entry.test.artifacts?.length ?? 0) + (entry.test.log ? 1 : 0), {
-    id: "notes",
-    header: "Notes",
-    sortFn: "basic",
-    cell: (info) => {
-      const { test } = info.row.original;
-      return (
+function executionColumns(showTest: boolean): Column<Execution>[] {
+  const columns: Column<Execution>[] = [
+    executions.accessor((entry) => entry.run.id, {
+      id: "run",
+      header: "Run",
+      sortFn: "alphanumeric",
+      meta: { className: "mono" },
+      cell: (info) => (
         <>
-          {test.artifacts?.length ? (
-            <span className="badge">{test.artifacts.length} artifacts</span>
+          {info.getValue()}
+          {variantLabel(info.row.original.test.variants) ? (
+            <span className="variant">{variantLabel(info.row.original.test.variants)}</span>
           ) : null}
-          {test.log ? <span className="badge">log</span> : null}
         </>
-      );
-    },
-  }),
-];
+      ),
+    }),
+  ];
+  // Only "All tests" needs saying which test a row is.
+  if (showTest) {
+    columns.push(
+      executions.accessor((entry) => entry.test.path, {
+        id: "test",
+        header: "Test",
+        sortFn: "alphanumeric",
+        meta: { className: "mono" },
+      }),
+    );
+  }
+  columns.push(
+    executions.accessor((entry) => entry.run.startedAt, {
+      id: "started",
+      header: "Started",
+      sortFn: "datetime",
+      meta: { className: "mono" },
+      cell: (info) => startedLabel(info.getValue()),
+    }),
+    executions.accessor((entry) => entry.test.status, {
+      id: "status",
+      header: "Status",
+      sortFn: "alphanumeric",
+      cell: (info) => (
+        <StatusCell status={info.getValue()} cached={info.row.original.test.cached} />
+      ),
+    }),
+    executions.accessor((entry) => entry.test.durationMs ?? 0, {
+      id: "duration",
+      header: "Duration",
+      sortFn: "basic",
+      cell: (info) => formatMs(info.row.original.test.durationMs),
+    }),
+    executions.accessor((entry) => (entry.test.artifacts?.length ?? 0) + (entry.test.log ? 1 : 0), {
+      id: "notes",
+      header: "Notes",
+      sortFn: "basic",
+      cell: (info) => {
+        const { test } = info.row.original;
+        return (
+          <>
+            {test.artifacts?.length ? (
+              <span className="badge">{test.artifacts.length} artifacts</span>
+            ) : null}
+            {test.log ? <span className="badge">log</span> : null}
+          </>
+        );
+      },
+    }),
+  );
+  return columns;
+}
 
 export function TestsView({
   runs,
   selected,
 }: {
   runs: RunRecord[];
-  // The test path from the URL; the first test stands in until one is picked.
+  // The test path from the URL; without one, "All tests" is what shows.
   selected?: string;
 }): React.ReactElement {
   const [filter, setFilter] = useState<TestFilter>(testFilterDefaults);
   const rows = useMemo(() => aggregate(runs), [runs]);
   const tags = useMemo(() => tagsByPath(runs), [runs]);
   const shown = useMemo(() => filterTests(rows, filter, tags), [rows, filter, tags]);
-  // as on the runs tab, a linked test stays visible even when filtered out
-  const current = rows.find((t) => t.path === selected) ?? shown[0] ?? rows[0];
-  if (!current) return <div className="empty">no recorded runs yet — run some tests first</div>;
+  if (rows.length === 0)
+    return <div className="empty">no recorded runs yet — run some tests first</div>;
+  // No selection means every test - the "All tests" row, like the TUI's.
+  const current = selected !== undefined ? rows.find((t) => t.path === selected) : undefined;
   const ran: Execution[] = runs.flatMap((run) =>
-    run.tests.filter((t) => t.path === current.path).map((test) => ({ run, test })),
+    run.tests
+      .filter((t) => current === undefined || t.path === current.path)
+      .map((test) => ({ run, test })),
   );
   return (
     <main>
@@ -165,32 +186,39 @@ export function TestsView({
             onChange={(text) => setFilter({ ...filter, text })}
           />
         </FilterBar>
+        <button
+          className={`all-tests-row ${current === undefined ? "selected" : ""}`}
+          onClick={() => navigate({ view: "tests" })}
+        >
+          All tests <span className="muted">({rows.length})</span>
+        </button>
         <DataTable
           columns={testColumns}
           data={shown}
           initialSorting={[{ id: "path", desc: false }]}
           rowKey={(t) => t.path}
-          rowClassName={(t) => `row ${t.path === current.path ? "selected" : ""}`}
+          rowClassName={(t) => `row ${t.path === current?.path ? "selected" : ""}`}
           onRowClick={(t) => navigate({ view: "tests", testPath: t.path })}
           empty="no test matches the filters"
         />
       </div>
       <div className="detail">
         <h2>
-          executions of <span className="mono">{current.path}</span>
-          <VerdictBadge test={current} />
-          {(tags.get(current.path) ?? []).map((tag) => (
+          executions of{" "}
+          <span className="mono">{current === undefined ? "all tests" : current.path}</span>
+          {current !== undefined ? <VerdictBadge test={current} /> : null}
+          {(current !== undefined ? (tags.get(current.path) ?? []) : []).map((tag) => (
             <span key={tag} className="badge">
               {tag}
             </span>
           ))}
         </h2>
         <DataTable
-          columns={executionColumns}
+          columns={executionColumns(current === undefined)}
           data={ran}
           // newest first, as the runs list reads
           initialSorting={[{ id: "started", desc: true }]}
-          rowKey={(entry) => `${entry.run.id} ${entry.test.origin ?? ""}`}
+          rowKey={(entry) => `${entry.run.id} ${entry.test.path} ${entry.test.origin ?? ""}`}
           rowClassName={() => "row"}
           // a click opens the execution's own page: that test in that run
           onRowClick={(entry) =>

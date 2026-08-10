@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   aggregate,
-  countSummary,
   formatMs,
   isBroken,
   isFlaky,
@@ -47,16 +46,6 @@ test("formatMs renders ms, seconds and minutes", () => {
 test("startedLabel trims an ISO timestamp to date + time", () => {
   assert.equal(startedLabel("2026-01-02T09:00:00.000Z"), "2026-01-02 09:00:00");
   assert.equal(startedLabel("2026-01-02T09:00:00Z"), "2026-01-02 09:00:00");
-});
-
-test("countSummary counts statuses in first-seen order", () => {
-  const record = run("r1", "2026-01-01T00:00:00.000Z", [
-    { path: "a", status: "passed" },
-    { path: "b", status: "failed" },
-    { path: "c", status: "passed" },
-    { path: "d", status: "skipped" },
-  ]);
-  assert.equal(countSummary(record), "2 passed, 1 failed, 1 skipped");
 });
 
 test("aggregate folds runs per test path, newest run first", () => {
