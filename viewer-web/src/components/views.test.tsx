@@ -115,6 +115,50 @@ test("a label key with many values becomes a dropdown, few stay chips", () => {
   assert.doesNotMatch(markup, /aria-label="filter by tier"/);
 });
 
+test("a merged run tabs one log per leg and its overview repeats the labels", () => {
+  const record = { ...runs[1] };
+  record.labels = { branch: "main" };
+  record.tests = [
+    {
+      path: "ci/unit",
+      status: "passed",
+      log: "tests/20260101-linux/ci-unit.log",
+      variants: { platform: "linux" },
+    },
+    {
+      path: "ci/unit",
+      status: "failed",
+      log: "tests/20260101-windows/ci-unit.log",
+      variants: { platform: "windows" },
+    },
+  ];
+  record.services = [
+    {
+      name: "db",
+      status: "stopped",
+      log: "services/20260101-linux/db.log",
+      variants: { platform: "linux" },
+    },
+    {
+      name: "db",
+      status: "stopped",
+      log: "services/20260101-windows/db.log",
+      variants: { platform: "windows" },
+    },
+  ];
+  const markup = renderToStaticMarkup(
+    <TestView runs={[record]} runId={record.id} testPath="ci/unit" />,
+  );
+  assert.match(markup, /Test log \(platform=linux\)<\/button>/);
+  assert.match(markup, /Test log \(platform=windows\)<\/button>/);
+  assert.match(markup, /service db \(platform=linux\)<\/button>/);
+  assert.match(markup, /service db \(platform=windows\)<\/button>/);
+  // the overview repeats the run's labels and tails each leg's log
+  assert.match(markup, /class="badge label"/);
+  assert.match(markup, /branch=main/);
+  assert.equal(markup.match(/class="log wrap tail"/g)?.length, 2, "one excerpt per leg");
+});
+
 test("a run detail offers the runs it can be compared with", () => {
   const markup = renderToStaticMarkup(<RunsView runs={runs} />);
   assert.match(markup, /aria-label="compare with"/);

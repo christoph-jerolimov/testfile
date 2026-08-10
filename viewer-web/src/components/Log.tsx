@@ -63,7 +63,17 @@ function Span({
   return <span style={style}>{parts}</span>;
 }
 
-export function Log({ url, revision = 0 }: { url: string; revision?: number }): React.ReactElement {
+export function Log({
+  url,
+  revision = 0,
+  tail,
+}: {
+  url: string;
+  revision?: number;
+  // Show only the last `tail` lines, without the search/wrap/follow bar -
+  // the excerpt an overview embeds, not a log to work in.
+  tail?: number;
+}): React.ReactElement {
   const [text, setText] = useState<string | undefined>();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -89,7 +99,14 @@ export function Log({ url, revision = 0 }: { url: string; revision?: number }): 
   // a different log starts from the top, with the search still armed
   useEffect(() => setText(undefined), [url]);
 
-  const lines = useMemo(() => ansiLines(text ?? ""), [text]);
+  const lines = useMemo(() => {
+    const all = ansiLines(text ?? "");
+    if (tail === undefined) return all;
+    // the trailing newline of a log is not a line worth a slot of the tail
+    const last = all[all.length - 1];
+    const trimmed = last && last.length === 0 ? all.slice(0, -1) : all;
+    return trimmed.slice(-tail);
+  }, [text, tail]);
   const matches = useMemo(() => findMatches(lines, query), [lines, query]);
   useEffect(() => setActive(0), [query, url]);
 
@@ -105,6 +122,18 @@ export function Log({ url, revision = 0 }: { url: string; revision?: number }): 
 
   const step = (by: number): void =>
     setActive((current) => (current + by + matches.length) % Math.max(1, matches.length));
+
+  if (tail !== undefined) {
+    return (
+      <pre className="log wrap tail">
+        {text === undefined
+          ? "loading..."
+          : lines.map((spans, line) => (
+              <Line key={line} spans={spans} matches={matches} line={line} active={active} />
+            ))}
+      </pre>
+    );
+  }
 
   return (
     <>

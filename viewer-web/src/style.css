@@ -409,6 +409,12 @@ pre.log.wrap {
   word-break: break-word;
 }
 
+/* A log excerpt embedded in an overview: the tail, not a workspace. */
+pre.log.tail {
+  max-height: none;
+  margin-top: 0.4rem;
+}
+
 .log-line {
   min-height: 1.45em;
 }
