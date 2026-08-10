@@ -1,20 +1,20 @@
 Testfile[1m[2m › [22mShortcuts[22m
  [1mKeyboard shortcuts[22m
 
+ [1m[36mRuns (focused)[39m[22m
+   [36m↑↓ pgup/pgdn  [39mnavigate
+   [36ms             [39msort column
+   [36mr             [39mreverse
+   [36menter/click   [39mopen run
+   [36m/             [39mfilter
+
+ [1m[36mTabs (focused)[39m[22m
+   [36mtab / 1 2     [39mswitch tab
+
  [1mEverywhere[22m
-   [36m?           [39mhelp
-   [36mq           [39mquit
-   [36mesc         [39mback
-
-
-
-
-
-
-
-
-
-
+   [36m?             [39mhelp
+   [36mq             [39mquit
+   [36mesc           [39mback
 
 
 

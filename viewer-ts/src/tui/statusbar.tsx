@@ -10,7 +10,7 @@ export interface Shortcut {
   label: string;
 }
 
-interface Scope {
+export interface Scope {
   id: string;
   title: string;
   shortcuts: Shortcut[];
@@ -76,7 +76,7 @@ export function useShortcuts(
   }, [id, title, serialized, active]);
 }
 
-function useScopes(): Scope[] {
+export function useScopes(): Scope[] {
   const api = useContext(StatusBarContext);
   return api ? [...api.state.scopes.values()] : [];
 }
@@ -117,10 +117,11 @@ export function StatusBar({ message }: { message?: string }): React.ReactElement
 
 // The "?" overlay: every registered scope with its shortcuts, active scopes
 // first. Rendered instead of the page content - terminals have no z-axis
-// worth fighting over.
-export function ShortcutOverlay(): React.ReactElement {
-  const scopes = useScopes();
-  const ordered = [...scopes].sort((a, b) => Number(b.active) - Number(a.active));
+// worth fighting over - so the opener passes the scopes it saw: rendering
+// the overlay unmounts the page, which would otherwise empty the list.
+export function ShortcutOverlay({ scopes }: { scopes?: Scope[] }): React.ReactElement {
+  const live = useScopes();
+  const ordered = [...(scopes ?? live)].sort((a, b) => Number(b.active) - Number(a.active));
   return (
     <Box flexDirection="column" paddingX={1}>
       <Text bold>Keyboard shortcuts</Text>
@@ -134,7 +135,7 @@ export function ShortcutOverlay(): React.ReactElement {
           {scope.shortcuts.map((shortcut, index) => (
             <Text key={index}>
               {"  "}
-              <Text color="cyan">{shortcut.keys.padEnd(12)}</Text>
+              <Text color="cyan">{shortcut.keys.padEnd(14)}</Text>
               {shortcut.label}
             </Text>
           ))}
@@ -145,13 +146,13 @@ export function ShortcutOverlay(): React.ReactElement {
         {GLOBAL_SHORTCUTS.map((shortcut, index) => (
           <Text key={index}>
             {"  "}
-            <Text color="cyan">{shortcut.keys.padEnd(12)}</Text>
+            <Text color="cyan">{shortcut.keys.padEnd(14)}</Text>
             {shortcut.label}
           </Text>
         ))}
         <Text>
           {"  "}
-          <Text color="cyan">{"esc".padEnd(12)}</Text>
+          <Text color="cyan">{"esc".padEnd(14)}</Text>
           back
         </Text>
       </Box>

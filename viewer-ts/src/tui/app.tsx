@@ -12,7 +12,7 @@ import { PageShell, TitleProvider } from "./panels.js";
 import { IndexPage } from "./pages/index-page.js";
 import { RunNodePage, RunPage } from "./pages/run-page.js";
 import { TestPage, TestRunsPage } from "./pages/test-page.js";
-import { ShortcutOverlay, StatusBarProvider } from "./statusbar.js";
+import { ShortcutOverlay, StatusBarProvider, useScopes, type Scope } from "./statusbar.js";
 import { ClickProvider } from "./table.js";
 import { watchRuns } from "./watch-runs.js";
 
@@ -28,14 +28,17 @@ function Pages({
   const { exit } = useApp();
   const navigation = useNavigation();
   const interaction = useInteraction();
-  const [overlay, setOverlay] = useState(false);
+  const scopes = useScopes();
+  // Showing the overlay unmounts the page, which unregisters its shortcut
+  // scopes - so the overlay carries the scopes seen when it opened.
+  const [overlay, setOverlay] = useState<Scope[] | undefined>();
 
   useInput((input, key) => {
     if (isMouseSequence(input)) return;
     if (key.ctrl && input === "c") return void exit();
     if (overlay) {
       // any key closes the overlay
-      setOverlay(false);
+      setOverlay(undefined);
       return;
     }
     if (key.escape) {
@@ -44,13 +47,13 @@ function Pages({
     }
     if (interaction.textInputActive()) return;
     if (input === "q") exit();
-    else if (input === "?") setOverlay(true);
+    else if (input === "?") setOverlay(scopes);
   });
 
   if (overlay) {
     return (
       <PageShell breadcrumb={["Shortcuts"]} message="press any key to close">
-        <ShortcutOverlay />
+        <ShortcutOverlay scopes={overlay} />
       </PageShell>
     );
   }
