@@ -53,11 +53,8 @@ test("runs view lists the history and opens the newest run", async ({ page }) =>
 });
 
 test("a single test log opens from the run detail", async ({ page }) => {
-  await page
-    .locator(".detail tr", { hasText: "unit" })
-    .getByRole("button", { name: "show" })
-    .first()
-    .click();
+  // the whole row selects the test, not only its "show" link
+  await page.locator(".detail table.tree tr.clickable", { hasText: "unit" }).first().click();
   const log = page.locator(".detail .log");
   await expect(log).toContainText("41 tests passed");
   await expect(log).toContainText("boom: expected 4 to equal 5");
