@@ -12,7 +12,7 @@ import { formatMs, mergedVariantLabel, startedLabel, variantLabel } from "../for
 import { navigate } from "../router.js";
 import type { RunRecord } from "../types.js";
 import { columnHelper, DataTable, type Column } from "./DataTable.js";
-import { DayRange, FilterBar, MultiSelect, SearchInput } from "./FilterBar.js";
+import { DayRange, FilterBar, LabelSelect, MultiSelect, SearchInput } from "./FilterBar.js";
 import { RunDetail } from "./RunDetail.js";
 import { StatusCell } from "./StatusCell.js";
 
@@ -142,8 +142,7 @@ export function RunsView({
             selected={filter.variants}
             onChange={(variants) => setFilter({ ...filter, variants })}
           />
-          <MultiSelect
-            label="Labels"
+          <LabelSelect
             options={labelOptions(runs)}
             selected={filter.labels}
             onChange={(labels) => setFilter({ ...filter, labels })}
