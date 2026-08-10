@@ -65,6 +65,10 @@ inputs:
     description: "Node.js version used to run the Testfile runner"
     required: false
     default: "22"
+  doctor:
+    description: "Run `testfile doctor` before the tests: check the machine against what this Testfile needs (tools, container engines, ports) and fail early with a readable report instead of halfway through the run"
+    required: false
+    default: "true"
   annotations:
     description: "Emit GitHub annotations for failed tests (shown on the PR)"
     required: false
@@ -107,6 +111,15 @@ runs:
         cd "${{ github.action_path }}"
         npm ci --no-audit --no-fund
         npm run build --workspace runner-ts
+
+    # Pre-flight: every missing tool, engine or taken port that would fail
+    # the run anyway fails here instead, in one readable report.
+    - name: Check the machine (testfile doctor)
+      if: ${{ inputs.doctor == 'true' }}
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+      run: node "${{ github.action_path }}/runner-ts/dist/cli.js" doctor "$INPUT_PATH"
 
     - name: Run Testfile
       shell: bash

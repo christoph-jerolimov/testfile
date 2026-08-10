@@ -33,6 +33,7 @@ against your repository's Testfile. The job fails when tests fail.
 | `max-parallel` | – | Global cap on concurrently running tests. |
 | `reporter` / `output` | – | Write [machine-readable results](./cli#machine-readable-reports) (`junit` or `json`). |
 | `node-version` | `22` | Node.js version for the runner. |
+| `doctor` | `true` | Run [`testfile doctor`](./cli#checking-the-machine) before the tests: every missing tool, engine or taken port that would fail the run anyway fails here instead, in one readable report. |
 | `annotations` | `true` | Emit GitHub annotations for failed and aborted tests — each appears on the PR with the last 15 lines of its log. |
 | `summary` | `true` | Write a job-summary table of the run's results (status, duration and notes per test). |
 | `statuses` | `false` | Report one [commit status per test](#a-status-per-test) — needs `permissions: statuses: write`. |
