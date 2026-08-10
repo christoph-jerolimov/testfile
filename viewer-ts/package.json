@@ -10,7 +10,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "pretest": "npm run build",
-    "test": "node --test \"dist/**/*.test.js\""
+    "test": "node --test \"dist/**/*.test.js\"",
+    "screens:update": "npm run build && node dist/tui/screens-update.js"
   },
   "dependencies": {
     "@tanstack/react-table": "^9.1.2",

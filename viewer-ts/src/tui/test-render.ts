@@ -1,7 +1,7 @@
 // A minimal render harness for TUI tests: Ink rendering into fake streams,
-// 100 columns by 30 rows, with a writable stdin to drive keys. The same
-// approach as ink-testing-library, inlined so it always resolves the same
-// ink copy the app uses.
+// 100 columns by 30 rows unless asked otherwise, with a writable stdin to
+// drive keys. The same approach as ink-testing-library, inlined so it
+// always resolves the same ink copy the app uses.
 import { EventEmitter } from "node:events";
 import { render as inkRender } from "ink";
 import type React from "react";
@@ -10,14 +10,19 @@ import type React from "react";
 // so the frames carry SGR codes that would break every plain-text match.
 function stripStyles(frame: string): string {
   // eslint-disable-next-line no-control-regex
-  return frame.replace(/\u001b\[[0-9;]*m/g, "");
+  return frame.replace(/\[[0-9;]*m/g, "");
 }
 
 class FakeStdout extends EventEmitter {
-  readonly columns = 100;
-  readonly rows = 30;
+  readonly columns: number;
+  readonly rows: number;
   readonly frames: string[] = [];
   private last: string | undefined;
+  constructor(columns: number, rows: number) {
+    super();
+    this.columns = columns;
+    this.rows = rows;
+  }
   write = (frame: string): boolean => {
     this.frames.push(frame);
     this.last = frame;
@@ -25,6 +30,8 @@ class FakeStdout extends EventEmitter {
   };
   lastFrame = (): string | undefined =>
     this.last === undefined ? undefined : stripStyles(this.last);
+  // The frame as written, styles included - what a screenshot wants.
+  lastRawFrame = (): string | undefined => this.last;
 }
 
 class FakeStdin extends EventEmitter {
@@ -52,15 +59,19 @@ export interface TestRender {
   stdin: FakeStdin;
   frames: string[];
   lastFrame(): string | undefined;
+  lastRawFrame(): string | undefined;
   unmount(): void;
 }
 
-export function renderForTest(tree: React.ReactElement): TestRender {
-  const stdout = new FakeStdout();
+export function renderForTest(
+  tree: React.ReactElement,
+  options: { columns?: number; rows?: number } = {},
+): TestRender {
+  const stdout = new FakeStdout(options.columns ?? 100, options.rows ?? 30);
   const stdin = new FakeStdin();
   const instance = inkRender(tree, {
     stdout: stdout as unknown as NodeJS.WriteStream,
-    stderr: new FakeStdout() as unknown as NodeJS.WriteStream,
+    stderr: new FakeStdout(80, 24) as unknown as NodeJS.WriteStream,
     stdin: stdin as unknown as NodeJS.ReadStream,
     debug: true,
     exitOnCtrlC: false,
@@ -70,6 +81,7 @@ export function renderForTest(tree: React.ReactElement): TestRender {
     stdin,
     frames: stdout.frames,
     lastFrame: stdout.lastFrame,
+    lastRawFrame: stdout.lastRawFrame,
     unmount: () => instance.unmount(),
   };
 }
