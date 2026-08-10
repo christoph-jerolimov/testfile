@@ -10,10 +10,27 @@
   --red: #ff5c69;
   --yellow: #ffc857;
   --magenta: #c792ea;
-  /* Logs keep their terminal look in both themes - the ANSI palette the
-     runner records is drawn on this background. */
+  /* The log pane and the ANSI palette the recorded logs are drawn with -
+     themed like everything else, so a log looks like it belongs to the
+     page it is on. */
   --log-bg: #0b0e13;
   --log-fg: #d7dee8;
+  --ansi-black: #3b424d;
+  --ansi-red: #ff5c69;
+  --ansi-green: #3ddc84;
+  --ansi-yellow: #ffc857;
+  --ansi-blue: #4cc2ff;
+  --ansi-magenta: #c792ea;
+  --ansi-cyan: #57d1c9;
+  --ansi-white: #d7dee8;
+  --ansi-bright-black: #6b7482;
+  --ansi-bright-red: #ff8b94;
+  --ansi-bright-green: #7ceaae;
+  --ansi-bright-yellow: #ffdd94;
+  --ansi-bright-blue: #8ad8ff;
+  --ansi-bright-magenta: #dcb6f5;
+  --ansi-bright-cyan: #8ee6df;
+  --ansi-bright-white: #ffffff;
   font-size: 15px;
   color-scheme: dark;
 }
@@ -33,6 +50,24 @@
     --red: #d1242f;
     --yellow: #b58a00;
     --magenta: #8250df;
+    --log-bg: #fbfcfd;
+    --log-fg: #1f2733;
+    --ansi-black: #24292f;
+    --ansi-red: #cf222e;
+    --ansi-green: #116329;
+    --ansi-yellow: #9a6700;
+    --ansi-blue: #0969da;
+    --ansi-magenta: #8250df;
+    --ansi-cyan: #1b7c83;
+    --ansi-white: #6e7781;
+    --ansi-bright-black: #57606a;
+    --ansi-bright-red: #a40e26;
+    --ansi-bright-green: #1a7f37;
+    --ansi-bright-yellow: #7d4e00;
+    --ansi-bright-blue: #218bff;
+    --ansi-bright-magenta: #a475f9;
+    --ansi-bright-cyan: #3192aa;
+    --ansi-bright-white: #8c959f;
     color-scheme: light;
   }
 }

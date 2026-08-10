@@ -77,6 +77,12 @@ test("the log renders ANSI colour instead of printing it", async ({ page }) => {
   await expect(failed).toHaveCSS("font-weight", "600");
   const passed = log.locator("span", { hasText: "41 tests passed" }).last();
   await expect(passed).toHaveCSS("color", "rgb(61, 220, 132)");
+
+  // the ANSI palette follows the theme: the same spans re-colour in light
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(failed).toHaveCSS("color", "rgb(207, 34, 46)");
+  await expect(passed).toHaveCSS("color", "rgb(17, 99, 41)");
+  await page.emulateMedia({ colorScheme: "dark" });
 });
 
 test("the log can be searched, wrapped and followed", async ({ page }) => {

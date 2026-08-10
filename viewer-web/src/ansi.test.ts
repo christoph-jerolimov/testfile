@@ -33,14 +33,14 @@ test("colour codes become spans, and reset ends them", () => {
     ["plain ", "red", " plain"],
   );
   assert.equal(line[0].style.fg, undefined);
-  assert.equal(line[1].style.fg, "#ff5c69");
+  assert.equal(line[1].style.fg, "var(--ansi-red)");
   assert.equal(line[2].style.fg, undefined);
 });
 
 test("a style stays open across a line break, as it does in a terminal", () => {
   const lines = ansiLines(`${sgr("32")}green\nstill green${sgr("39")} plain`);
-  assert.equal(lines[0][0].style.fg, "#3ddc84");
-  assert.equal(lines[1][0].style.fg, "#3ddc84");
+  assert.equal(lines[0][0].style.fg, "var(--ansi-green)");
+  assert.equal(lines[1][0].style.fg, "var(--ansi-green)");
   assert.equal(lines[1][1].style.fg, undefined);
 });
 
@@ -56,12 +56,12 @@ test("weights and their explicit ends", () => {
 });
 
 test("bright, background and 256-colour forms", () => {
-  assert.equal(applyCodes({}, "91").fg, "#ff8b94");
-  assert.equal(applyCodes({}, "42").bg, "#3ddc84");
-  assert.equal(applyCodes({}, "102").bg, "#7ceaae");
-  assert.equal(applyCodes({ bg: "#3ddc84" }, "49").bg, undefined);
+  assert.equal(applyCodes({}, "91").fg, "var(--ansi-bright-red)");
+  assert.equal(applyCodes({}, "42").bg, "var(--ansi-green)");
+  assert.equal(applyCodes({}, "102").bg, "var(--ansi-bright-green)");
+  assert.equal(applyCodes({ bg: "var(--ansi-green)" }, "49").bg, undefined);
   // 256-colour: a named one, one from the cube, one from the greys
-  assert.equal(applyCodes({}, "38;5;1").fg, "#ff5c69");
+  assert.equal(applyCodes({}, "38;5;1").fg, "var(--ansi-red)");
   assert.equal(applyCodes({}, "38;5;46").fg, "#00ff00");
   assert.equal(applyCodes({}, "38;5;244").fg, "#808080");
   // 24-bit, and the codes after it are still read
@@ -87,9 +87,12 @@ test("cssOf turns a style into what the browser needs", () => {
     textDecoration: "underline",
   });
   // inverse swaps the two, falling back to the log's own colours
-  assert.deepEqual(cssOf({ inverse: true }), { color: "#0b0e13", background: "#d7dee8" });
-  assert.deepEqual(cssOf({ inverse: true, fg: "#3ddc84", bg: "#123456" }), {
+  assert.deepEqual(cssOf({ inverse: true }), {
+    color: "var(--log-bg)",
+    background: "var(--log-fg)",
+  });
+  assert.deepEqual(cssOf({ inverse: true, fg: "var(--ansi-green)", bg: "#123456" }), {
     color: "#123456",
-    background: "#3ddc84",
+    background: "var(--ansi-green)",
   });
 });
