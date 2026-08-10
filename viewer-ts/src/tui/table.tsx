@@ -2,7 +2,7 @@
 // TanStack Table (the same library the web viewer uses); this file owns the
 // terminal concerns: fixed-width layout, a scrolling cursor, focus, key
 // bindings, and mapping mouse clicks back to rows.
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef } from "react";
 import { Box, Text, useInput, type DOMElement } from "ink";
 import {
   createCoreRowModel,
@@ -19,6 +19,7 @@ import {
 } from "@tanstack/react-table";
 import { isMouseSequence, parseClickEvents, parseWheelEvents } from "./mouse.js";
 import { useShortcuts, type Shortcut } from "./statusbar.js";
+import { useViewState } from "./view-state.js";
 
 // --- clicks ---------------------------------------------------------------
 
@@ -105,6 +106,9 @@ export interface ColumnSpec<T extends RowData> {
 export interface DataTableProps<T extends RowData> {
   id: string;
   title: string;
+  // Cursor and scroll survive navigation under this key (defaults to the
+  // id); pages whose data changes per visit key it by what they show.
+  stateKey?: string;
   data: readonly T[];
   columns: ColumnSpec<T>[];
   // Body height in rows (the header adds one line on top).
@@ -133,6 +137,7 @@ const SORT_SHORTCUTS: Shortcut[] = [
 export function DataTable<T extends RowData>({
   id,
   title,
+  stateKey,
   data,
   columns,
   height,
@@ -144,9 +149,10 @@ export function DataTable<T extends RowData>({
   extraShortcuts = [],
   emptyText = "nothing recorded",
 }: DataTableProps<T>): React.ReactElement {
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [cursor, setCursor] = useState(0);
-  const [scroll, setScroll] = useState(0);
+  const key = stateKey ?? id;
+  const [sorting, setSorting] = useViewState<SortingState>(`${key}:sorting`, []);
+  const [cursor, setCursor] = useViewState(`${key}:cursor`, 0);
+  const [scroll, setScroll] = useViewState(`${key}:scroll`, 0);
   const bodyRef = useRef<DOMElement>(null);
   const clicks = useContext(ClickContext);
 
@@ -176,7 +182,8 @@ export function DataTable<T extends RowData>({
     data: data as T[],
     columns: columnDefs,
     state: { sorting },
-    onSortingChange: setSorting,
+    onSortingChange: (updater) =>
+      setSorting(typeof updater === "function" ? updater(sorting) : updater),
   });
   const rows = table.getRowModel().rows;
 
@@ -256,14 +263,22 @@ export function DataTable<T extends RowData>({
   useShortcuts(id, title, [...SORT_SHORTCUTS, ...extraShortcuts], focused);
 
   // --- layout -------------------------------------------------------------
+  // Fixed columns keep their width; the flexible ones share what remains,
+  // remainder included, so the table always fills the panel exactly. When
+  // even the minimum does not fit, the row truncates at the right edge.
   const gap = 2;
   const fixed = columns.reduce((sum, c) => sum + (c.width ?? 0), 0);
   const flexCount = columns.filter((c) => c.width === undefined).length;
-  const flexWidth =
-    flexCount > 0
-      ? Math.max(8, Math.floor((width - fixed - gap * (columns.length - 1)) / flexCount))
-      : 0;
-  const widthOf = (column: ColumnSpec<T>): number => column.width ?? flexWidth;
+  const available = width - fixed - gap * (columns.length - 1);
+  const flexBase = flexCount > 0 ? Math.max(4, Math.floor(available / flexCount)) : 0;
+  let flexRemainder = Math.max(0, available - flexBase * flexCount);
+  const columnWidths = columns.map((column) => {
+    if (column.width !== undefined) return column.width;
+    const extra = flexRemainder > 0 ? 1 : 0;
+    flexRemainder -= extra;
+    return flexBase + extra;
+  });
+  const widthOf = (column: ColumnSpec<T>): number => columnWidths[columns.indexOf(column)]!;
 
   const cell = (text: string, cellWidth: number, align: "left" | "right"): string => {
     const clipped =

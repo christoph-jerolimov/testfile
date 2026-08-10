@@ -1,9 +1,9 @@
 Testfile[1m[2m › [22mTests[22m
 [2m Runs [22m  [7m[1m Tests [22m[27m
-[1mTEST                   RUNS  FAILS  VERDICT [22m [1m[2mRUN                   TEST      STATUS     DURATION  …[22m
-All tests                                    [1m20260105-113000-bb02  ci/build  [32m✔ passed [39m     21.0s  …[22m
-ci                        3      1  [2munknown [22m 20260105-090000-aa01  ci/build  [32m✔ passed [39m     21.0s  …
-[7mci/build                  3      0  [2munknown [22m[27m 20260104-090000-cc03  ci/build  [32m✔ passed [39m     21.0s  …
+[1mTEST                   RUNS  FAILS  VERDICT [22m [1m[2mRUN                   TEST  STATUS     DURATION  NOTE…[22m
+All tests                                    [1m20260105-113000-bb02  ci/…  [32m✔ passed [39m     21.0s  cach…[22m
+ci                        3      1  [2munknown [22m 20260105-090000-aa01  ci/…  [32m✔ passed [39m     21.0s  cach…
+[7mci/build                  3      0  [2munknown [22m[27m 20260104-090000-cc03  ci/…  [32m✔ passed [39m     21.0s  cach…
 ci/checks                 3      1  [2munknown [22m
 ci/checks/lint            3      0  [2munknown [22m
 ci/checks/unit            3      0  [2munknown [22m

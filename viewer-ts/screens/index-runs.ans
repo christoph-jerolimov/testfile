@@ -1,10 +1,10 @@
 Testfile[1m[2m › [22mRuns[22m
 [7m[1m Runs [22m[27m  [2m Tests [22m
 [2m3 recorded runs[22m
-[1mSTARTED              STATUS     DURATION  VARIANTS            TESTS                                [22m
-[7m2026-01-05 11:30:00  [31m✘ failed [39m     1m38s                      3 failed, 3 passed                   [27m
-2026-01-05 09:00:00  [32m✔ passed [39m     2m34s                      6 passed
-2026-01-04 09:00:00  [32m✔ passed [39m     2m34s  platform=linux      6 passed
+[1mSTARTED              RUN                   STATUS     DURATION  PASSED  FAILED  OTHERS     VARIANTS[22m
+[7m2026-01-05 11:30:00  20260105-113000-bb02  [31m✘ failed [39m     1m38s  [32m     3[39m  [31m     3[39m  [2m         [22m          [27m
+2026-01-05 09:00:00  20260105-090000-aa01  [32m✔ passed [39m     2m34s  [32m     6[39m          [2m         [22m
+2026-01-04 09:00:00  20260104-090000-cc03  [32m✔ passed [39m     2m34s  [32m     6[39m          [2m         [22m  platfor…
 
 
 

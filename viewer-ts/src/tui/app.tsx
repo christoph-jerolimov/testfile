@@ -14,6 +14,7 @@ import { RunNodePage, RunPage } from "./pages/run-page.js";
 import { TestPage, TestRunsPage } from "./pages/test-page.js";
 import { ShortcutOverlay, StatusBarProvider, useScopes, type Scope } from "./statusbar.js";
 import { ClickProvider } from "./table.js";
+import { ViewStateProvider } from "./view-state.js";
 import { watchRuns } from "./watch-runs.js";
 
 export type ViewerView = "runs" | "tests";
@@ -35,7 +36,11 @@ function Pages({
 
   useInput((input, key) => {
     if (isMouseSequence(input)) return;
-    if (key.ctrl && input === "c") return void exit();
+    if (key.ctrl && input === "c") {
+      // a log pane with a selection copies it; otherwise ctrl-c quits
+      if (!interaction.handleCtrlC()) exit();
+      return;
+    }
     if (overlay) {
       // any key closes the overlay
       setOverlay(undefined);
@@ -98,15 +103,17 @@ export function App({
 
   return (
     <TitleProvider title={name}>
-      <StatusBarProvider>
-        <InteractionProvider>
-          <NavigationProvider>
-            <ClickProvider>
-              <Pages history={history} initialView={initialView} />
-            </ClickProvider>
-          </NavigationProvider>
-        </InteractionProvider>
-      </StatusBarProvider>
+      <ViewStateProvider>
+        <StatusBarProvider>
+          <InteractionProvider>
+            <NavigationProvider>
+              <ClickProvider>
+                <Pages history={history} initialView={initialView} />
+              </ClickProvider>
+            </NavigationProvider>
+          </InteractionProvider>
+        </StatusBarProvider>
+      </ViewStateProvider>
     </TitleProvider>
   );
 }

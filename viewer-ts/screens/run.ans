@@ -1,23 +1,23 @@
 Testfile[2m › [22mRuns[1m[2m › [22m20260105-113000-bb02[22m
 [2m2026-01-05 11:30:00 · failed · 1m38s · esc back[22m
-[1mTEST         STATUS     DURATION    START[22m [1m Overview [22m  [2m Log [22m  [2m ⚙ db [22m  [2m ⚙ web [22m
-ci           [31m✘ failed [39m     1m17s     +0ms [36m[2mtest:      ci/checks/unit[22m[39m
-  build      [32m✔ passed [39m     21.0s   +200ms [36m[2mrun:       20260105-113000-bb02 (2026-01-05T11:30:00.000Z[22m[39m
-  checks     [31m✘ failed [39m      1m6s   +21.4s [36m[2mstatus:    passed[22m[39m
-    lint     [32m✔ passed [39m      8.0s   +21.5s [36m[2mstarted:   +21.5s[22m[39m
-[7m    unit     [32m✔ passed [39m      1m4s   +21.5s[27m [36m[2mduration:  1m4s[22m[39m
-    e2e      [31m✘ failed [39m      1m6s   +21.6s [36m[2m [22m[39m
-                                          [36m[2mservices:[22m[39m
-                                            db (stopped)
-                                            web (stopped)
-
-
-
-
-
-
-
-
+[1mTEST              STATUS     DURATION    START[22m [1m Overview [22m  [2m Log [22m  [2m ⚙ db [22m  [2m ⚙ web [22m
+ci                [31m✘ failed [39m     1m17s     +0ms [2m [22m
+  build           [32m✔ passed [39m     21.0s   +200ms [36mtest:      ci/checks/unit[39m
+  checks          [31m✘ failed [39m      1m6s   +21.4s [36m[2mrun:       20260105-113000-bb02[22m[39m
+    lint          [32m✔ passed [39m      8.0s   +21.5s [36m[2mstarted:   2026-01-05T11:30:00.000Z[22m[39m
+[7m    unit          [32m✔ passed [39m      1m4s   +21.5s[27m [36m[2mstatus:    passed[22m[39m
+    e2e           [31m✘ failed [39m      1m6s   +21.6s [36m[2moffset:    +21.5s into the run[22m[39m
+                                               [36m[2mduration:  1m4s[22m[39m
+                                               [36m[2m [22m[39m
+                                               [36m[2mservices:[22m[39m
+                                                 db (stopped)
+                                                 web (stopped)
+                                               [36m[2m [22m[39m
+                                               [36m[2mlog:[22m[39m
+                                               $ npm run e2e
+                                               41 tests passed
+                                               boom: expected 4 to equal 5
+                                                 at math.test.ts:12
 
 
 

@@ -1,14 +1,40 @@
 // The tabbed detail view over one test in one run: Overview, the test's
 // log, and one tab per related service log. The run page embeds it as its
 // right panel, the test page and the narrow-mode pages are it.
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { Box, useInput } from "ink";
 import type { RunHistory, RunRecord } from "../runrecord.js";
 import { LogPane } from "./logpane.js";
-import { describeRun, logToLines, relatedServices, testOverview } from "./model.js";
+import {
+  describeRun,
+  logToLines,
+  relatedServices,
+  testOverview,
+  type OutputLine,
+} from "./model.js";
 import { isMouseSequence } from "./mouse.js";
 import { TabStrip, type TabSpec } from "./panels.js";
 import { useShortcuts } from "./statusbar.js";
+import { useViewState } from "./view-state.js";
+
+// The overview ends with a peek at the log, so the common question - what
+// happened - is answered without switching tabs.
+const OVERVIEW_TAIL = 20;
+
+function logTail(text: string | undefined): OutputLine[] {
+  if (text === undefined || text.trim() === "") return [];
+  const lines = logToLines(text, "");
+  const tail = lines.slice(-OVERVIEW_TAIL);
+  return [
+    { text: "", stream: "system" },
+    {
+      text:
+        lines.length > tail.length ? `log (last ${tail.length} of ${lines.length} lines):` : "log:",
+      stream: "system",
+    },
+    ...tail,
+  ];
+}
 
 export function DetailTabs({
   id,
@@ -34,7 +60,7 @@ export function DetailTabs({
     { id: "log", label: "Log" },
     ...services.map((service) => ({ id: `service:${service.name}`, label: `⚙ ${service.name}` })),
   ];
-  const [active, setActive] = useState("overview");
+  const [active, setActive] = useViewState(`${id}:tab`, "overview");
   const activeTab = tabs.some((tab) => tab.id === active) ? active : "overview";
 
   useInput(
@@ -53,7 +79,14 @@ export function DetailTabs({
   const test = path ? run.tests.find((t) => t.path === path) : undefined;
   const lines = useMemo(() => {
     if (activeTab === "overview") {
-      return path === undefined ? describeRun(run) : testOverview(run, path);
+      const overview = path === undefined ? describeRun(run) : testOverview(run, path);
+      const text =
+        path === undefined
+          ? history.readRunLog(run)
+          : test
+            ? history.readLog(run, test)
+            : undefined;
+      return [...overview, ...logTail(text)];
     }
     if (activeTab === "log") {
       if (path === undefined) return logToLines(history.readRunLog(run), "no output recorded");
