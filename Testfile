@@ -120,6 +120,19 @@ test:
             - action/statuses.mjs
             - action/statuses.test.mjs
             - action/record.mjs
+        # The skills tell an assistant which commands to run; this checks
+        # every command and flag they name against the CLIs' own --help,
+        # so a renamed flag cannot turn the advice into nonsense.
+        - name: skills
+          tags: [fast, docs]
+          # both CLIs have to be built: the check asks them for their help
+          # (viewer-ts is built by its own test's pretest step)
+          needs: [build-runner, viewer-ts]
+          command: node --test .claude/skills/skills.test.mjs
+          inputs:
+            - .claude/skills/**
+            - runner-ts/src/commands/**
+            - viewer-ts/src/commands/**
         # Runs nothing: it maps the specification's sections onto the case
         # ids, so a new spec section cannot arrive without a case.
         - name: conformance-coverage
