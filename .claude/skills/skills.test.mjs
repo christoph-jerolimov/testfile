@@ -15,8 +15,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..");
 
 const BINARIES = {
-  testfile: join(root, "runner-ts", "dist", "cli.js"),
-  "testfile-viewer": join(root, "viewer-ts", "dist", "cli.js"),
+  testfile: join(root, "cli-ts", "dist", "cli.js"),
 };
 
 function skills() {
@@ -41,7 +40,7 @@ function frontmatter(text) {
   return fields;
 }
 
-// Every "testfile ..." / "testfile-viewer ..." invocation a skill shows,
+// Every "testfile ..." invocation a skill shows,
 // as {binary, subcommand, flags}. Only lines that start with a binary
 // count, so prose mentioning a flag is not mistaken for a command.
 function invocations(text) {
@@ -51,7 +50,7 @@ function invocations(text) {
       .trim()
       .replace(/^[-*|]\s*/, "")
       .replace(/^`|`$/g, "");
-    const match = /^(testfile-viewer|testfile)\s+(.*)$/.exec(line);
+    const match = /^(testfile)\s+(.*)$/.exec(line);
     if (!match) continue;
     // stop at a pipe: what follows belongs to another program
     const args = match[2].split("|")[0].trim().split(/\s+/);
@@ -70,7 +69,7 @@ function invocations(text) {
 }
 
 // The help of the deepest command that exists: a skill writes
-// "testfile-viewer inspect run <id> --log", and --log is a flag of
+// "testfile inspect run <id> --log", and --log is a flag of
 // `inspect run`, not of `inspect`. Words that are arguments rather than
 // subcommands are dropped by trying the longest path first.
 function help(binary, path) {

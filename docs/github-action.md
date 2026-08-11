@@ -49,7 +49,7 @@ against your repository's Testfile. The job fails when tests fail.
 
 Every run the action records is labelled with where it came from, so a
 history collected from many workflows can be narrowed down afterwards
-(`testfile-viewer serve` filters by label). Each label is a key and a
+(`testfile serve` filters by label). Each label is a key and a
 value; the runner takes them one `--label key=value` at a time.
 
 | Key | Value |
@@ -199,19 +199,19 @@ context that differs from the one you would type into a branch rule.
 Every action run uploads the recorded run folder as a `testfile-run`
 artifact — GitHub wraps it in a zip, so the artifact is a single zip with
 `run.yaml` and the logs at its root. A manually downloaded artifact
-imports with `testfile-viewer archive import testfile-run.zip`. `testfile-viewer github sync` downloads the artifacts of the latest
+imports with `testfile archive import testfile-run.zip`. `testfile github sync` downloads the artifacts of the latest
 workflow runs — every artifact whose name *starts with* `testfile-run`, so
 the per-platform legs and the merged run all arrive — and imports them into
 your local
-[run history](./cli#run-history), where `testfile-viewer runs`, `inspect run`,
+[run history](./cli#run-history), where `testfile runs`, `inspect run`,
 `diff`, `--flaky` and the TUI's runs/tests views treat them like local
 runs:
 
 ```sh
 export GITHUB_TOKEN=...          # a token with actions:read (GH_TOKEN works too)
 export GITHUB_TOKEN=$(gh auth token)   # ... or reuse the gh CLI's login
-testfile-viewer github sync you/your-repo --latest 10
-testfile-viewer runs             # CI runs are now part of the history
+testfile github sync you/your-repo --latest 10
+testfile runs             # CI runs are now part of the history
 ```
 
 See [sharing runs](./cli#sharing-runs) for the underlying `pack`/`import`
@@ -256,7 +256,7 @@ jobs:
 Three platforms means three recorded runs. A follow-up job combines them
 into a single run — one verdict, one duration, every test tagged with the
 platform it ran on — with
-[`testfile-viewer merge`](./cli-reference#testfile-viewer-merge-run). The
+[`testfile merge`](./cli-reference#testfile-merge-run). The
 [three-platform guided tour](./three-platforms) walks through the whole
 workflow, merge job included.
 
@@ -328,7 +328,7 @@ rather than a prompt that has to explain the layout of `.testfile/`.
 
 Give the job the [MCP server](./cli#talking-to-an-ai-assistant) instead of
 a digest when the assistant should be able to dig further —
-`testfile-viewer mcp` over the same imported history lets it pull a
+`testfile mcp` over the same imported history lets it pull a
 specific log or reproduce one test on its own.
 
 ### Writing the conclusion back

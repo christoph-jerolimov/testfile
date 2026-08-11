@@ -65,7 +65,7 @@ export function registerS3(program: Command): void {
           return;
         }
         for (const name of names) console.log(name);
-        console.log(color(90, `\npull one with: testfile-viewer s3 pull ${prefix} --run <id>`));
+        console.log(color(90, `\npull one with: testfile s3 pull ${prefix} --run <id>`));
       } catch (err) {
         commandFailed(err);
       }

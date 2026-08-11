@@ -1,9 +1,6 @@
 import { dirname } from "node:path";
-import type { Command } from "commander";
-import { loadTestfile } from "../loader.js";
-import { Session } from "../session.js";
-import { collectTags, sortTags } from "../tags.js";
-import { color } from "../util.js";
+import { type Command } from "commander";
+import { collectTags, color, loadTestfile, Session, sortTags } from "@testfile/runner";
 import { wantsJson, writeJson } from "./shared.js";
 
 export function registerTags(program: Command): void {

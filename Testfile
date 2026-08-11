@@ -84,14 +84,16 @@ test:
             - vscode-extension/package.json
             - vscode-extension/build.mjs
             - schema/testfile.schema.json
-        - name: build-runner
+        - name: build-cli
           tags: [build]
           command: npm run build --workspace runner-ts
         # The recorded-run domain everything else reads: built first, since
         # the viewer and its tests compile against it.
         - name: core-ts
           tags: [fast, unit]
-          command: npm test --workspace core-ts
+          needs: [build-cli]
+          workdir: core-ts
+          command: node --test "dist/**/*.test.js"
           inputs:
             - core-ts/src/**
             - core-ts/package.json
@@ -100,8 +102,9 @@ test:
         # cases skip themselves where those are missing.
         - name: sync-ts
           tags: [fast, unit]
-          needs: [core-ts]
-          command: npm test --workspace sync-ts
+          needs: [build-cli]
+          workdir: sync-ts
+          command: node --test "dist/**/*.test.js"
           inputs:
             - core-ts/src/**
             - sync-ts/src/**
@@ -111,8 +114,9 @@ test:
         # all, the MCP wire is written here.
         - name: mcp-ts
           tags: [fast, unit]
-          needs: [core-ts]
-          command: npm test --workspace mcp-ts
+          needs: [build-cli]
+          workdir: mcp-ts
+          command: node --test "dist/**/*.test.js"
           inputs:
             - core-ts/src/**
             - mcp-ts/src/**
@@ -122,8 +126,9 @@ test:
         # tests compare against the committed .ans files.
         - name: tui-ts
           tags: [fast, unit]
-          needs: [core-ts]
-          command: npm test --workspace tui-ts
+          needs: [build-cli]
+          workdir: tui-ts
+          command: node --test "dist/**/*.test.js"
           inputs:
             - core-ts/src/**
             - tui-ts/src/**
@@ -132,31 +137,34 @@ test:
             - tui-ts/tsconfig.json
         - name: web-ts
           tags: [fast, unit]
-          needs: [core-ts]
-          command: npm test --workspace web-ts
+          needs: [build-cli]
+          workdir: web-ts
+          command: node --test "dist/**/*.test.js"
           inputs:
             - core-ts/src/**
             - web-ts/src/**
             - web-ts/package.json
             - web-ts/tsconfig.json
-        - name: viewer-ts
+        - name: cli-ts
           tags: [fast, unit]
-          needs: [core-ts, sync-ts, mcp-ts, tui-ts, web-ts]
-          command: npm test --workspace viewer-ts
+          needs: [build-cli]
+          workdir: cli-ts
+          command: node --test "dist/**/*.test.js"
           inputs:
             - core-ts/src/**
             - sync-ts/src/**
             - mcp-ts/src/**
             - tui-ts/src/**
             - web-ts/src/**
-            - viewer-ts/src/**
-            - viewer-ts/package.json
-            - viewer-ts/tsconfig.json
+            - runner-ts/src/**
+            - cli-ts/src/**
+            - cli-ts/package.json
+            - cli-ts/tsconfig.json
         # npm test --workspace runner-ts would rebuild via pretest; the tests
         # run against the one build above so nothing rewrites dist mid-run.
         - name: runner-tests
           tags: [fast, unit]
-          needs: [build-runner]
+          needs: [build-cli]
           workdir: runner-ts
           command: node --test "dist/**/*.test.js"
         # The cases are written for a POSIX shell and some of them need a
@@ -165,7 +173,7 @@ test:
         - name: conformance
           tags: [slow, conformance]
           if: ${{ env.TESTFILE_OS }} != win32
-          needs: [build-runner]
+          needs: [build-cli]
           command: npm test --workspace conformance
         # The labels the GitHub Action derives from its context decide how a
         # recorded CI run can be found again, so the derivation is pinned.
@@ -190,14 +198,12 @@ test:
         # so a renamed flag cannot turn the advice into nonsense.
         - name: skills
           tags: [fast, docs]
-          # both CLIs have to be built: the check asks them for their help
-          # (viewer-ts is built by its own test's pretest step)
-          needs: [build-runner, viewer-ts]
+          # the check asks the CLI for its own help, so it has to be built
+          needs: [build-cli]
           command: node --test .claude/skills/skills.test.mjs
           inputs:
             - .claude/skills/**
-            - runner-ts/src/commands/**
-            - viewer-ts/src/commands/**
+            - cli-ts/src/**
         # Runs nothing: it maps the specification's sections onto the case
         # ids, so a new spec section cannot arrive without a case.
         - name: conformance-coverage
@@ -212,10 +218,10 @@ test:
         # must stay valid.
         - name: examples
           tags: [fast, docs]
-          needs: [build-runner]
+          needs: [build-cli]
           script: |
             for dir in examples/*/; do
-              node runner-ts/dist/cli.js validate "$dir"
+              node cli-ts/dist/cli.js validate "$dir"
             done
         # The web viewer's Playwright suite, dogfooding the format: the
         # viewer-ts serve command runs as a service over the committed e2e
@@ -229,11 +235,11 @@ test:
         - name: viewer-e2e
           tags: [slow, e2e, browser]
           if: ${{ env.TESTFILE_OS }} == linux
-          needs: [viewer-ts, viewer-web]
+          needs: [build-cli, viewer-web]
           workdir: viewer-web
           services:
             viewer:
-              command: node ../viewer-ts/dist/cli.js serve e2e/fixture --port ${{ ports.e2e }} --name "E2E Fixture"
+              command: node ../cli-ts/dist/cli.js serve e2e/fixture --port ${{ ports.e2e }} --name "E2E Fixture"
               ready:
                 tcp: ${{ ports.e2e }}
                 timeout: 30s
@@ -252,10 +258,10 @@ test:
         # smoke Testfile produces a passing JUnit report.
         - name: action-smoke
           tags: [action]
-          needs: [build-runner]
+          needs: [build-cli]
           script: |
             out=$(mktemp)
-            node runner-ts/dist/cli.js start .github/action-smoke --reporter junit --output "$out"
+            node cli-ts/dist/cli.js start .github/action-smoke --reporter junit --output "$out"
             grep -q '<testcase name="hello"' "$out"
             grep -q 'failures="0"' "$out"
             rm -f "$out"

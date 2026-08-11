@@ -94,7 +94,7 @@ them into a single run folder, which it uploads like any other run:
       - uses: actions/setup-node@v7
         with: { node-version: 22 }
       - run: npm ci --no-audit --no-fund
-      - run: npm run build --workspace viewer-ts
+      - run: npm run build --workspace cli-ts
       # every artifact unpacks into its own folder, and each of those IS a
       # run folder (run.yaml next to the logs)
       - uses: actions/download-artifact@v8
@@ -105,7 +105,7 @@ them into a single run folder, which it uploads like any other run:
         id: merge
         run: |
           runs=(downloaded/testfile-run-*)
-          if node viewer-ts/dist/cli.js merge "${runs[@]}" --dir .; then
+          if node cli-ts/dist/cli.js merge "${runs[@]}" --dir .; then
             echo "passed=true" >> "$GITHUB_OUTPUT"
           else
             echo "passed=false" >> "$GITHUB_OUTPUT"
@@ -143,9 +143,9 @@ The result is an ordinary run folder. Download the `testfile-run-merged`
 artifact, unpack it into `.testfile/runs/`, and every viewer shows it:
 
 ```sh
-testfile-viewer inspect run 20260805-101500-merged   # the tests, per platform
-testfile-viewer tui                                  # browse it in the terminal
-testfile-viewer serve                                # ... or in the browser
+testfile inspect run 20260805-101500-merged   # the tests, per platform
+testfile tui                                  # browse it in the terminal
+testfile serve                                # ... or in the browser
 ```
 
 Each test appears once per platform, tagged with its variant, and the run
@@ -172,7 +172,7 @@ tests:
 ```
 
 Rather than downloading artifacts by hand,
-[`testfile-viewer github sync`](./github-action#bringing-ci-runs-home)
+[`testfile github sync`](./github-action#bringing-ci-runs-home)
 pulls them — including the merged one — straight into your local history.
 
 ## Merging shards
@@ -184,7 +184,7 @@ suite, so no test appears twice and **no variants are needed**:
 testfile start --shard 1/3 &   # on three machines
 testfile start --shard 2/3 &
 testfile start --shard 3/3 &
-testfile-viewer merge run-1 run-2 run-3
+testfile merge run-1 run-2 run-3
 ```
 
 Variants are only required when two runs recorded the *same* test path —

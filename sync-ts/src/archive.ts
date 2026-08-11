@@ -1,7 +1,7 @@
 // Local run archives: pack a self-contained .testfile/runs/<id>/ folder as
 // a .tgz and import such archives (or GitHub artifact zips) back into a
 // history. Everything lands in the per-run layout the runner writes, so
-// imported runs show up in `testfile-viewer runs` and the TUI like local
+// imported runs show up in `testfile runs` and the TUI like local
 // ones. The S3 and GitHub backends build on these primitives.
 import { spawnSync } from "node:child_process";
 import {

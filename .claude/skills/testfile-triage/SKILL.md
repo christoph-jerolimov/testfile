@@ -11,7 +11,7 @@ caused it, and what to do next**. Not a transcript of what you read.
 ## 1. Start with the digest, not the logs
 
 ```sh
-testfile-viewer explain
+testfile explain
 ```
 
 One command answers what failed, why, and what changed against the run
@@ -23,11 +23,11 @@ from a test that has always passed until now.
 Only reach for a full log when the digest's excerpt is not enough:
 
 ```sh
-testfile-viewer explain --log-lines 60          # more of each log
-testfile-viewer inspect run <id> --log ci/unit  # the whole log of one test
+testfile explain --log-lines 60          # more of each log
+testfile inspect run <id> --log ci/unit  # the whole log of one test
 ```
 
-Use `testfile-viewer runs` first if you need to find the run: it lists
+Use `testfile runs` first if you need to find the run: it lists
 them newest first, and `--filter-label branch=main` narrows a history that
 collects runs from every branch and CI job.
 
@@ -49,7 +49,7 @@ consequences of it. Before investigating anything:
 ## 3. Reproduce before fixing
 
 ```sh
-testfile-viewer repro <run-id> ci/unit
+testfile repro <run-id> ci/unit
 ```
 
 This prints the command that reruns exactly that one test, the

@@ -108,7 +108,7 @@ export function registerGithub(program: Command): void {
       const widths = header.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
       console.log(color(1, header.map((h, i) => pad(h, widths[i])).join("  ")));
       for (const row of rows) console.log(row.map((cell, i) => pad(cell, widths[i])).join("  "));
-      console.log(color(90, `\nimport them with: testfile-viewer github sync ${repo}`));
+      console.log(color(90, `\nimport them with: testfile github sync ${repo}`));
     } catch (err) {
       commandFailed(err);
     }

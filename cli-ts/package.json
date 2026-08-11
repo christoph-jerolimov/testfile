@@ -1,12 +1,15 @@
 {
-  "name": "@testfile/viewer-ts",
+  "name": "@testfile/cli",
   "version": "0.1.0",
-  "description": "Read-only viewer tooling over recorded Testfile runs: history, TUI, web-viewer server and run transfer",
+  "description": "The testfile command line: run the tests a Testfile describes, and read the runs that came out",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {
-    "testfile-viewer": "./dist/cli.js"
+    "testfile": "./dist/cli.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -b tsconfig.json",
     "pretest": "npm run build",
@@ -15,15 +18,16 @@
   "dependencies": {
     "@testfile/core": "0.1.0",
     "@testfile/mcp": "0.1.0",
+    "@testfile/runner": "0.1.0",
     "@testfile/sync": "0.1.0",
-    "@testfile/tui": "0.1.0",
     "@testfile/web": "0.1.0",
-    "commander": "^15.0.0",
-    "yaml": "^2.8.0"
+    "commander": "^15.0.0"
+  },
+  "optionalDependencies": {
+    "@testfile/tui": "0.1.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
-    "typescript": "^7.0.2",
-    "@playwright/test": "1.62.1"
+    "typescript": "^7.0.2"
   }
 }

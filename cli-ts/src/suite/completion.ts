@@ -1,6 +1,5 @@
-import type { Command } from "commander";
-import { generateCompletion, type CompletionModel } from "../completion.js";
-import { color } from "../util.js";
+import { type Command } from "commander";
+import { color, type CompletionModel, generateCompletion } from "@testfile/runner";
 
 export function registerCompletion(program: Command): void {
   program

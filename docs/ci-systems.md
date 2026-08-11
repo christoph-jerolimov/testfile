@@ -44,26 +44,26 @@ For GitLab, the viewer speaks the API directly:
 
 ```sh
 export GITLAB_TOKEN=...                     # a token with read_api
-testfile-viewer gitlab list group/project   # what is available
-testfile-viewer gitlab sync group/project   # import the latest pipelines
-testfile-viewer runs                        # they are part of the history now
+testfile gitlab list group/project   # what is available
+testfile gitlab sync group/project   # import the latest pipelines
+testfile runs                        # they are part of the history now
 ```
 
 `--job <name>` selects the job whose artifacts hold the run (default
 `testfile`), `--latest <n>` how many pipelines to consider, `--ref <branch>`
 narrows to one branch, and `--host https://gitlab.example.com` points at a
 self-hosted instance. On GitHub, the equivalent is
-[`testfile-viewer github sync`](./github-action#bringing-ci-runs-home).
+[`testfile github sync`](./github-action#bringing-ci-runs-home).
 
 For Jenkins, CircleCI, Buildkite — or any system whose artifacts you
 download by hand — import the downloaded archive:
 
 ```sh
-testfile-viewer archive import testfile-runs.zip
+testfile archive import testfile-runs.zip
 ```
 
 Both `.zip` (what CI systems produce) and `.tgz` (what
-`testfile-viewer archive pack` produces) work, and runs that already exist
+`testfile archive pack` produces) work, and runs that already exist
 locally are skipped, so repeated imports are safe.
 
 ## Sharing through a bucket
@@ -72,9 +72,9 @@ Independent of the CI system, a pipeline can push its run to S3 and
 developers can pull it:
 
 ```sh
-testfile-viewer s3 push s3://my-bucket/testfile-runs   # in the pipeline
-testfile-viewer s3 list s3://my-bucket/testfile-runs   # locally
-testfile-viewer s3 pull s3://my-bucket/testfile-runs
+testfile s3 push s3://my-bucket/testfile-runs   # in the pipeline
+testfile s3 list s3://my-bucket/testfile-runs   # locally
+testfile s3 pull s3://my-bucket/testfile-runs
 ```
 
 This uses the `aws` CLI, so it works with any S3-compatible endpoint the

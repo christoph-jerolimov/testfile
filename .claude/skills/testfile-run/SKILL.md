@@ -56,7 +56,7 @@ The exit code is the answer: `0` passed, `1` failed, `130` interrupted.
 Every run is recorded, so when something failed:
 
 ```sh
-testfile-viewer explain        # what failed, why, what changed
+testfile explain        # what failed, why, what changed
 ```
 
 Prefer that over re-reading the terminal — it also says whether the test

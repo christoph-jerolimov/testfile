@@ -16,12 +16,10 @@ import {
   writeJson,
 } from "./shared.js";
 
-export function registerInspect(program: Command): void {
-  const inspectCommand = program
-    .command("inspect")
-    .description("Show a single recorded thing in detail");
-
-  inspectCommand
+// Hangs off the suite's `inspect`: `testfile inspect` shows what would
+// run, `testfile inspect run <id>` shows what did.
+export function registerInspectRun(inspect: Command): void {
+  inspect
     .command("run")
     .argument("<id>", "recorded run to show (a unique id prefix is enough)")
     .argument("[path]", "directory containing a .testfile folder", ".")
@@ -156,7 +154,7 @@ export function registerInspect(program: Command): void {
               console.log(`  ${pad(service.status ?? "-", 7)} ${service.name}${log}`);
             }
           }
-          console.log(color(90, `\nlogs: testfile-viewer inspect run ${run.id} --log [test-path]`));
+          console.log(color(90, `\nlogs: testfile inspect run ${run.id} --log [test-path]`));
         } catch (err) {
           commandFailed(err);
         }

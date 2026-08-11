@@ -48,7 +48,7 @@ export interface RunRecordService {
   origin?: string;
 }
 
-// What `testfile-viewer merge` combined into this run.
+// What `testfile merge` combined into this run.
 export interface RunRecordMerged {
   runs: {
     id: string;

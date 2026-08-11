@@ -1,10 +1,14 @@
 import { existsSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import type { Command } from "commander";
-import { runChecks, worstOf, type Check } from "../doctor.js";
-import { loadTestfile } from "../loader.js";
-import type { TestfileDoc } from "../model.js";
-import { color } from "../util.js";
+import { type Command } from "commander";
+import {
+  type Check,
+  color,
+  loadTestfile,
+  runChecks,
+  type TestfileDoc,
+  worstOf,
+} from "@testfile/runner";
 import { wantsJson, writeJson } from "./shared.js";
 
 const MARK: Record<Check["status"], string> = {

@@ -3,8 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import type { TestfileDoc } from "../model.js";
-import { Session } from "../session.js";
+import { Session, type TestfileDoc } from "@testfile/runner";
 import { suiteJson, wantsJson, writeJson } from "./shared.js";
 
 function tempDir(): string {

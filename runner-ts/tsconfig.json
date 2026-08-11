@@ -11,9 +11,17 @@
       "node"
     ],
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "composite": true,
+    "declaration": true,
+    "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
   "include": [
     "src"
+  ],
+  "references": [
+    {
+      "path": "../core-ts"
+    }
   ]
 }
