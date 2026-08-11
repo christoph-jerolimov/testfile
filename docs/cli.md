@@ -554,6 +554,7 @@ testfile-viewer inspect run 20260801-1046        # one run in detail (id prefix 
 testfile-viewer inspect run <id> --log           # merged stdout+stderr of the run
 testfile-viewer inspect run <id> --log all/e2e   # ... of a single test
 testfile-viewer inspect run <id> --json          # the whole record, for a script
+testfile-viewer explain                          # what failed in the latest run, and why
 testfile-viewer repro <id> all/e2e               # everything needed to reproduce one failure
 ```
 
@@ -604,6 +605,35 @@ or removed from the run, and significant duration changes (more than 100ms
 and more than 20%) of tests that passed in both runs. `--json` writes the
 same lists as `{base, compare, newlyFailed, fixed, stillFailing, added,
 removed, durations}`, which is enough to post a comment from CI.
+
+### Digesting a run
+
+`explain` answers the three questions a red run raises — what failed, why,
+and what changed — in one bounded piece of markdown:
+
+```sh
+testfile-viewer explain                        # the latest run
+testfile-viewer explain 20260801-1146          # a particular one
+testfile-viewer explain --max-failures 3 --log-lines 10
+testfile-viewer explain --json                 # the same digest, structured
+```
+
+Each failure carries its reason, the end of its log and what the history
+says about it — a test that fails half the time is a different problem
+from one that just broke, so the digest says `known flaky — 6/12 of its
+recent results failed` rather than only `failed`. The verdict is the same
+[flaky rule](#run-history) the rest of the tooling uses.
+
+A group fails because something under it failed, so the leaves come first
+and the groups are the first to go when the digest has to be shorter:
+`--max-failures` bounds how many failures are detailed (10 by default),
+`--log-lines` how much log each one gets (20). What is left out is
+counted, never silently dropped. Log excerpts are stripped of colour —
+in a PR comment or a prompt, escape sequences are noise.
+
+The run before this one is compared automatically, so the digest opens
+with `newly failing` / `still failing` / `fixed` before it gets to the
+detail.
 
 ### Reproducing a failure
 

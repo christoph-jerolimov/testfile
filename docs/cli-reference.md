@@ -179,6 +179,18 @@ Show one recorded run in detail — a unique id prefix is enough.
 | `--log [test-path]` | Print the run's merged log, or a single test's log. |
 | `--json [file]` | Write the full run record as JSON, to a file or (without a value) stdout. Cannot be combined with `--log`, which is raw text. |
 
+### `testfile-viewer explain [run] [path]`
+
+[Digest one run](./cli#digesting-a-run) as markdown: what failed, with the
+end of each log and the [flaky verdict](./cli#run-history) of the test,
+and what changed against the run before. Without an id, the latest run.
+
+| Option | Description |
+| ------ | ----------- |
+| `--max-failures <n>` | How many failures are detailed (default 10). Leaves come before groups, so a tight budget keeps what broke. |
+| `--log-lines <n>` | Lines of log kept per failure (default 20). |
+| `--json [file]` | Write the digest as JSON, to a file or (without a value) stdout. |
+
 ### `testfile-viewer repro <run> <test> [path]`
 
 Print everything needed to [reproduce one recorded failure](./cli#reproducing-a-failure):
