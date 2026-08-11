@@ -195,6 +195,33 @@ log and `<skipped/>` markers; the JSON report is the same record that the
 run's `run.yaml` stores. In watch mode the report is rewritten after every
 re-run.
 
+### Streaming events while the run happens
+
+`--reporter` speaks once, at the end. `--json-stream` speaks throughout:
+one JSON object per line (NDJSON) on stdout, written as the run happens,
+so a tool — or an agent supervising a long suite — can react to the first
+failure instead of waiting for a summary.
+
+```sh
+testfile start --json-stream | jq -c 'select(.event == "test-end" and .status == "failed")'
+```
+
+| Event | Fields |
+| ----- | ------ |
+| `run-start` | `selected` (how many tests), `at` |
+| `test-start` | `path`, `kind` |
+| `line` | `path` *or* `service`, `stream` (`stdout`/`stderr`/`system`), `text` |
+| `test-end` | `path`, `status`, `durationMs`, `cached`, `reason`, `error` |
+| `service` | `name`, `status`, `error` — once per status change |
+| `run-end` | `status`, `exitCode`, `runId`, `counts` (per status, leaves only), `at` |
+
+Fields that don't apply are left out rather than sent as null, and new
+events and fields may be added — a consumer must ignore what it doesn't
+know. Service output is only streamed with `-v`, as in a normal run.
+Because stdout belongs to the stream, everything written for a human goes
+to stderr; combining it with a `--reporter` that also writes to stdout is
+an error, so give the report a file (`--output results.json`).
+
 What the inspection commands print is available as JSON too, through the
 same `--json [file]` flag: a file name writes there, the bare flag writes
 to stdout, so a command can be piped straight into `jq`. (The commands
