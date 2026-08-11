@@ -4,7 +4,7 @@
 // starts tests; that is the runner's job (`testfile start`).
 import React, { useEffect, useState } from "react";
 import { useApp, useInput } from "ink";
-import type { RunHistory } from "../runrecord.js";
+import { type RunHistory, watchRuns } from "@testfile/core";
 import { useInteraction, InteractionProvider } from "./interaction.js";
 import { isMouseSequence } from "./mouse.js";
 import { NavigationProvider, useNavigation } from "./navigation.js";
@@ -15,7 +15,6 @@ import { TestPage, TestRunsPage } from "./pages/test-page.js";
 import { ShortcutOverlay, StatusBarProvider, useScopes, type Scope } from "./statusbar.js";
 import { ClickProvider } from "./table.js";
 import { ViewStateProvider } from "./view-state.js";
-import { watchRuns } from "./watch-runs.js";
 
 export type ViewerView = "runs" | "tests";
 

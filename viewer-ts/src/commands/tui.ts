@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { RunHistory } from "../runrecord.js";
+import { RunHistory } from "@testfile/core";
 import { commandFailed, resolveHistoryBase } from "./shared.js";
 
 export function registerTui(program: Command): void {

@@ -6,6 +6,8 @@
   "license": "Apache-2.0",
   "workspaces": [
     "schema",
+    "core-ts",
+    "sync-ts",
     "runner-ts",
     "viewer-ts",
     "viewer-web",

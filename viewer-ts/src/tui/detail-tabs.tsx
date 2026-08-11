@@ -3,15 +3,9 @@
 // right panel, the test page and the narrow-mode pages are it.
 import React, { useMemo } from "react";
 import { Box, useInput } from "ink";
-import type { RunHistory, RunRecord } from "../runrecord.js";
+import { relatedServices, type RunHistory, type RunRecord } from "@testfile/core";
 import { LogPane } from "./logpane.js";
-import {
-  describeRun,
-  logToLines,
-  relatedServices,
-  testOverview,
-  type OutputLine,
-} from "./model.js";
+import { describeRun, logToLines, testOverview, type OutputLine } from "./model.js";
 import { isMouseSequence } from "./mouse.js";
 import { TabStrip, type TabSpec } from "./panels.js";
 import { useShortcuts } from "./statusbar.js";

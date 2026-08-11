@@ -5,18 +5,18 @@
 // --json-stream`) rather than have a read-only server grow a side door.
 // What the tools buy is structure - no shell output to parse, no guessing
 // at the layout of .testfile/ - and the same digests the CLI prints.
-import { explainOf } from "../explain.js";
-import { reproOf } from "../repro.js";
 import {
   detectFlaky,
   diffRuns,
+  explainOf,
+  filterRuns,
   flakyWindows,
-  verdictOf,
+  reproOf,
   type RunHistory,
   type RunRecord,
-} from "../runrecord.js";
-import { filterRuns } from "../runfilter.js";
-import { stripAnsi } from "../util.js";
+  stripAnsi,
+  verdictOf,
+} from "@testfile/core";
 import type { ToolDefinition } from "./protocol.js";
 
 // A run as a list entry: enough to choose one, not the whole record.

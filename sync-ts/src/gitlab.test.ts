@@ -5,9 +5,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { needs } from "./testtools.js";
-import { writeRun } from "./fixture.js";
-import { RunHistory } from "./runrecord.js";
-import { gitlabRunArchives, syncFromGitlab } from "./transfer/index.js";
+import { writeRun } from "@testfile/core/fixture";
+import { RunHistory } from "@testfile/core";
+import { gitlabRunArchives, syncFromGitlab } from "./index.js";
 
 function tempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "testfile-transfer-"));

@@ -1,0 +1,34 @@
+{
+  "name": "@testfile/core",
+  "version": "0.1.0",
+  "description": "The recorded-run domain: run.yaml types, the run history, and everything that can be computed from it (diffs, flaky verdicts, digests, repro bundles, merging)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./fixture": {
+      "types": "./dist/fixture.d.ts",
+      "default": "./dist/fixture.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -b tsconfig.json",
+    "pretest": "npm run build",
+    "test": "node --test \"dist/**/*.test.js\""
+  },
+  "dependencies": {
+    "yaml": "^2.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
+}

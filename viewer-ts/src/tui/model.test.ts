@@ -1,15 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { RunRecord } from "../runrecord.js";
 import {
-  describeRun,
   recordedTests,
   relatedServices,
+  type RunRecord,
   suiteRows,
-  testOverview,
   testRunsFor,
   timelineRows,
-} from "./model.js";
+} from "@testfile/core";
+import { describeRun, testOverview } from "./model.js";
 
 function run(overrides: Partial<RunRecord> = {}): RunRecord {
   return {

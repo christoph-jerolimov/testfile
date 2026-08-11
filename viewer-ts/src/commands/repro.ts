@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { formatRepro, reproOf } from "../repro.js";
+import { formatRepro, reproOf } from "@testfile/core";
 import { commandFailed, findRun, loadedHistory, wantsJson, writeJson } from "./shared.js";
 
 // "platform=linux" pairs into a map, to pick one leg of a merged run.

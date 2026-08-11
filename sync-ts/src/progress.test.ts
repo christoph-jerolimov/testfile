@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { lineProgress, type ProgressStream } from "./transfer/progress.js";
+import { lineProgress, type ProgressStream } from "./progress.js";
 
 function recorder(isTTY: boolean): ProgressStream & { chunks: string[] } {
   const chunks: string[] = [];

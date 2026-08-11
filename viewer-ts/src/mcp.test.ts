@@ -15,7 +15,7 @@ import {
   type ToolDefinition,
 } from "./mcp/protocol.js";
 import { testfileTools } from "./mcp/tools.js";
-import { RunHistory, type RunRecord, type RunRecordTest } from "./runrecord.js";
+import { RunHistory, type RunRecord, type RunRecordTest } from "@testfile/core";
 
 const server = { name: "testfile", version: "0.1.0", instructions: "read recorded runs" };
 

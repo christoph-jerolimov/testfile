@@ -2,14 +2,16 @@ import { existsSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Command } from "commander";
 import {
+  color,
+  formatMs,
+  HISTORY_DIR,
   mergedRunId,
+  type MergeSource,
   readRunFolder,
+  RunHistory,
   variantLabel,
   writeMergedRun,
-  type MergeSource,
-} from "../merge.js";
-import { HISTORY_DIR, RunHistory } from "../runrecord.js";
-import { color, formatMs } from "../util.js";
+} from "@testfile/core";
 import { colorStatus, commandFailed, resolveHistoryBase } from "./shared.js";
 
 // A run to merge, named either as a folder (what a CI artifact unpacks to)

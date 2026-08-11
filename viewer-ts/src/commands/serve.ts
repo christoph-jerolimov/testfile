@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import { findViewerDir, ViewerServer } from "../serve.js";
-import { color } from "../util.js";
+import { color } from "@testfile/core";
 import { commandFailed, resolveHistoryBase } from "./shared.js";
 
 export function registerServe(program: Command): void {

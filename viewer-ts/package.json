@@ -8,12 +8,14 @@
     "testfile-viewer": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -b tsconfig.json",
     "pretest": "npm run build",
     "test": "node --test \"dist/**/*.test.js\"",
     "screens:update": "npm run build && node dist/tui/screens-update.js"
   },
   "dependencies": {
+    "@testfile/core": "0.1.0",
+    "@testfile/sync": "0.1.0",
     "@tanstack/react-table": "^9.1.2",
     "commander": "^15.0.0",
     "ink": "^7.1.1",

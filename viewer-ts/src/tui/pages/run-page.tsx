@@ -3,11 +3,9 @@
 // push the detail as its own page.
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
-import type { RunHistory } from "../../runrecord.js";
-import { formatMs } from "../../util.js";
+import { formatMs, type RunHistory, type SuiteRow, suiteRows } from "@testfile/core";
 import { DetailTabs } from "../detail-tabs.js";
 import { useEscape } from "../interaction.js";
-import { suiteRows, type SuiteRow } from "../model.js";
 import { isMouseSequence } from "../mouse.js";
 import { useNavigation } from "../navigation.js";
 import { PageShell, SplitPanel, useScreen } from "../panels.js";
