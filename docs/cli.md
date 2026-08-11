@@ -953,6 +953,25 @@ recorded while the assistant is connected shows up without a restart), and
 a tool that can't answer says so as a result the model can read rather
 than as a protocol error it can't.
 
+### Skills
+
+Knowing the commands is not the same as knowing which one to reach for.
+This repository ships three [Claude Code skills](https://code.claude.com/docs)
+in `.claude/skills/`, which an assistant working in a checkout picks up
+automatically:
+
+| Skill | For |
+| ----- | --- |
+| `testfile-triage` | a red run: which failure is real, what caused it, whether it's worth chasing |
+| `testfile-run` | choosing a selection — `--changed` after an edit, `--failed` after a fix, the whole suite before declaring done |
+| `testfile-author` | writing or extending a Testfile, including which key replaces a shell workaround |
+
+Copy the folder into any project that uses Testfile; nothing in them is
+specific to this repository. They are checked by the suite: every command
+and flag a skill names is verified against the CLIs' own `--help`, so a
+renamed flag fails the build instead of turning the advice into confident
+nonsense.
+
 ## Interrupting a run
 
 The first Ctrl+C aborts running tests and shuts down all services through
