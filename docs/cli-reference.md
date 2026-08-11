@@ -49,6 +49,7 @@ Start the test suite (the default command).
 | `-l, --label <key=value>` | Record a label with the run, e.g. `branch=main`, so it can be [found again later](./cli#labelling-runs). Split at the first `=`; a key may only be given once. *(repeatable)* |
 | `--reporter <kind>` | Write [machine-readable results](./cli#machine-readable-reports) after the run: `junit` or `json`. |
 | `--output <file>` | Report target file, or `-` for stdout (the default). |
+| `--json-stream` | Stream [NDJSON events](./cli#streaming-events-while-the-run-happens) to stdout while the run happens — `run-start`, `test-start`, `line`, `test-end`, `service`, `run-end`. Human output moves to stderr. |
 
 Plus the shared [filter options](#shared-filter-options-start-and-inspect) below.
 

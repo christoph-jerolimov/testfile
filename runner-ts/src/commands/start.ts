@@ -7,6 +7,7 @@ import { writeReport, type ReporterKind } from "../report.js";
 import { ConsoleReporter } from "../reporter.js";
 import { configureEngine } from "../services.js";
 import { Session } from "../session.js";
+import { StreamReporter } from "../streamreporter.js";
 import { color } from "../util.js";
 import { watchDirectory, WatchScheduler } from "../watch.js";
 import {
@@ -57,6 +58,7 @@ export function registerStart(program: Command): void {
     cache: boolean;
     forwardEnv: string[];
     reporter?: ReporterKind;
+    jsonStream: boolean;
     output: string;
     variant: string[];
     label: string[];
@@ -97,6 +99,11 @@ export function registerStart(program: Command): void {
         [],
       )
       .option("--reporter <kind>", "write machine-readable results after the run: junit or json")
+      .option(
+        "--json-stream",
+        "stream NDJSON events (test-start, line, test-end, service, run-end) to stdout while the run happens, for tools and agents",
+        false,
+      )
       .option("--output <file>", 'report target file, or "-" for stdout', "-")
       .option(
         "--engine <name>",
@@ -117,6 +124,9 @@ export function registerStart(program: Command): void {
         options.reporter !== "json"
       ) {
         throw new Error(`unknown --reporter "${options.reporter}", expected junit or json`);
+      }
+      if (options.jsonStream && options.reporter !== undefined && options.output === "-") {
+        throw new Error("--json-stream owns stdout; give --reporter a file with --output");
       }
       // The engine is the run's choice, not the file's: the flag beats the
       // environment, and with neither the first responding engine is used.
@@ -197,35 +207,49 @@ export function registerStart(program: Command): void {
 
     {
       process.on("SIGINT", onSignal);
+      // With --json-stream, stdout is the event stream and everything meant
+      // for a human moves to stderr.
+      const info = (text: string): void =>
+        options.jsonStream ? console.error(text) : console.log(text);
       let reporter: ConsoleReporter | undefined;
+      let stream: StreamReporter | undefined;
       session.on("runner", (runner) => {
-        reporter = new ConsoleReporter(runner, { verbose: options.verbose });
+        if (options.jsonStream) {
+          stream = new StreamReporter(runner, {
+            verbose: options.verbose,
+            selected: filtered.testCount,
+          });
+        } else {
+          reporter = new ConsoleReporter(runner, { verbose: options.verbose });
+        }
       });
       const runOnce = async (): Promise<void> => {
         const status = await session.runSelected(filtered.selection);
         if (status === undefined) return;
-        reporter?.summary();
-        if (session.lastRecord) {
-          console.log(color(90, `run recorded in ${HISTORY_DIR}/runs/${session.lastRecord.id}`));
-        }
-        if (options.reporter) {
-          writeReport(session, options.reporter, options.output);
-          if (options.output !== "-")
-            console.log(color(90, `${options.reporter} report written to ${options.output}`));
-        }
-        process.exitCode = session.runner!.interrupted
+        const exitCode = session.runner!.interrupted
           ? 130
           : status === "passed" || status === "skipped"
             ? 0
             : 1;
+        reporter?.summary();
+        if (session.lastRecord && !options.jsonStream) {
+          console.log(color(90, `run recorded in ${HISTORY_DIR}/runs/${session.lastRecord.id}`));
+        }
+        stream?.runEnd({ status, exitCode, runId: session.lastRecord?.id });
+        if (options.reporter) {
+          writeReport(session, options.reporter, options.output);
+          if (options.output !== "-")
+            info(color(90, `${options.reporter} report written to ${options.output}`));
+        }
+        process.exitCode = exitCode;
       };
       await runOnce();
       if (options.watch && !session.runner?.interrupted) {
         startWatching(() => {
-          console.log(color(36, "\nchange detected, re-running..."));
+          info(color(36, "\nchange detected, re-running..."));
           void runOnce();
         });
-        console.log(color(36, "watching for changes... (Ctrl+C to exit)"));
+        info(color(36, "watching for changes... (Ctrl+C to exit)"));
       }
     }
   });
