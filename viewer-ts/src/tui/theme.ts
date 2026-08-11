@@ -1,6 +1,6 @@
 // The one place look-and-feel constants live, so every table and page
 // renders statuses the same way.
-import type { Status } from "../runrecord.js";
+import { type Status } from "@testfile/core";
 
 export const STATUS_GLYPH: Record<string, { glyph: string; color?: string }> = {
   passed: { glyph: "✔", color: "green" },

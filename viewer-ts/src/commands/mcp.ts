@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { serveStdio } from "../mcp/protocol.js";
 import { testfileTools } from "../mcp/tools.js";
-import { RunHistory } from "../runrecord.js";
+import { RunHistory } from "@testfile/core";
 import { commandFailed, resolveHistoryBase } from "./shared.js";
 
 const INSTRUCTIONS = [

@@ -1,16 +1,18 @@
 import type { Command } from "commander";
-import { variantLabel } from "../merge.js";
-import { detectFlaky } from "../runrecord.js";
 import {
+  color,
   describeFilter,
+  detectFlaky,
   filterRuns,
+  formatMs,
   isEmptyFilter,
   labelOptions,
+  pad,
   parseStatuses,
-  variantOptions,
   type RunFilter,
-} from "../runfilter.js";
-import { color, formatMs, pad } from "../util.js";
+  variantLabel,
+  variantOptions,
+} from "@testfile/core";
 import {
   collect,
   colorStatus,

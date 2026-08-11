@@ -1,6 +1,6 @@
 import { watch, type FSWatcher } from "node:fs";
 import { join } from "node:path";
-import { HISTORY_DIR } from "../runrecord.js";
+import { HISTORY_DIR } from "./runrecord.js";
 
 // Watches .testfile/runs/ for changes - runs recorded by other processes
 // (e.g. a plain `testfile start` in another terminal) show up in the TUI's

@@ -1,6 +1,5 @@
 import type { Command } from "commander";
-import { diffRuns } from "../runrecord.js";
-import { color, formatMs, pad } from "../util.js";
+import { color, diffRuns, formatMs, pad } from "@testfile/core";
 import { commandFailed, findRun, loadedHistory, wantsJson, writeJson } from "./shared.js";
 
 export function registerDiff(program: Command): void {

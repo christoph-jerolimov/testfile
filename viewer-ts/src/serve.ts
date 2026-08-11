@@ -6,9 +6,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { RunHistory, type RunRecord } from "./runrecord.js";
-import { recordedTests } from "./tui/model.js";
-import { watchRuns } from "./tui/watch-runs.js";
+import { recordedTests, RunHistory, type RunRecord, watchRuns } from "@testfile/core";
 
 export interface ServeOptions {
   baseDir: string;

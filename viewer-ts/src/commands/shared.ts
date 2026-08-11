@@ -2,8 +2,7 @@
 // run by id prefix, status colors and JSON output.
 import { existsSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { HISTORY_DIR, RunHistory, type RunRecord } from "../runrecord.js";
-import { color } from "../util.js";
+import { color, HISTORY_DIR, RunHistory, type RunRecord } from "@testfile/core";
 
 const STATUS_COLORS: Record<string, number> = {
   passed: 32,

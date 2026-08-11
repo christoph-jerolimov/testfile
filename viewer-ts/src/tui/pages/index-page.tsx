@@ -3,11 +3,17 @@
 // its executions on the right).
 import React, { useMemo, useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { variantLabel } from "../../merge.js";
-import type { RunHistory, RunRecord } from "../../runrecord.js";
-import { formatMs } from "../../util.js";
+import {
+  formatMs,
+  type RecordedTest,
+  recordedTests,
+  type RunHistory,
+  type RunRecord,
+  type TestRunRow,
+  testRunsFor,
+  variantLabel,
+} from "@testfile/core";
 import { useEscape, useTextInput } from "../interaction.js";
-import { recordedTests, testRunsFor, type RecordedTest, type TestRunRow } from "../model.js";
 import { isMouseSequence } from "../mouse.js";
 import { useNavigation } from "../navigation.js";
 import { PageShell, SplitPanel, TabStrip, useScreen } from "../panels.js";

@@ -1,8 +1,12 @@
 import type { Command } from "commander";
-import { variantLabel } from "../merge.js";
-import { color, formatMs, pad } from "../util.js";
-import type { RunRecordSuiteNode } from "../runrecord.js";
-import { timelineRows } from "../tui/model.js";
+import {
+  color,
+  formatMs,
+  pad,
+  type RunRecordSuiteNode,
+  timelineRows,
+  variantLabel,
+} from "@testfile/core";
 import {
   colorStatus,
   commandFailed,

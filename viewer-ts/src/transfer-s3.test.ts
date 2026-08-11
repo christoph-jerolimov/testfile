@@ -5,8 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { needs } from "./testtools.js";
-import { writeRun } from "./fixture.js";
-import { RunHistory } from "./runrecord.js";
+import { writeRun } from "@testfile/core/fixture";
+import { RunHistory } from "@testfile/core";
 import { packRun, s3List, s3Pull, s3Push, type Exec } from "./transfer/index.js";
 
 function tempDir(): string {

@@ -87,10 +87,21 @@ test:
         - name: build-runner
           tags: [build]
           command: npm run build --workspace runner-ts
+        # The recorded-run domain everything else reads: built first, since
+        # the viewer and its tests compile against it.
+        - name: core-ts
+          tags: [fast, unit]
+          command: npm test --workspace core-ts
+          inputs:
+            - core-ts/src/**
+            - core-ts/package.json
+            - core-ts/tsconfig.json
         - name: viewer-ts
           tags: [fast, unit]
+          needs: [core-ts]
           command: npm test --workspace viewer-ts
           inputs:
+            - core-ts/src/**
             - viewer-ts/src/**
             - viewer-ts/package.json
             - viewer-ts/tsconfig.json

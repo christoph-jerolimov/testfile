@@ -2,10 +2,8 @@
 // executions page that leads to it from the Tests tab.
 import React from "react";
 import { Text } from "ink";
-import type { RunHistory } from "../../runrecord.js";
-import { formatMs } from "../../util.js";
+import { formatMs, type RunHistory, type TestRunRow, testRunsFor } from "@testfile/core";
 import { DetailTabs } from "../detail-tabs.js";
-import { testRunsFor, type TestRunRow } from "../model.js";
 import { useNavigation } from "../navigation.js";
 import { PageShell, useScreen } from "../panels.js";
 import { DataTable, type ColumnSpec } from "../table.js";
