@@ -6,14 +6,19 @@ description: The testfile command line runner and its interactive terminal UI.
 
 # CLI & TUI
 
-Two binaries share the work: the **runner** `testfile`
-([`runner-ts`](https://github.com/christoph-jerolimov/testfile/tree/main/runner-ts))
-reads the Testfile, runs processes and writes the recorded runs; the
-**viewer** `testfile-viewer`
-([`viewer-ts`](https://github.com/christoph-jerolimov/testfile/tree/main/viewer-ts))
-is strictly read-only over those recorded runs — any tool producing the
-documented [result format](https://github.com/christoph-jerolimov/testfile/tree/main/spec)
-works with it.
+One command line, two halves. `testfile start` and its siblings read the
+Testfile, run the processes it describes and record what happened;
+`testfile runs`, `explain`, `repro`, `tui`, `serve` and the rest are
+strictly read-only over those recorded runs — they never touch the
+Testfile and never start a test, so they work with any tool producing the
+documented [result format](https://github.com/christoph-jerolimov/testfile/tree/main/spec),
+not just this runner.
+
+Under the hood that separation is real: the reading half is a set of
+packages ([`core-ts`](https://github.com/christoph-jerolimov/testfile/tree/main/core-ts),
+`sync-ts`, `mcp-ts`, `tui-ts`, `web-ts`) that never depend on the runner,
+and [`runner-ts`](https://github.com/christoph-jerolimov/testfile/tree/main/runner-ts)
+is the only one that starts anything.
 
 This page is the guided tour; the [CLI reference](./cli-reference) lists
 every command with all of its arguments and options.
@@ -39,16 +44,16 @@ testfile changes [path]      # which tests a change selection would run
 testfile completion bash     # shell completions (bash, zsh, fish)
 
 # the viewer (read-only over .testfile/)
-testfile-viewer runs               # table of recorded runs (default command)
-testfile-viewer inspect run <id>   # one run in detail
-testfile-viewer diff <a> <b>       # compare two runs
-testfile-viewer merge <run...>     # combine shards / platform runs into one
-testfile-viewer tui                # terminal UI: runs + tests, watching
-testfile-viewer serve              # localhost REST API + web viewer
-testfile-viewer archive <cmd>      # pack/import recorded runs as archives
-testfile-viewer s3 <cmd>           # push/pull/list runs in an S3 bucket
-testfile-viewer github <cmd>       # sync/list GitHub Actions run artifacts
-testfile-viewer gitlab <cmd>       # sync/list GitLab CI job artifacts
+testfile runs               # table of recorded runs (default command)
+testfile inspect run <id>   # one run in detail
+testfile diff <a> <b>       # compare two runs
+testfile merge <run...>     # combine shards / platform runs into one
+testfile tui                # terminal UI: runs + tests, watching
+testfile serve              # localhost REST API + web viewer
+testfile archive <cmd>      # pack/import recorded runs as archives
+testfile s3 <cmd>           # push/pull/list runs in an S3 bucket
+testfile github <cmd>       # sync/list GitHub Actions run artifacts
+testfile gitlab <cmd>       # sync/list GitLab CI job artifacts
 ```
 
 Tab completion for commands and flags:
@@ -170,7 +175,7 @@ of runs keeps the union of their labels; where two runs disagree on a key
 the first one wins, because what actually differs between the legs of a
 matrix belongs in [`--variant`](#merging-runs).
 
-Viewers show them (`testfile-viewer inspect run <id>`, the TUI's run detail, the
+Viewers show them (`testfile inspect run <id>`, the TUI's run detail, the
 web viewer's run detail) and both filter by them —
 [`runs --filter-label`](#run-history) on the command line, a Labels chip
 row in the browser. The
@@ -235,10 +240,10 @@ testfile tags --json                           # the tag inventory
 testfile changes --json                        # what --changed selects from
 testfile doctor --json checks.json             # machine status of this machine
 
-testfile-viewer runs --json                    # the recorded runs
-testfile-viewer inspect run <id> --json        # one run record, in full
-testfile-viewer diff <a> <b> --json            # what changed between two runs
-testfile-viewer s3 list <prefix> --json        # ... and github/gitlab list
+testfile runs --json                    # the recorded runs
+testfile inspect run <id> --json        # one run record, in full
+testfile diff <a> <b> --json            # what changed between two runs
+testfile s3 list <prefix> --json        # ... and github/gitlab list
 ```
 
 ## Watch mode
@@ -375,14 +380,14 @@ result with [`merge`](#merging-runs).
 ## Merging runs
 
 Sharding and a matrix of CI jobs both leave you with several run folders
-for what is conceptually one run. `testfile-viewer merge` combines them:
+for what is conceptually one run. `testfile merge` combines them:
 
 ```sh
 # shards: each ran a different part of the suite
-testfile-viewer merge shard-1 shard-2 shard-3
+testfile merge shard-1 shard-2 shard-3
 
 # CI artifacts, each unpacked into its own folder
-testfile-viewer merge downloaded/testfile-run-*
+testfile merge downloaded/testfile-run-*
 ```
 
 The result is an ordinary run — one verdict, one duration, the union of
@@ -465,7 +470,7 @@ A nested summary with per-test durations is printed at the end.
 
 ## The TUI
 
-`testfile-viewer tui` opens a read-only terminal UI over the recorded runs
+`testfile tui` opens a read-only terminal UI over the recorded runs
 (it never starts tests — that is `testfile start`'s job). It is a
 multi-page interface, mirroring the [web viewer](#the-web-viewer): pages
 navigate forward, `esc` walks back, and a breadcrumb on top says where you
@@ -510,8 +515,8 @@ only the left table is shown, and enter opens the details as their own
 page instead.
 
 Every page watches `.testfile/runs/` — runs recorded by other processes
-(say, a `testfile start` in a second terminal, or a `testfile-viewer
-github sync`) appear live. `--view tests` opens on the Tests tab
+(say, a `testfile start` in a second terminal, or a `testfile github
+sync`) appear live. `--view tests` opens on the Tests tab
 (`--view results` still works as an alias).
 
 ## Run history
@@ -547,25 +552,25 @@ one `runs.yaml` index are migrated to per-run files on first use.)
 Browse the history from the command line:
 
 ```sh
-testfile-viewer runs                             # table of recent runs, newest first
-testfile-viewer runs --json                      # ... as JSON (or --json runs.json)
-testfile-viewer tui                              # browse runs in the TUI
-testfile-viewer inspect run 20260801-1046        # one run in detail (id prefix is ok)
-testfile-viewer inspect run <id> --log           # merged stdout+stderr of the run
-testfile-viewer inspect run <id> --log all/e2e   # ... of a single test
-testfile-viewer inspect run <id> --json          # the whole record, for a script
-testfile-viewer explain                          # what failed in the latest run, and why
-testfile-viewer repro <id> all/e2e               # everything needed to reproduce one failure
+testfile runs                             # table of recent runs, newest first
+testfile runs --json                      # ... as JSON (or --json runs.json)
+testfile tui                              # browse runs in the TUI
+testfile inspect run 20260801-1046        # one run in detail (id prefix is ok)
+testfile inspect run <id> --log           # merged stdout+stderr of the run
+testfile inspect run <id> --log all/e2e   # ... of a single test
+testfile inspect run <id> --json          # the whole record, for a script
+testfile explain                          # what failed in the latest run, and why
+testfile repro <id> all/e2e               # everything needed to reproduce one failure
 ```
 
 A history that collects runs from every branch and every CI job gets long,
 so `runs` narrows it:
 
 ```sh
-testfile-viewer runs --filter-status failed
-testfile-viewer runs --filter-label branch=main --filter-label branch=release
-testfile-viewer runs --filter-label pr            # any run that has a pr label
-testfile-viewer runs --filter-variant platform=windows
+testfile runs --filter-status failed
+testfile runs --filter-label branch=main --filter-label branch=release
+testfile runs --filter-label pr            # any run that has a pr label
+testfile runs --filter-variant platform=windows
 ```
 
 Several values of one filter are an **OR** (`branch=main` *or*
@@ -591,13 +596,13 @@ timeline:
   ci/unit   | ███████████████████████| 120ms+2.9s
 ```
 
-`testfile-viewer` only needs the `.testfile/` folder, so it also works when
+`testfile` only needs the `.testfile/` folder, so it also works when
 the Testfile itself has moved or changed.
 
 Compare two runs (older id first, unique prefixes are enough):
 
 ```sh
-testfile-viewer diff 20260801-1040 20260801-1146
+testfile diff 20260801-1040 20260801-1146
 ```
 
 The diff lists newly failed, fixed and still-failing tests, tests added to
@@ -612,10 +617,10 @@ removed, durations}`, which is enough to post a comment from CI.
 and what changed — in one bounded piece of markdown:
 
 ```sh
-testfile-viewer explain                        # the latest run
-testfile-viewer explain 20260801-1146          # a particular one
-testfile-viewer explain --max-failures 3 --log-lines 10
-testfile-viewer explain --json                 # the same digest, structured
+testfile explain                        # the latest run
+testfile explain 20260801-1146          # a particular one
+testfile explain --max-failures 3 --log-lines 10
+testfile explain --json                 # the same digest, structured
 ```
 
 Each failure carries its reason, the end of its log and what the history
@@ -643,9 +648,9 @@ log said. `repro` puts it in one place — and gives the command that reruns
 exactly that test, not the whole suite:
 
 ```sh
-testfile-viewer repro 20260801-1146 ci/e2e
-testfile-viewer repro <id> ci/e2e --variant platform=windows   # one leg of a merged run
-testfile-viewer repro <id> ci/e2e --json                       # for a tool or an agent
+testfile repro 20260801-1146 ci/e2e
+testfile repro <id> ci/e2e --variant platform=windows   # one leg of a merged run
+testfile repro <id> ci/e2e --json                       # for a tool or an agent
 ```
 
 ```
@@ -681,8 +686,8 @@ is the one worth reproducing.
 Hunt down flaky tests:
 
 ```sh
-testfile-viewer runs --flaky               # across the recorded history
-testfile-viewer runs --flaky --last 10     # narrowed to the 10 most recent runs
+testfile runs --flaky               # across the recorded history
+testfile runs --flaky --last 10     # narrowed to the 10 most recent runs
 ```
 
 What a test did fifty runs ago says nothing about it now, so the verdict is
@@ -713,15 +718,15 @@ Age is not a criterion — a long-untouched project keeps its verdicts, and
 ## Sharing runs
 
 Because every run is a self-contained `runs/<id>/` folder, runs can move
-between machines. `testfile-viewer archive` packs them as `.tgz` archives and
+between machines. `testfile archive` packs them as `.tgz` archives and
 brings them into the local history, where `runs`, `inspect run`, `diff`, `--flaky`
 and the TUI treat them like local runs:
 
 ```sh
-testfile-viewer archive pack                    # latest run -> testfile-run-<id>.tgz
-testfile-viewer archive pack --run 20260801 -o ci.tgz
-testfile-viewer archive import ci.tgz           # import into ./.testfile/runs/
-testfile-viewer archive import testfile-run.zip # a downloaded GitHub run artifact
+testfile archive pack                    # latest run -> testfile-run-<id>.tgz
+testfile archive pack --run 20260801 -o ci.tgz
+testfile archive import ci.tgz           # import into ./.testfile/runs/
+testfile archive import testfile-run.zip # a downloaded GitHub run artifact
 ```
 
 Importing skips runs that already exist locally (same id), so repeated
@@ -737,11 +742,11 @@ With the [aws CLI](https://aws.amazon.com/cli/) configured, runs can be
 shared through S3 — for example a CI job pushes, developers pull:
 
 ```sh
-testfile-viewer s3 push s3://my-bucket/testfile-runs          # latest run
-testfile-viewer s3 push s3://my-bucket/testfile-runs --run 20260801
-testfile-viewer s3 list s3://my-bucket/testfile-runs          # available archives
-testfile-viewer s3 pull s3://my-bucket/testfile-runs          # newest archive
-testfile-viewer s3 pull s3://my-bucket/testfile-runs --run <full-id>
+testfile s3 push s3://my-bucket/testfile-runs          # latest run
+testfile s3 push s3://my-bucket/testfile-runs --run 20260801
+testfile s3 list s3://my-bucket/testfile-runs          # available archives
+testfile s3 pull s3://my-bucket/testfile-runs          # newest archive
+testfile s3 pull s3://my-bucket/testfile-runs --run <full-id>
 ```
 
 And when CI is the [GitHub Action](./github-action) (which uploads every
@@ -755,11 +760,11 @@ name is a **prefix**, so a [matrix over platforms](./three-platforms) —
 export GITHUB_TOKEN=...                  # a token with actions:read
                                          # (GH_TOKEN works too)
 export GITHUB_TOKEN=$(gh auth token)     # ... or reuse the gh CLI's login
-testfile-viewer github list owner/repo          # available run artifacts
-testfile-viewer github sync owner/repo          # latest 100 workflow runs
-testfile-viewer github sync owner/repo --latest 20
-testfile-viewer github sync owner/repo --artifact testfile-run-merged
-testfile-viewer github sync owner/repo --artifact testfile-run --exact
+testfile github list owner/repo          # available run artifacts
+testfile github sync owner/repo          # latest 100 workflow runs
+testfile github sync owner/repo --latest 20
+testfile github sync owner/repo --artifact testfile-run-merged
+testfile github sync owner/repo --artifact testfile-run --exact
 ```
 
 Already-imported runs are skipped, so `sync` is incremental — run it again
@@ -776,12 +781,12 @@ imported and skipped runs is unchanged.
 
 ## The web viewer
 
-`testfile-viewer serve` starts a small web UI over the recorded runs — the
+`testfile serve` starts a small web UI over the recorded runs — the
 browser sibling of the TUI:
 
 ```sh
-testfile-viewer serve          # http://127.0.0.1:7357
-testfile-viewer serve --port 8080
+testfile serve          # http://127.0.0.1:7357
+testfile serve --port 8080
 ```
 
 - **Runs**: a table of all recorded runs; selecting one shows its details,
@@ -802,7 +807,7 @@ testfile-viewer serve --port 8080
   default) and a `follow` toggle that pins the view to the end while a run
   is still being written.
 - The server watches `.testfile/runs/` and pushes changes to the browser,
-  so runs recorded elsewhere (another terminal, `testfile-viewer github sync`)
+  so runs recorded elsewhere (another terminal, `testfile github sync`)
   appear live.
 - The page follows the system theme — dark and light are both first-class
   (without a preference it stays dark). The logs theme too: the recorded
@@ -857,14 +862,14 @@ The two views the CLI already had are on the same pages. In **Tests**,
 each test carries a **history sparkline** — one block per recorded run,
 newest on the right, so a test that alternates green and red looks
 different from one that simply broke — and a `flaky` or `broken` badge
-next to the tests `testfile-viewer runs --flaky` would list, decided by
+next to the tests `testfile runs --flaky` would list, decided by
 exactly the same rule. A test with fewer than 10 results gets no badge at
 all. The sparkline still draws the whole history, so the badge and the
 blocks can legitimately disagree about an old bad patch. The `flaky only`
 chip narrows the table to the flaky ones. In **Runs**, a run detail has a *compare with*
 picker: choose another recorded run (or press `previous run` for the one
 recorded before this one) and the same six sections
-`testfile-viewer diff a b` prints appear above the suite tree — newly
+`testfile diff a b` prints appear above the suite tree — newly
 failed, still failing, fixed, added, removed, and durations that moved by
 more than 100ms *and* more than a fifth. In a merged run the worst leg of a
 path decides, exactly as the run's own verdict does.
@@ -913,7 +918,7 @@ esbuild); `serve` picks up its build automatically.
 
 ## Talking to an AI assistant
 
-`testfile-viewer mcp` serves the recorded runs over the
+`testfile mcp` serves the recorded runs over the
 [Model Context Protocol](https://modelcontextprotocol.io), so an assistant
 that speaks MCP — Claude Code, Claude Desktop, an agent of your own — can
 read the history as data instead of parsing terminal output.
@@ -923,7 +928,7 @@ read the history as data instead of parsing terminal output.
 {
   "mcpServers": {
     "testfile": {
-      "command": "testfile-viewer",
+      "command": "testfile",
       "args": ["mcp", "/path/to/your/project"]
     }
   }
@@ -1005,7 +1010,7 @@ analysis:
   at: 2026-08-01T12:10:00.000Z
 ```
 
-`testfile-viewer inspect run`, `explain`, the TUI and the web viewer all
+`testfile inspect run`, `explain`, the TUI and the web viewer all
 show it next to the run — **marked as somebody's reading of it, never as a
 result**: a run whose analysis says "this is fine" is still a failed run.
 No runner writes the field and no viewer does either (they are read-only);

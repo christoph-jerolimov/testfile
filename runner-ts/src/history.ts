@@ -87,7 +87,7 @@ export interface RunRecord {
   machine?: string;
   // What distinguishes this run from a sibling run of the same suite -
   // e.g. { platform: linux } for one leg of a matrix. Set with --variant,
-  // and what `testfile-viewer merge` needs to keep the legs apart.
+  // and what `testfile merge` needs to keep the legs apart.
   variants?: Record<string, string>;
   // Attached to the run so it can be found again - e.g. { branch: main,
   // pr: "42" }. Set with --label; keys and values are free-form.

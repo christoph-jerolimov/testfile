@@ -63,7 +63,7 @@ Other useful commands:
 testfile validate   # check the file against the JSON schema
 testfile doctor     # check this machine against what the file needs
 testfile inspect    # print the expanded test suite without running it
-testfile-viewer tui # browse recorded runs (read-only terminal UI)
+testfile tui # browse recorded runs (read-only terminal UI)
 ```
 
 ## 3. Grow the suite

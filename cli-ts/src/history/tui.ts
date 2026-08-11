@@ -12,7 +12,7 @@ export function registerTui(program: Command): void {
     .action(async (path: string, options: { view: string; name?: string }) => {
       try {
         if (!process.stdout.isTTY) {
-          throw new Error("the TUI needs an interactive terminal (use: testfile-viewer runs)");
+          throw new Error("the TUI needs an interactive terminal (use: testfile runs)");
         }
         if (!["runs", "tests", "results"].includes(options.view)) {
           throw new Error(`unknown --view "${options.view}", expected runs or tests`);

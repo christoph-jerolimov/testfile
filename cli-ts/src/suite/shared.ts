@@ -2,21 +2,26 @@
 // into a selection, sharding it, and printing an expanded suite.
 import { writeFileSync } from "node:fs";
 import { Command } from "commander";
-import { gitChangedSelection, predictCacheHits } from "../cache-predict.js";
 import {
+  collectGitChanges,
+  color,
+  durationsFrom,
   filterByLastFailed,
+  formatMs,
+  gitChangedSelection,
   hasFilters,
   parseMatrixFilters,
+  parseShard,
   parseTagFilters,
+  predictCacheHits,
+  type RunTest,
+  selectShard,
   selectTests,
+  Session,
   splitGenericFilters,
   type TestFilters,
-} from "../filter.js";
-import { collectGitChanges } from "../gitchanges.js";
-import { walk, type RunTest } from "../runsuite.js";
-import { Session } from "../session.js";
-import { durationsFrom, parseShard, selectShard } from "../shard.js";
-import { color, formatMs } from "../util.js";
+  walk,
+} from "@testfile/runner";
 
 export { predictCacheHits };
 

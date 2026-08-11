@@ -1,24 +1,28 @@
 import { type FSWatcher } from "node:fs";
 import { dirname } from "node:path";
-import type { Command } from "commander";
-import { HISTORY_DIR } from "../history.js";
-import { loadTestfile } from "../loader.js";
-import { writeReport, type ReporterKind } from "../report.js";
-import { ConsoleReporter } from "../reporter.js";
-import { configureEngine } from "../services.js";
-import { Session } from "../session.js";
-import { StreamReporter } from "../streamreporter.js";
-import { color } from "../util.js";
-import { watchDirectory, WatchScheduler } from "../watch.js";
+import { type Command } from "commander";
+import {
+  color,
+  configureEngine,
+  ConsoleReporter,
+  HISTORY_DIR,
+  loadTestfile,
+  type ReporterKind,
+  Session,
+  StreamReporter,
+  watchDirectory,
+  WatchScheduler,
+  writeReport,
+} from "@testfile/runner";
 import {
   addFilterOptions,
   applyChanged,
   applyShard,
   collect,
+  type FilterFlags,
   predictCacheHits,
   printSuite,
   resolveFilters,
-  type FilterFlags,
 } from "./shared.js";
 
 // "branch=main" pairs into a map, split at the first "=" so a value may

@@ -63,12 +63,7 @@
         "testfile.command": {
           "type": "string",
           "default": "testfile",
-          "description": "The testfile CLI to invoke (e.g. \"testfile\" or \"node /path/to/runner-ts/dist/cli.js\")."
-        },
-        "testfile.viewerCommand": {
-          "type": "string",
-          "default": "testfile-viewer",
-          "description": "The read-only viewer CLI for the TUI and web viewer (e.g. \"testfile-viewer\" or \"node /path/to/viewer-ts/dist/cli.js\")."
+          "description": "The testfile CLI to invoke (e.g. \"testfile\" or \"node /path/to/cli-ts/dist/cli.js\")."
         }
       }
     },

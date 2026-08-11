@@ -1,27 +1,28 @@
 ---
 title: CLI reference
 order: 11
-description: Every command and argument of the testfile runner and the testfile-viewer.
+description: Every command and argument of the testfile command line.
 ---
 
 # CLI reference
 
-The complete list of commands, arguments and options of the two binaries:
-[`testfile`](#testfile--the-runner) (the runner — executes suites and writes
-run records) and [`testfile-viewer`](#testfile-viewer--the-viewer) (read-only
-over the recorded runs in `.testfile/`). For guides and examples see
-[CLI & TUI](./cli); this page is the dry inventory.
+The complete list of commands, arguments and options of `testfile`. The
+command line has two halves: [running what a Testfile
+describes](#running-the-suite), and [reading the runs that came
+out](#reading-the-runs). For guides and examples see [CLI & TUI](./cli);
+this page is the dry inventory.
 
 Conventions used below:
 
-- `[path]` defaults to `.` everywhere. For the runner it is a Testfile or a
-  directory containing one (`Testfile`, `testfile.yaml` or `testfile.yml`);
-  for the viewer it is a directory containing a `.testfile` folder.
+- `[path]` defaults to `.` everywhere. For the suite commands it is a
+  Testfile or a directory containing one (`Testfile`, `testfile.yaml` or
+  `testfile.yml`); for the history commands it is a directory containing a
+  `.testfile` folder.
 - *(repeatable)* flags can be passed multiple times.
-- Every command also accepts `-h, --help`; both binaries accept
+- Every command also accepts `-h, --help`; the binary accepts
   `-V, --version` and `help [command]`.
 
-## `testfile` — the runner
+## Running the suite
 
 ```
 testfile [command] [options] [path]
@@ -45,7 +46,7 @@ Start the test suite (the default command).
 | `--no-cache` | Ignore cached results; fresh results still refresh the cache. |
 | `--forward-env <pattern>` | Forward matching host env vars into the [isolated test env](./env-and-ports#an-isolated-environment), e.g. `"GITHUB_*"` or `"*"`. *(repeatable)* |
 | `--engine <name>` | Container engine for this run: `podman`, `docker` or `kubernetes`. Default: `$TESTFILE_ENGINE`, else the first of the three that responds. The [Testfile itself never names one](./services#containers). |
-| `--variant <key=value>` | Record what distinguishes this run from a sibling run — e.g. `platform=linux` for one leg of a matrix. Recorded in `run.yaml` and used by [`testfile-viewer merge`](#testfile-viewer-merge-run). *(repeatable)* |
+| `--variant <key=value>` | Record what distinguishes this run from a sibling run — e.g. `platform=linux` for one leg of a matrix. Recorded in `run.yaml` and used by [`testfile merge`](#testfile-merge-run). *(repeatable)* |
 | `-l, --label <key=value>` | Record a label with the run, e.g. `branch=main`, so it can be [found again later](./cli#labelling-runs). Split at the first `=`; a key may only be given once. *(repeatable)* |
 | `--reporter <kind>` | Write [machine-readable results](./cli#machine-readable-reports) after the run: `junit` or `json`. |
 | `--output <file>` | Report target file, or `-` for stdout (the default). |
@@ -140,21 +141,17 @@ warnings (a missing git, for instance) do not.
 Print a completion script for `bash`, `zsh` or `fish` — see
 [CLI & TUI](./cli#commands) for how to install it. No options.
 
-## `testfile-viewer` — the viewer
+## Reading the runs
 
-```
-testfile-viewer [command] [options] [path]
-```
+These commands only read the [run history](./cli#run-history) in
+`.testfile/`: they never touch the Testfile and never start a test.
 
-Read-only over the [run history](./cli#run-history) in `.testfile/`;
-running without a command is the same as `testfile-viewer runs`.
+### `testfile runs [path]`
 
-### `testfile-viewer runs [path]`
-
-List the recorded runs as a table, newest first (the default command).
-Sharing lives under its own commands: [`archive`](#testfile-viewer-archive-subcommands),
-[`s3`](#testfile-viewer-s3-subcommands) and
-[`github`](#testfile-viewer-github-subcommands).
+List the recorded runs as a table, newest first.
+Sharing lives under its own commands: [`archive`](#testfile-archive-subcommands),
+[`s3`](#testfile-s3-subcommands) and
+[`github`](#testfile-github-subcommands).
 
 | Option | Description |
 | ------ | ----------- |
@@ -163,14 +160,14 @@ Sharing lives under its own commands: [`archive`](#testfile-viewer-archive-subco
 | `--last <n>` | With `--flaky`: only consider the most recent `n` runs. |
 | `--filter-status <status>` | Only runs with this status: `passed`, `failed` or `aborted`. *(repeatable)* |
 | `--filter-label <key=value>` | Only runs carrying this [label](./cli#labelling-runs); a bare `key` asks whether it is set at all. *(repeatable)* |
-| `--filter-variant <key=value>` | Only runs with this variant, including the legs of a [merged run](#testfile-viewer-merge-run). *(repeatable)* |
+| `--filter-variant <key=value>` | Only runs with this variant, including the legs of a [merged run](#testfile-merge-run). *(repeatable)* |
 
 Several values of one filter are an **OR**, different filters an **AND**,
 and an unused filter narrows nothing. The filters apply to everything the
 command produces — the table, `--json` and the `--flaky` report all see
 the same runs.
 
-### `testfile-viewer inspect run <id> [path]`
+### `testfile inspect run <id> [path]`
 
 Show one recorded run in detail — a unique id prefix is enough.
 
@@ -179,7 +176,7 @@ Show one recorded run in detail — a unique id prefix is enough.
 | `--log [test-path]` | Print the run's merged log, or a single test's log. |
 | `--json [file]` | Write the full run record as JSON, to a file or (without a value) stdout. Cannot be combined with `--log`, which is raw text. |
 
-### `testfile-viewer explain [run] [path]`
+### `testfile explain [run] [path]`
 
 [Digest one run](./cli#digesting-a-run) as markdown: what failed, with the
 end of each log and the [flaky verdict](./cli#run-history) of the test,
@@ -191,7 +188,7 @@ and what changed against the run before. Without an id, the latest run.
 | `--log-lines <n>` | Lines of log kept per failure (default 20). |
 | `--json [file]` | Write the digest as JSON, to a file or (without a value) stdout. |
 
-### `testfile-viewer repro <run> <test> [path]`
+### `testfile repro <run> <test> [path]`
 
 Print everything needed to [reproduce one recorded failure](./cli#reproducing-a-failure):
 the run it happened in, the test's status and reason, the command that
@@ -200,11 +197,11 @@ needs and the end of its log.
 
 | Option | Description |
 | ------ | ----------- |
-| `--variant <key=value>` | Which leg of a [merged run](#testfile-viewer-merge-run) to reproduce, e.g. `platform=linux`. Without it, a failing leg is chosen. *(repeatable)* |
+| `--variant <key=value>` | Which leg of a [merged run](#testfile-merge-run) to reproduce, e.g. `platform=linux`. Without it, a failing leg is chosen. *(repeatable)* |
 | `--log-lines <n>` | How much of the log to include (default 40). |
 | `--json [file]` | Write the bundle as JSON, to a file or (without a value) stdout. The JSON lists every artifact; the text form previews the first ten. |
 
-### `testfile-viewer diff <older> <newer> [path]`
+### `testfile diff <older> <newer> [path]`
 
 Compare two recorded runs (older id first, unique prefixes are enough):
 newly failed, fixed, still failing, added/removed tests and significant
@@ -214,7 +211,7 @@ duration changes.
 | ------ | ----------- |
 | `--json [file]` | Write the diff as JSON (`{base, compare, newlyFailed, fixed, stillFailing, added, removed, durations}`), to a file or (without a value) stdout. |
 
-### `testfile-viewer merge <run...>`
+### `testfile merge <run...>`
 
 Combine several runs into a single run — [shards](./cli#sharding-across-machines) or one
 job per platform — and write it into a history. Each `<run>` is either a
@@ -228,11 +225,11 @@ run folder (an unpacked CI artifact: `run.yaml` next to the logs) or an id
 
 The merged run is an ordinary run: one status, one duration, the union of
 the tests. Runs that recorded the same test path must carry distinct
-[`--variant`](#testfile--the-runner) values — see the
+[`--variant`](#testfile-start-path) values — see the
 [guided tour](./three-platforms). Exits non-zero when the merged verdict
 is not `passed`.
 
-### `testfile-viewer tui [path]`
+### `testfile tui [path]`
 
 Interactive [terminal UI](./cli#the-tui) over the recorded runs; watches
 `.testfile/runs/` for new runs.
@@ -242,7 +239,7 @@ Interactive [terminal UI](./cli#the-tui) over the recorded runs; watches
 | `--view <view>` | Initial tab: `runs` (default) or `tests` (`results` is accepted as an alias). |
 | `--name <name>` | Display name shown in the header. |
 
-### `testfile-viewer serve [path]`
+### `testfile serve [path]`
 
 Serve a localhost REST API and the [web viewer](./cli#the-web-viewer) over
 the recorded runs.
@@ -252,7 +249,7 @@ the recorded runs.
 | `--port <n>` | Port to listen on, always bound to `127.0.0.1` only (default: `7357`). |
 | `--name <name>` | Display name shown in the web viewer. |
 
-### `testfile-viewer mcp [path]`
+### `testfile mcp [path]`
 
 Serve the recorded runs to an AI assistant over
 [MCP](./cli#talking-to-an-ai-assistant) (stdio transport). Eight read-only
@@ -263,7 +260,7 @@ that runs tests — that is the runner's job (`testfile start`).
 Takes no options: the transport is stdin/stdout, and the client decides
 what to ask.
 
-### `testfile-viewer archive` subcommands
+### `testfile archive` subcommands
 
 Pack recorded runs as local archives and [import](./cli#sharing-runs) them.
 
@@ -282,7 +279,7 @@ Import a packed run into the local history. `archive` is a `.tgz` (from
 `archive pack`) or a `.zip` (a downloaded GitHub run artifact). Already
 imported run ids are skipped. No options.
 
-### `testfile-viewer s3` subcommands
+### `testfile s3` subcommands
 
 Share runs via an S3 bucket (`s3://bucket/prefix`, uses the `aws` CLI).
 
@@ -310,7 +307,7 @@ List the run archives available under the prefix, newest first.
 | ------ | ----------- |
 | `--json [file]` | Write the archive names as JSON (`{prefix, archives}`), to a file or (without a value) stdout. |
 
-### `testfile-viewer github` subcommands
+### `testfile github` subcommands
 
 Bring the run artifacts of GitHub Actions workflow runs into the local
 history. Both subcommands need `GITHUB_TOKEN` or `GH_TOKEN` (with
@@ -339,7 +336,7 @@ downloading anything.
 | ------ | ----------- |
 | `--json [file]` | Write the artifacts as JSON (`{repo, artifacts}`), to a file or (without a value) stdout. |
 
-### `testfile-viewer gitlab` subcommands
+### `testfile gitlab` subcommands
 
 Bring the run artifacts of GitLab CI jobs into the local history (see
 [other CI systems](./ci-systems)). Both subcommands need `GITLAB_TOKEN`

@@ -24,7 +24,7 @@ import {
 
 export function registerRuns(program: Command): void {
   program
-    .command("runs", { isDefault: true })
+    .command("runs")
     .argument("[path]", "directory containing a .testfile folder", ".")
     .option("--json [file]", "write the runs as JSON, to a file or (without a value) stdout")
     .option("--flaky", "find tests that fail too often in their recent results to trust", false)
@@ -51,7 +51,7 @@ export function registerRuns(program: Command): void {
       collect,
       [],
     )
-    .description("List recorded runs (the default command)")
+    .description("List recorded runs")
     .action(
       (
         path: string,
@@ -166,7 +166,7 @@ export function registerRuns(program: Command): void {
           const shown = isEmptyFilter(filter)
             ? ""
             : `${describeFilter(history.runs.length, loaded.runs.length)} · `;
-          console.log(color(90, `\n${shown}details: testfile-viewer inspect run <id>`));
+          console.log(color(90, `\n${shown}details: testfile inspect run <id>`));
         } catch (err) {
           commandFailed(err);
         }
