@@ -972,6 +972,21 @@ and flag a skill names is verified against the CLIs' own `--help`, so a
 renamed flag fails the build instead of turning the advice into confident
 nonsense.
 
+### The documentation, for a model
+
+The website publishes itself in the [llms.txt](https://llmstxt.org) shape,
+so an assistant can read the documentation without scraping HTML:
+
+| File | Contents |
+| ---- | -------- |
+| [`/llms.txt`](https://christoph-jerolimov.github.io/testfile/llms.txt) | one line per page — title, link and what the page answers — so a model can fetch the two pages it needs |
+| [`/llms-full.txt`](https://christoph-jerolimov.github.io/testfile/llms-full.txt) | every page's markdown, concatenated, for reading the lot at once |
+
+Both are generated from the same content the pages are built from, and the
+build fails if a published page is missing from the index — an index that
+quietly omits a page is worse than none, because whoever reads it believes
+it was complete.
+
 ### Recording what a failure meant
 
 A run says what happened. It cannot say what it *meant* — that three
