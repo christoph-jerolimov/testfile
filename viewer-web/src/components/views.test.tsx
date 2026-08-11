@@ -159,6 +159,21 @@ test("a merged run tabs one log per leg and its overview repeats the labels", ()
   assert.equal(markup.match(/class="log wrap tail"/g)?.length, 2, "one excerpt per leg");
 });
 
+test("an analysis appears on the run, said to be somebody's reading of it", () => {
+  const annotated = { ...runs[0] };
+  annotated.analysis = {
+    text: "Port 5432 collides in the parallel group. Not this change.",
+    author: "claude-code",
+  };
+  const markup = renderToStaticMarkup(<RunsView runs={[annotated, runs[1]]} />);
+  assert.match(markup, /class="analysis"/);
+  assert.match(markup, /analysis, added after the run by claude-code/);
+  assert.match(markup, /Port 5432 collides/);
+
+  // a run without one shows nothing at all
+  assert.doesNotMatch(renderToStaticMarkup(<RunsView runs={runs} />), /class="analysis"/);
+});
+
 test("a run detail offers the runs it can be compared with", () => {
   const markup = renderToStaticMarkup(<RunsView runs={runs} />);
   assert.match(markup, /aria-label="compare with"/);

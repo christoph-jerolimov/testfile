@@ -1,0 +1,15 @@
+# An analysis is a finding: an author and a timestamp without one says
+# nothing, so `text` is required.
+id: 20260101-120000-eeee
+startedAt: 2026-01-01T12:00:00.000Z
+durationMs: 42
+status: passed
+exitCode: 0
+cancelled: false
+env: {}
+ports: {}
+selected: []
+tests: []
+analysis:
+  author: claude-code
+  at: 2026-01-01T12:10:00.000Z

@@ -84,6 +84,15 @@ export function registerInspect(program: Command): void {
             }
           }
           console.log(`selected:  ${run.selected.join(", ") || "-"}`);
+          // Somebody's reading of the run, not a result of it - said so
+          // in as many words, because it is easy to mistake for one.
+          if (run.analysis) {
+            const who = run.analysis.author ? ` by ${run.analysis.author}` : "";
+            console.log(`analysis:  ${color(90, `(added after the run${who})`)}`);
+            for (const line of run.analysis.text.trimEnd().split("\n")) {
+              console.log(`  ${line}`);
+            }
+          }
           const env = Object.entries(run.env)
             .map(([k, v]) => `${k}=${v}`)
             .join(" ");

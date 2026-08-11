@@ -70,6 +70,9 @@ export interface RunRecord {
   tests: RunTest[];
   services?: RunService[];
   junit?: string;
+  // Somebody's reading of the run, written after it. An annotation, never
+  // a result: it must not change a status, a count or a verdict.
+  analysis?: { text: string; author?: string; at?: string };
 }
 
 export interface Summary {

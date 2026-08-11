@@ -72,6 +72,7 @@ of every record, so editors validate and complete it.
 | `services`   | array   | no       | One entry per started service — see below. |
 | `suite`      | object  | no       | The Testfile's test tree, including tests this run did not execute — see [`suite`](#suite). |
 | `junit`      | string  | no       | Relative path of the JUnit XML (`junit.xml`). |
+| `analysis`   | object  | no       | Someone's reading of why the run went the way it did, added **after** the run — see [`analysis`](#analysis). |
 
 Consumers must ignore unknown fields (producers may add fields in later
 format versions) and must skip run folders whose `run.yaml` is missing or
@@ -132,6 +133,40 @@ nesting from the `path` values.
 | `log`      | string | no       | Relative path of the service's log; absent without output. |
 | `variants` | map    | no       | Merged runs only: the `variants` of the run this service ran in. |
 | `origin`   | string | no       | Merged runs only: the `id` of that run. |
+
+### `analysis`
+
+A run says what happened. It cannot say what it *meant* — that the three
+failures share one cause, that the flake was a port collision, that the
+red was infrastructure and not the change. Someone works that out
+afterwards, and today they write it in a pull request comment that nobody
+reading the run will ever see.
+
+| Field    | Type   | Required | Description |
+| -------- | ------ | -------- | ----------- |
+| `text`   | string | yes      | The finding, in prose. Free-form; consumers display it and must not parse it. |
+| `author` | string | no       | Who wrote it — a person, a bot, a model. Free-form identifier. |
+| `at`     | string | no       | When, ISO 8601 with milliseconds, UTC. |
+
+```yaml
+analysis:
+  text: |
+    All three failures come from the port 5432 collision in the parallel
+    group: ci/migrations and ci/e2e both start a database service.
+    Not caused by this change.
+  author: claude-code
+  at: 2026-08-01T12:10:00.000Z
+```
+
+Rules that keep it honest:
+
+- **A runner never writes it.** The field is added after the run, by
+  whoever did the reading; a runner has nothing to say here.
+- **It is an annotation, not a result.** Consumers must show it as
+  somebody's opinion — never let it change a status, a count or a verdict.
+  A run whose `analysis` says "this is fine" is still a failed run.
+- **It is optional and replaceable.** A later reading may overwrite it. A
+  producer writing it must preserve every other field of the record.
 
 ## Merged runs
 

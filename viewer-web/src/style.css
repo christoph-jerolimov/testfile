@@ -486,6 +486,22 @@ button.link {
   color: var(--dim);
   white-space: nowrap;
 }
+/* Somebody's reading of the run: set apart from the facts above it, so it
+   is never mistaken for one. */
+.analysis {
+  margin: 0.25rem 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.analysis p {
+  margin: 0.35rem 0 0;
+  white-space: pre-wrap;
+}
+
 .merged {
   margin: 0.25rem 0 0.75rem;
   padding: 0.5rem 0.75rem;

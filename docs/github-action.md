@@ -286,3 +286,70 @@ This repository's own [CI](https://github.com/christoph-jerolimov/testfile/blob/
 is that job — one Testfile, three platforms — plus a merge job combining
 the three runs and a kind cluster on the Linux leg for the kubernetes
 conformance case.
+
+## Letting an assistant read the failure
+
+A red CI run usually reaches a person as a link and a wall of log. The run
+folder holds better material than that, and the action already uploads it,
+so a follow-up job can hand a failure to an assistant with the evidence
+attached instead of the URL.
+
+```yaml
+  triage:
+    needs: test
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: testfile-run*
+          path: runs
+      # the downloaded artifacts become an ordinary local history
+      - run: npx @testfile/viewer archive import runs/*/testfile-run*.zip
+      # what failed, why, and what changed - bounded, and already prose
+      - run: npx @testfile/viewer explain --max-failures 5 > digest.md
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            The CI run below failed. Work out whether each failure is real
+            or a known flake, and what caused it. Do not change any code.
+            $(cat digest.md)
+```
+
+The digest is the point: it is already the shape an assistant needs
+(failing tests, their reasons, log excerpts, the flaky verdict, the
+comparison with the previous run), it is bounded, and it costs one command
+rather than a prompt that has to explain the layout of `.testfile/`.
+
+Give the job the [MCP server](./cli#talking-to-an-ai-assistant) instead of
+a digest when the assistant should be able to dig further —
+`testfile-viewer mcp` over the same imported history lets it pull a
+specific log or reproduce one test on its own.
+
+### Writing the conclusion back
+
+An analysis that lives only in a job log is lost by the next run. The
+result format has a place for it: an optional
+[`analysis`](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md#analysis)
+field on `run.yaml`, which every viewer shows next to the run — marked as
+somebody's reading of it, never as a result.
+
+```sh
+node -e '
+  const { readFileSync, writeFileSync } = require("node:fs");
+  const { parse, stringify } = require("yaml");
+  const file = process.argv[1], run = parse(readFileSync(file, "utf8"));
+  run.analysis = { text: readFileSync("finding.md", "utf8"), author: "claude-code",
+                   at: new Date().toISOString() };
+  writeFileSync(file, stringify(run));
+' .testfile/runs/<id>/run.yaml
+```
+
+A runner never writes that field, and neither does any viewer — the
+viewers are read-only. Whoever did the reading writes it, and must
+preserve every other field of the record.

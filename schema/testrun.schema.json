@@ -175,6 +175,28 @@
       "description": "Relative path of the JUnit XML inside the run folder, usually junit.xml.",
       "type": "string",
       "minLength": 1
+    },
+    "analysis": {
+      "description": "Someone's reading of why this run went the way it did, added after the run by a person or a tool. Never written by the runner; viewers show it as an annotation, not as a result.",
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "description": "The finding, in prose. Free-form; consumers display it and must not parse it.",
+          "type": "string",
+          "minLength": 1
+        },
+        "author": {
+          "description": "Who wrote it, e.g. a person, a bot name or a model. Free-form identifier.",
+          "type": "string",
+          "minLength": 1
+        },
+        "at": {
+          "description": "When it was written, ISO 8601 with milliseconds, UTC.",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
     }
   },
   "$defs": {

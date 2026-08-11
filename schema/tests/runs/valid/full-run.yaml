@@ -79,3 +79,11 @@ tests:
     startedAfterMs: 3
     durationMs: 8
 junit: junit.xml
+# Somebody's reading of the run, added after it happened - never by the
+# runner, and never a result.
+analysis:
+  text: |
+    All three failures come from the port 5432 collision in the parallel
+    group. Not caused by this change.
+  author: claude-code
+  at: 2026-08-03T23:30:00.000Z
