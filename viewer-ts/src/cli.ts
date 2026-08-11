@@ -8,6 +8,7 @@ import { registerDiff } from "./commands/diff.js";
 import { registerExplain } from "./commands/explain.js";
 import { registerGithub } from "./commands/github.js";
 import { registerGitlab } from "./commands/gitlab.js";
+import { registerMcp } from "./commands/mcp.js";
 import { registerMerge } from "./commands/merge.js";
 import { registerInspect } from "./commands/inspect.js";
 import { registerRepro } from "./commands/repro.js";
@@ -30,6 +31,7 @@ registerDiff(program);
 registerMerge(program);
 registerTui(program);
 registerServe(program);
+registerMcp(program);
 // `runs` is the default command; the sharing backends have their own groups
 registerRuns(program);
 registerArchive(program);

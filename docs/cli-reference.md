@@ -252,6 +252,17 @@ the recorded runs.
 | `--port <n>` | Port to listen on, always bound to `127.0.0.1` only (default: `7357`). |
 | `--name <name>` | Display name shown in the web viewer. |
 
+### `testfile-viewer mcp [path]`
+
+Serve the recorded runs to an AI assistant over
+[MCP](./cli#talking-to-an-ai-assistant) (stdio transport). Eight read-only
+tools: `list_runs`, `get_run`, `explain_run`, `repro_test`,
+`get_test_log`, `diff_runs`, `list_tests`, `list_flaky`. There is no tool
+that runs tests — that is the runner's job (`testfile start`).
+
+Takes no options: the transport is stdin/stdout, and the client decides
+what to ask.
+
 ### `testfile-viewer archive` subcommands
 
 Pack recorded runs as local archives and [import](./cli#sharing-runs) them.
