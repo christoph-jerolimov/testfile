@@ -56,6 +56,13 @@ test:
           tags: [docs]
           needs: [website]
           command: npm run check:links --workspace website
+        # llms.txt indexes the site for a model; an index that quietly
+        # misses a page is worse than none, since whoever reads it believes
+        # it is complete.
+        - name: llms
+          tags: [docs]
+          needs: [website]
+          command: npm run check:llms --workspace website
         - name: link-checker
           tags: [fast, unit, docs]
           command: npm test --workspace website
