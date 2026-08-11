@@ -96,12 +96,24 @@ test:
             - core-ts/src/**
             - core-ts/package.json
             - core-ts/tsconfig.json
-        - name: viewer-ts
+        # Moving runs between machines; needs tar/unzip, so some of its
+        # cases skip themselves where those are missing.
+        - name: sync-ts
           tags: [fast, unit]
           needs: [core-ts]
+          command: npm test --workspace sync-ts
+          inputs:
+            - core-ts/src/**
+            - sync-ts/src/**
+            - sync-ts/package.json
+            - sync-ts/tsconfig.json
+        - name: viewer-ts
+          tags: [fast, unit]
+          needs: [core-ts, sync-ts]
           command: npm test --workspace viewer-ts
           inputs:
             - core-ts/src/**
+            - sync-ts/src/**
             - viewer-ts/src/**
             - viewer-ts/package.json
             - viewer-ts/tsconfig.json

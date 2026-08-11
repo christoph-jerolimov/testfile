@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { needs } from "./testtools.js";
 import { writeRun } from "@testfile/core/fixture";
 import { RunHistory } from "@testfile/core";
-import { packRun, s3List, s3Pull, s3Push, type Exec } from "./transfer/index.js";
+import { packRun, s3List, s3Pull, s3Push, type Exec } from "./index.js";
 
 function tempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "testfile-transfer-"));

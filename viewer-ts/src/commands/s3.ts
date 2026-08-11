@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { defaultExec, lineProgress, s3List, s3Pull, s3Push } from "../transfer/index.js";
+import { defaultExec, lineProgress, s3List, s3Pull, s3Push } from "@testfile/sync";
 import { color } from "@testfile/core";
 import {
   commandFailed,

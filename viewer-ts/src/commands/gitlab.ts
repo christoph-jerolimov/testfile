@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { gitlabRunArchives, lineProgress, syncFromGitlab } from "../transfer/index.js";
+import { gitlabRunArchives, lineProgress, syncFromGitlab } from "@testfile/sync";
 import { color, pad } from "@testfile/core";
 import { commandFailed, reportImport, resolveHistoryBase, wantsJson, writeJson } from "./shared.js";
 
