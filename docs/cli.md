@@ -911,6 +911,48 @@ network. It exposes a read-only REST API for other tooling:
 The UI itself lives in the `viewer-web/` workspace (React, bundled with
 esbuild); `serve` picks up its build automatically.
 
+## Talking to an AI assistant
+
+`testfile-viewer mcp` serves the recorded runs over the
+[Model Context Protocol](https://modelcontextprotocol.io), so an assistant
+that speaks MCP — Claude Code, Claude Desktop, an agent of your own — can
+read the history as data instead of parsing terminal output.
+
+```jsonc
+// .mcp.json, or Claude Desktop's config
+{
+  "mcpServers": {
+    "testfile": {
+      "command": "testfile-viewer",
+      "args": ["mcp", "/path/to/your/project"]
+    }
+  }
+}
+```
+
+| Tool | Answers |
+| ---- | ------- |
+| `list_runs` | recent runs with their status and counts; narrows by status, label or variant |
+| `get_run` | one run's full record |
+| `explain_run` | [the digest](#digesting-a-run): what failed, why, what changed — where to start when a run is red |
+| `repro_test` | [the repro bundle](#reproducing-a-failure) for one failure |
+| `get_test_log` | one test's log, whole or its tail |
+| `diff_runs` | what changed between two runs |
+| `list_tests` | every known test with its pass/fail counts and [verdict](#run-history) |
+| `list_flaky` | the tests the flaky rule flags |
+
+**Everything here reads.** There is deliberately no `run_tests` tool: the
+viewer does not run tests, and an assistant that wants to is already
+holding a shell — `testfile start -n <test>`, or
+[`--json-stream`](#streaming-events-while-the-run-happens) to follow a run
+live. Keeping the server read-only means connecting it can't change
+anything.
+
+The transport is stdio, the history is re-read on every call (a run
+recorded while the assistant is connected shows up without a restart), and
+a tool that can't answer says so as a result the model can read rather
+than as a protocol error it can't.
+
 ## Interrupting a run
 
 The first Ctrl+C aborts running tests and shuts down all services through
