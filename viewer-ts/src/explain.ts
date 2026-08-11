@@ -46,6 +46,8 @@ export interface Explain {
     labels?: Record<string, string>;
   };
   counts: Record<string, number>;
+  // What somebody made of this run afterwards, if anybody did.
+  analysis?: { text: string; author?: string; at?: string };
   failures: ExplainFailure[];
   // Failures left out because of --max-failures.
   omittedFailures: number;
@@ -151,6 +153,7 @@ export function explainOf(
       ...(run.labels ? { labels: run.labels } : {}),
     },
     counts,
+    ...(run.analysis ? { analysis: run.analysis } : {}),
     failures,
     omittedFailures: Math.max(0, failed.length - failures.length),
     ...(older && diff
@@ -202,6 +205,17 @@ export function formatExplain(explain: Explain): string {
     .map(([status, n]) => `${n} ${status}`)
     .join(", ");
   out.push(`tests: ${counts || "none recorded"}`);
+
+  // Before the detail, because it is the shortcut past it - but marked as
+  // an opinion, since it is one.
+  if (explain.analysis) {
+    out.push("");
+    out.push(
+      `## analysis (added after the run${explain.analysis.author ? ` by ${explain.analysis.author}` : ""})`,
+    );
+    out.push("");
+    out.push(explain.analysis.text.trimEnd());
+  }
 
   if (explain.previous) {
     const { newlyFailed, fixed, stillFailing, id } = explain.previous;

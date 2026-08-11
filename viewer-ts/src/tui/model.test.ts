@@ -134,6 +134,23 @@ test("a merged run describes its legs and tags every test", () => {
   assert.ok(lines.some((line) => line.startsWith("failed") && line.includes("[platform=windows]")));
 });
 
+test("an analysis is shown with the run, marked as added afterwards", () => {
+  const lines = describeRun(
+    run({
+      analysis: {
+        text: "The port collision, not this change.\nSee ci/migrations.",
+        author: "claude-code",
+      },
+    }),
+  ).map((line) => line.text);
+
+  assert.ok(lines.includes("analysis:  (added after the run by claude-code)"));
+  assert.ok(lines.includes("  The port collision, not this change."));
+  assert.ok(lines.includes("  See ci/migrations."), "every line of it, not only the first");
+  // a run without one says nothing at all about analysis
+  assert.ok(!describeRun(run()).some((line) => line.text.startsWith("analysis:")));
+});
+
 test("a run with recorded start times lays out on a timeline", () => {
   const record = run({
     durationMs: 1000,

@@ -972,6 +972,32 @@ and flag a skill names is verified against the CLIs' own `--help`, so a
 renamed flag fails the build instead of turning the advice into confident
 nonsense.
 
+### Recording what a failure meant
+
+A run says what happened. It cannot say what it *meant* — that three
+failures share one cause, that the flake was a port collision, that the
+red was infrastructure and not the change. Whoever works that out can
+write it into the record, as an optional
+[`analysis`](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md#analysis)
+field on `run.yaml`:
+
+```yaml
+analysis:
+  text: |
+    All three failures come from the port 5432 collision in the parallel
+    group. Not caused by this change.
+  author: claude-code
+  at: 2026-08-01T12:10:00.000Z
+```
+
+`testfile-viewer inspect run`, `explain`, the TUI and the web viewer all
+show it next to the run — **marked as somebody's reading of it, never as a
+result**: a run whose analysis says "this is fine" is still a failed run.
+No runner writes the field and no viewer does either (they are read-only);
+whoever did the reading writes it, preserving the rest of the record.
+[Letting an assistant read the failure](./github-action#letting-an-assistant-read-the-failure)
+shows the CI shape of that loop.
+
 ## Interrupting a run
 
 The first Ctrl+C aborts running tests and shuts down all services through

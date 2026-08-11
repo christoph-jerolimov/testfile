@@ -87,6 +87,15 @@ export function describeRun(run: RunRecord): OutputLine[] {
   if (run.selected.length > 0) {
     lines.push({ text: `selected:  ${run.selected.join(", ")}`, stream: "system" });
   }
+  // Somebody's reading of the run, labelled as one: it sits among facts
+  // and is not one.
+  if (run.analysis) {
+    const who = run.analysis.author ? ` by ${run.analysis.author}` : "";
+    lines.push({ text: `analysis:  (added after the run${who})`, stream: "system" });
+    for (const line of run.analysis.text.trimEnd().split("\n")) {
+      lines.push({ text: `  ${line}`, stream: "system" });
+    }
+  }
   const env = Object.entries(run.env)
     .map(([k, v]) => `${k}=${v}`)
     .join(" ");

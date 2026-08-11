@@ -85,6 +85,16 @@ export interface RunRecord {
   tests: RunRecordTest[];
   services?: RunRecordService[];
   junit?: string;
+  // Somebody's reading of why the run went the way it did, written after
+  // the run. An annotation, never a result: it must not change a status,
+  // a count or a verdict.
+  analysis?: RunRecordAnalysis;
+}
+
+export interface RunRecordAnalysis {
+  text: string;
+  author?: string;
+  at?: string;
 }
 
 // Reads runs/<id>/run.yaml folders (newest first). Runs recorded by very

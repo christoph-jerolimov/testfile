@@ -76,6 +76,17 @@ export function RunDetail({
           ))}
         </div>
       ) : null}
+      {/* Somebody's reading of the run, added after it happened. Marked as
+          an opinion, because it sits next to facts and is not one. */}
+      {run.analysis ? (
+        <div className="analysis">
+          <div className="muted small">
+            analysis, added after the run
+            {run.analysis.author ? ` by ${run.analysis.author}` : ""}
+          </div>
+          <p>{run.analysis.text.trimEnd()}</p>
+        </div>
+      ) : null}
       {/* The run folder itself: the record it was read from, and the JUnit
           report when the run wrote one. */}
       <div className="files">

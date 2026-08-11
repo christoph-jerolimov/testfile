@@ -219,6 +219,32 @@ test("the leaf that broke comes before the groups it broke", () => {
   assert.match(text, /a group: it failed because something under it did/);
 });
 
+test("an analysis someone added is carried and shown as an opinion", () => {
+  const history = historyWith([
+    run(
+      "20260802-120000-bbbb",
+      "2026-08-02T12:00:00.000Z",
+      [{ path: "ci/unit", status: "failed" }],
+      {
+        analysis: {
+          text: "Port 5432 collides between ci/migrations and ci/e2e.\nNot this change.",
+          author: "claude-code",
+          at: "2026-08-02T12:10:00.000Z",
+        },
+      },
+    ),
+  ]);
+  const explain = explainOf(history, history.runs[0]!);
+  assert.equal(explain.analysis?.author, "claude-code");
+
+  const text = formatExplain(explain);
+  assert.match(text, /## analysis \(added after the run by claude-code\)/);
+  assert.match(text, /Port 5432 collides/);
+  // it never becomes a result: the run is still failed, the counts stand
+  assert.match(text, /# run 20260802-120000-bbbb: failed/);
+  assert.match(text, /tests: 1 failed/);
+});
+
 test("the first recorded run has nothing to compare against", () => {
   const history = historyWith([
     run("20260802-120000-bbbb", "2026-08-02T12:00:00.000Z", [
