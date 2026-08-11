@@ -554,6 +554,7 @@ testfile-viewer inspect run 20260801-1046        # one run in detail (id prefix 
 testfile-viewer inspect run <id> --log           # merged stdout+stderr of the run
 testfile-viewer inspect run <id> --log all/e2e   # ... of a single test
 testfile-viewer inspect run <id> --json          # the whole record, for a script
+testfile-viewer repro <id> all/e2e               # everything needed to reproduce one failure
 ```
 
 A history that collects runs from every branch and every CI job gets long,
@@ -603,6 +604,49 @@ or removed from the run, and significant duration changes (more than 100ms
 and more than 20%) of tests that passed in both runs. `--json` writes the
 same lists as `{base, compare, newlyFailed, fixed, stillFailing, added,
 removed, durations}`, which is enough to post a comment from CI.
+
+### Reproducing a failure
+
+A red test in CI is a puzzle assembled from several places: which run,
+which leg of a matrix, what environment, which services were up, what the
+log said. `repro` puts it in one place — and gives the command that reruns
+exactly that test, not the whole suite:
+
+```sh
+testfile-viewer repro 20260801-1146 ci/e2e
+testfile-viewer repro <id> ci/e2e --variant platform=windows   # one leg of a merged run
+testfile-viewer repro <id> ci/e2e --json                       # for a tool or an agent
+```
+
+```
+# reproduce ci/e2e from run 20260801-114600-9f2c
+
+status:    failed (cache miss: src/**: 1 changed file)
+recorded:  2026-08-01T11:46:00.000Z on ci-linux
+labels:    branch=main, pr=42
+matrix:    browser=firefox
+tags:      ci, slow
+
+run it with:
+
+  export DATABASE_URL=postgres://localhost:5432/test
+  testfile start -n ci/e2e -m browser:firefox
+
+services this test needs (status in the recorded run):
+  db — stopped
+
+the end of its log:
+
+  boom: expected 4 to equal 5
+```
+
+Everything comes from the run's own record — the viewer never reruns
+anything and never guesses, so what the run did not record does not
+appear. The environment leaves out what every run sets anyway (`CI`,
+`FORCE_COLOR`, `TESTFILE_OS`): what is left is what was special about
+this one. On a [merged run](#merging-runs) a path has one result per leg;
+`--variant` picks one, and without it a failing leg is chosen, since that
+is the one worth reproducing.
 
 Hunt down flaky tests:
 

@@ -9,6 +9,7 @@ import { registerGithub } from "./commands/github.js";
 import { registerGitlab } from "./commands/gitlab.js";
 import { registerMerge } from "./commands/merge.js";
 import { registerInspect } from "./commands/inspect.js";
+import { registerRepro } from "./commands/repro.js";
 import { registerRuns } from "./commands/runs.js";
 import { registerS3 } from "./commands/s3.js";
 import { registerServe } from "./commands/serve.js";
@@ -22,6 +23,7 @@ program
   .version("0.1.0");
 
 registerInspect(program);
+registerRepro(program);
 registerDiff(program);
 registerMerge(program);
 registerTui(program);
