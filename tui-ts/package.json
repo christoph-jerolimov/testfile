@@ -1,0 +1,35 @@
+{
+  "name": "@testfile/tui",
+  "version": "0.1.0",
+  "description": "The terminal UI over recorded Testfile runs (Ink); the only package that needs a renderer",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -b tsconfig.json",
+    "pretest": "npm run build",
+    "test": "node --test \"dist/**/*.test.js\"",
+    "screens:update": "npm run build && node dist/screens-update.js"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^9.1.2",
+    "@testfile/core": "0.1.0",
+    "ink": "^7.1.1",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.18",
+    "typescript": "^7.0.2"
+  }
+}

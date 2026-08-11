@@ -19,7 +19,7 @@ export function registerTui(program: Command): void {
         }
         const base = resolveHistoryBase(path);
         const history = new RunHistory(base);
-        const { startTui } = await import("../tui/index.js");
+        const { startTui } = await import("@testfile/tui");
         const tui = startTui(history, {
           baseDir: base,
           name: options.name,

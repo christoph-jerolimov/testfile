@@ -3,8 +3,8 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "jsx": "react-jsx",
     "strict": true,
+    "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
     "types": [
@@ -21,18 +21,6 @@
   "references": [
     {
       "path": "../core-ts"
-    },
-    {
-      "path": "../sync-ts"
-    },
-    {
-      "path": "../mcp-ts"
-    },
-    {
-      "path": "../tui-ts"
-    },
-    {
-      "path": "../web-ts"
     }
   ]
 }

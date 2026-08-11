@@ -3,7 +3,7 @@
 // plus a rasterized screens/<name>-<theme>.png - the images are for humans.
 // Run via:
 //
-//   npm run screens:update --workspace viewer-ts
+//   npm run screens:update --workspace tui-ts
 //
 // The PNGs render through the same pinned Playwright Chromium the web
 // viewer's screenshots use; TESTFILE_SCREENS_CHROMIUM points at an existing
@@ -15,7 +15,7 @@ import { captureScreens } from "./screens.js";
 
 const THEMES: Theme[] = ["dark", "light"];
 
-const dir = fileURLToPath(new URL("../../screens/", import.meta.url));
+const dir = fileURLToPath(new URL("../screens/", import.meta.url));
 mkdirSync(dir, { recursive: true });
 const screens = await captureScreens();
 

@@ -107,13 +107,48 @@ test:
             - sync-ts/src/**
             - sync-ts/package.json
             - sync-ts/tsconfig.json
+        # An assistant's view of the history: no external dependency at
+        # all, the MCP wire is written here.
+        - name: mcp-ts
+          tags: [fast, unit]
+          needs: [core-ts]
+          command: npm test --workspace mcp-ts
+          inputs:
+            - core-ts/src/**
+            - mcp-ts/src/**
+            - mcp-ts/package.json
+            - mcp-ts/tsconfig.json
+        # The only package that needs a renderer (Ink, React); its screen
+        # tests compare against the committed .ans files.
+        - name: tui-ts
+          tags: [fast, unit]
+          needs: [core-ts]
+          command: npm test --workspace tui-ts
+          inputs:
+            - core-ts/src/**
+            - tui-ts/src/**
+            - tui-ts/screens/**
+            - tui-ts/package.json
+            - tui-ts/tsconfig.json
+        - name: web-ts
+          tags: [fast, unit]
+          needs: [core-ts]
+          command: npm test --workspace web-ts
+          inputs:
+            - core-ts/src/**
+            - web-ts/src/**
+            - web-ts/package.json
+            - web-ts/tsconfig.json
         - name: viewer-ts
           tags: [fast, unit]
-          needs: [core-ts, sync-ts]
+          needs: [core-ts, sync-ts, mcp-ts, tui-ts, web-ts]
           command: npm test --workspace viewer-ts
           inputs:
             - core-ts/src/**
             - sync-ts/src/**
+            - mcp-ts/src/**
+            - tui-ts/src/**
+            - web-ts/src/**
             - viewer-ts/src/**
             - viewer-ts/package.json
             - viewer-ts/tsconfig.json

@@ -10,21 +10,19 @@
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -b tsconfig.json",
     "pretest": "npm run build",
-    "test": "node --test \"dist/**/*.test.js\"",
-    "screens:update": "npm run build && node dist/tui/screens-update.js"
+    "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
     "@testfile/core": "0.1.0",
+    "@testfile/mcp": "0.1.0",
     "@testfile/sync": "0.1.0",
-    "@tanstack/react-table": "^9.1.2",
+    "@testfile/tui": "0.1.0",
+    "@testfile/web": "0.1.0",
     "commander": "^15.0.0",
-    "ink": "^7.1.1",
-    "react": "^19.2.8",
     "yaml": "^2.8.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.2",
-    "@types/react": "^19.2.18",
     "typescript": "^7.0.2",
     "@playwright/test": "1.62.1"
   }
