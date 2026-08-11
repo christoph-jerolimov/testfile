@@ -179,6 +179,19 @@ Show one recorded run in detail — a unique id prefix is enough.
 | `--log [test-path]` | Print the run's merged log, or a single test's log. |
 | `--json [file]` | Write the full run record as JSON, to a file or (without a value) stdout. Cannot be combined with `--log`, which is raw text. |
 
+### `testfile-viewer repro <run> <test> [path]`
+
+Print everything needed to [reproduce one recorded failure](./cli#reproducing-a-failure):
+the run it happened in, the test's status and reason, the command that
+reruns exactly that test, the environment to run it in, the services it
+needs and the end of its log.
+
+| Option | Description |
+| ------ | ----------- |
+| `--variant <key=value>` | Which leg of a [merged run](#testfile-viewer-merge-run) to reproduce, e.g. `platform=linux`. Without it, a failing leg is chosen. *(repeatable)* |
+| `--log-lines <n>` | How much of the log to include (default 40). |
+| `--json [file]` | Write the bundle as JSON, to a file or (without a value) stdout. The JSON lists every artifact; the text form previews the first ten. |
+
 ### `testfile-viewer diff <older> <newer> [path]`
 
 Compare two recorded runs (older id first, unique prefixes are enough):
