@@ -5,6 +5,7 @@
 import { Command } from "commander";
 import { registerArchive } from "./commands/archive.js";
 import { registerDiff } from "./commands/diff.js";
+import { registerExplain } from "./commands/explain.js";
 import { registerGithub } from "./commands/github.js";
 import { registerGitlab } from "./commands/gitlab.js";
 import { registerMerge } from "./commands/merge.js";
@@ -23,6 +24,7 @@ program
   .version("0.1.0");
 
 registerInspect(program);
+registerExplain(program);
 registerRepro(program);
 registerDiff(program);
 registerMerge(program);
