@@ -1,0 +1,30 @@
+{
+  "name": "@testfile/mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server over recorded Testfile runs: read-only tools for an AI assistant",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -b tsconfig.json",
+    "pretest": "npm run build",
+    "test": "node --test \"dist/**/*.test.js\""
+  },
+  "dependencies": {
+    "@testfile/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { findViewerDir, ViewerServer } from "../serve.js";
+import { findViewerDir, ViewerServer } from "@testfile/web";
 import { color } from "@testfile/core";
 import { commandFailed, resolveHistoryBase } from "./shared.js";
 

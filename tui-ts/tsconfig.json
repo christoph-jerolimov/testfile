@@ -21,18 +21,6 @@
   "references": [
     {
       "path": "../core-ts"
-    },
-    {
-      "path": "../sync-ts"
-    },
-    {
-      "path": "../mcp-ts"
-    },
-    {
-      "path": "../tui-ts"
-    },
-    {
-      "path": "../web-ts"
     }
   ]
 }

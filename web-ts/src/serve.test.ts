@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { writeRun } from "@testfile/core/fixture";
-import { safeRelative, ViewerServer } from "./serve.js";
+import { safeRelative, ViewerServer } from "./index.js";
 
 function tempDir(): string {
   const dir = mkdtempSync(join(tmpdir(), "testfile-viewer-serve-"));
