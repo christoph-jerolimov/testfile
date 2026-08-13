@@ -233,19 +233,71 @@ aborted and the run fails.
 
 ### Where `exec` runs
 
-A **container** service is probed **from the inside** — `podman exec` /
-`docker exec`, or `kubectl exec` on the kubernetes engine. That is where the
-probe usually lives: `pg_isready` ships in the postgres image, and nothing
-has to be installed on the machine running the tests. Address the container
-port (`5432` above), not the published one.
+Most services ship their own readiness probe, and it lives *in the image* —
+`pg_isready` in `postgres`, `redis-cli` in `redis`. So a container service is
+probed **from the inside**, and only a service that has no inside is probed
+on the machine running the tests:
 
-A service started as a plain **process** has no inside, so its probe runs in
-a host shell, in the service's env and workdir.
+| the service is… | the command runs… | with… |
+| --------------- | ----------------- | ----- |
+| a `container:` | inside that container — `podman exec` / `docker exec`, or `kubectl exec` into the pod on the [kubernetes engine](#services-on-a-kubernetes-cluster) | the image's filesystem, user and `WORKDIR`; the image's environment plus `container.env`; the ports the service really listens on |
+| a `container:` with `host: true` | on the machine running the tests | the project's files, the service's `workdir` and `env`, and the **published** ports |
+| a `command:` or `script:` (a plain process) | on the machine running the tests | the same; `host:` is accepted but has nothing to opt out of |
 
-To probe a container service from the outside anyway — a host tool, or a
-port that is only published — set `host: true`:
+Both forms are a shell line handed to `sh -c`, so `&&`, pipes and quoting all
+work as usual — and on Windows a host-side probe needs an `sh` on `PATH`, the
+same one your tests use ([`testfile doctor`](./cli#checking-the-machine)
+checks for it).
+
+#### A container probes itself
+
+Nothing has to be installed locally, and the command names the port the
+service listens on inside the container — `5432`, not the random published
+one:
 
 ```yaml
+ports:
+  db: random
+services:
+  postgres:
+    container:
+      image: docker.io/library/postgres:16
+      ports:
+        - "${{ ports.db }}:5432"
+      env:
+        POSTGRES_PASSWORD: test
+    ready:
+      # -h 127.0.0.1 checks the TCP listener the tests will use; without it
+      # pg_isready asks the unix socket, which is ready a moment earlier
+      exec: pg_isready -h 127.0.0.1 -p 5432 -U postgres
+      timeout: 60s
+```
+
+The usual one-liners, all of which run in the image and need nothing on the
+machine running the tests:
+
+| image | probe |
+| ----- | ----- |
+| `postgres` | `pg_isready -h 127.0.0.1 -p 5432` |
+| `redis` | `redis-cli ping` |
+| `mysql`, `mariadb` | `mysqladmin ping -h 127.0.0.1 --silent` |
+| `mongo` | `mongosh --quiet --eval "db.runCommand({ ping: 1 }).ok"` |
+| `rabbitmq` | `rabbitmq-diagnostics -q ping` |
+| `elasticsearch` | `curl -fsS localhost:9200/_cluster/health` |
+
+These are what those images ship today, not a promise — a slimmed-down image
+may not have the client at all. `tcp:` asks nothing of the image and is the
+better check whenever "the port answers" is really what you mean.
+
+#### Probing from the outside with `host: true`
+
+Set `host: true` when the check belongs on this machine instead — a tool
+installed here, a client the image does not contain, or something that is
+only reachable through the published port:
+
+```yaml
+ports:
+  s3: random
 services:
   minio:
     container:
@@ -258,10 +310,81 @@ services:
         host: true
 ```
 
-The command is a shell line either way (`sh -c`), and a single attempt is
-capped at 10s — a probe that hangs is killed and retried on the next
-interval. `testfile doctor` only checks the host for probes that actually
-run there.
+It is also the way out when the image has **no shell**: `sh -c` has to exist
+in there, so distroless and `scratch`-based images cannot be entered at all.
+Probe those from the outside, or use `tcp`/`http`, which never enter the
+container:
+
+```yaml
+    ready:
+      tcp: ${{ ports.api }} # no shell needed anywhere
+```
+
+With the kubernetes engine the difference is a machine, not just a namespace:
+the in-container probe executes **in the cluster**, while `host: true` runs
+next to your tests and reaches the pod only through the forwarded
+`127.0.0.1` port.
+
+#### Templates resolve the same either way
+
+`${{ ports.x }}`, `${{ env.x }}` and `${{ matrix.x }}` are substituted by the
+runner *before* the command is handed over, so they mean the same thing in
+both places — which is exactly the trap. `${{ ports.db }}` is the published
+port on the host side, and inside the container nothing listens on it:
+
+```yaml
+    ready:
+      # ✗ the published port - inside the container nothing listens there
+      exec: pg_isready -p ${{ ports.db }}
+```
+
+```yaml
+    ready:
+      # ✓ the port the service itself listens on
+      exec: pg_isready -p 5432
+```
+
+Environment variables are not shared between the two sides. Inside, the
+command sees what the container process sees: the image's own variables plus
+`container.env`. Outside, it sees the run's environment plus the service's
+`env:` — the same one a `command:` service is started with.
+
+#### What counts as ready
+
+Exit code `0` means ready; anything else means *not yet* and is retried on
+the next `interval` — a failing probe is normal while a service starts and is
+never an error by itself. The run only fails when `timeout` expires (the
+clock starts after `delay`, so the longest wait is `delay + timeout`), which
+reports `service "db": not ready after 60s`, or when the service dies first,
+which reports `exited before becoming ready`.
+
+A single attempt is capped at **10s**. One that hangs is killed and retried,
+so a wedged probe costs an interval instead of the whole run.
+
+The probe's own output is discarded — neither stdout nor stderr reaches the
+service log, which stays the service's. If a probe is not behaving, run the
+same line by hand (`podman exec <container> sh -c '…'`) rather than looking
+for it in the log.
+
+#### `doctor` follows, `stop.command` does not
+
+`testfile doctor` looks up the executables a Testfile names, but only for
+probes that actually run here: an in-container probe is skipped, one with
+`host: true` is checked like any other command.
+
+`stop.command` is *not* symmetrical — it always runs on the machine running
+the tests, because it usually operates on the container rather than in it.
+
+#### Coming from docker-compose, or from an older Testfile
+
+A compose `healthcheck` runs inside the container, so
+[`testfile init`](./getting-started#1-create-a-testfile) carries it over
+unchanged, container port and all.
+
+Testfiles written before this rule probed containers through the published
+port and needed the tool installed locally. Either aim the command at the
+container port (usually shorter, and it stops depending on the machine), or
+add `host: true` to keep it exactly as it was.
 
 ## Graceful shutdown
 
