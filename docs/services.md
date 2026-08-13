@@ -218,17 +218,50 @@ ready:
   log:
     pattern: ready to accept connections
     stream: any
-  exec: pg_isready -h localhost -p ${{ ports.db }}
+  exec: pg_isready -h localhost -p 5432
   delay: 1s        # wait before the first check
   interval: 500ms  # poll interval (default 1s)
   timeout: 60s     # give up after this (default 30s), failing the run
 ```
 
 Set any combination of `http`, `tcp`, `log` and `exec` — all configured
-checks must pass. `exec` runs a probe command (in the service's env and
-workdir) until it exits with code 0, which is ideal for tools that ship
-their own readiness probe like `pg_isready` or `redis-cli ping`. If the service exits before becoming ready (or dies later while tests
-still depend on it), the dependent tests are aborted and the run fails.
+checks must pass. `exec` runs a probe command until it exits with code 0,
+which is ideal for tools that ship their own readiness probe like
+`pg_isready` or `redis-cli ping`. If the service exits before becoming ready
+(or dies later while tests still depend on it), the dependent tests are
+aborted and the run fails.
+
+### Where `exec` runs
+
+A **container** service is probed **from the inside** — `podman exec` /
+`docker exec`, or `kubectl exec` on the kubernetes engine. That is where the
+probe usually lives: `pg_isready` ships in the postgres image, and nothing
+has to be installed on the machine running the tests. Address the container
+port (`5432` above), not the published one.
+
+A service started as a plain **process** has no inside, so its probe runs in
+a host shell, in the service's env and workdir.
+
+To probe a container service from the outside anyway — a host tool, or a
+port that is only published — set `host: true`:
+
+```yaml
+services:
+  minio:
+    container:
+      image: docker.io/minio/minio
+      ports:
+        - "${{ ports.s3 }}:9000"
+    ready:
+      exec:
+        command: curl -fsS http://localhost:${{ ports.s3 }}/minio/health/live
+        host: true
+```
+
+The command is a shell line either way (`sh -c`), and a single attempt is
+capped at 10s — a probe that hangs is killed and retried on the next
+interval. `testfile doctor` only checks the host for probes that actually
+run there.
 
 ## Graceful shutdown
 

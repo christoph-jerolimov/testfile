@@ -139,7 +139,9 @@ nothing about whether the run works:
 - **commands that only exist at run time** — a first word containing a
   `${{ … }}` template, a `$VAR`, a substitution or quotes,
 - **bodies that run in a container** (a `container:` on the test or an
-  ancestor): those executables live in the image, not on this machine,
+  ancestor) and the [`ready.exec` probe of a container service](./services#where-exec-runs),
+  which runs inside that container unless it sets `host: true`: those
+  executables live in the image, not on this machine,
 - **`script:` blocks and tests with a custom `shell:`** — a shell program is
   not a command, and another shell has its own builtins.
 

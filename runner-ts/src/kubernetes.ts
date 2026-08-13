@@ -24,6 +24,7 @@
 import { spawn } from "node:child_process";
 import type { ContainerDef } from "./model.js";
 import type { OutputBuffer } from "./output.js";
+import { EXEC_TIMEOUT_MS } from "./ready.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
 import { sleep } from "./util.js";
 
@@ -559,6 +560,32 @@ export class KubernetesService {
           this.output.system("port-forward keeps dropping, giving up");
           this.onDeath();
         }
+      });
+    });
+  }
+
+  // Runs a readiness probe inside the pod's container. Streamed rather than
+  // captured, because a probe that hangs has to be killable - the poll loop
+  // gives up on this attempt and tries again next interval.
+  exec(command: string, timeoutMs = EXEC_TIMEOUT_MS): Promise<boolean> {
+    if (!this.ids || this.stopping || this.dead) return Promise.resolve(false);
+    const stream = this.runner.stream([
+      ...this.base,
+      "exec",
+      this.ids.pod,
+      "--",
+      "sh",
+      "-c",
+      command,
+    ]);
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        stream.kill();
+        resolve(false);
+      }, timeoutMs);
+      stream.onExit((code) => {
+        clearTimeout(timer);
+        resolve(code === 0);
       });
     });
   }

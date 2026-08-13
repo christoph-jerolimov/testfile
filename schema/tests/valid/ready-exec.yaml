@@ -2,7 +2,10 @@
 version: 0
 ports:
   db: random
+  s3: random
 services:
+  # A container service probes itself from the inside, so the image's own
+  # pg_isready is used and the container port applies.
   postgres:
     container:
       image: docker.io/library/postgres:16
@@ -11,9 +14,20 @@ services:
       env:
         POSTGRES_PASSWORD: test
     ready:
-      exec: pg_isready -h localhost -p ${{ ports.db }}
+      exec: pg_isready -h localhost -p 5432
       interval: 500ms
       timeout: 60s
+  # host: true probes from the machine running the tests instead, against
+  # the published port.
+  minio:
+    container:
+      image: docker.io/minio/minio
+      ports:
+        - "${{ ports.s3 }}:9000"
+    ready:
+      exec:
+        command: curl -fsS http://localhost:${{ ports.s3 }}/minio/health/live
+        host: true
   cache:
     command: redis-server --port 6390
     ready:

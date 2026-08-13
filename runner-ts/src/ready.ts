@@ -5,13 +5,21 @@ import type { OutputBuffer } from "./output.js";
 import { resolveTemplate, type Scopes } from "./template.js";
 import { formatMs, parseDurationMs, sleep } from "./util.js";
 
+// How long one exec attempt may take, wherever it runs. A probe that hangs
+// must not hold up the poll loop; the next interval tries again.
+export const EXEC_TIMEOUT_MS = 10_000;
+
 export interface WaitReadyOptions {
   output: OutputBuffer;
   scopes: Scopes;
   signal: AbortSignal;
   where: string;
-  // Working directory for exec checks.
+  // Working directory for exec checks that run on the host.
   cwd?: string;
+  // Runs an exec check inside the service's own container, resolving to
+  // whether it exited 0. Set only for container services; `exec.host: true`
+  // bypasses it and uses the host shell.
+  execInContainer?: (command: string) => Promise<boolean>;
   // Log checks only match lines appended at or after this index.
   logFrom?: number;
   // Lets the wait fail fast when the service process already exited.
@@ -84,9 +92,15 @@ function checkTcp(def: NonNullable<ReadyDef["tcp"]>, opts: WaitReadyOptions): Pr
   });
 }
 
+// The probe a service ships with usually lives in its own image, not on the
+// machine running the tests - so for a container service the command runs
+// inside the container, and only `host: true` puts it back in a host shell.
 function checkExec(def: NonNullable<ReadyDef["exec"]>, opts: WaitReadyOptions): Promise<boolean> {
   const spec = typeof def === "string" ? { command: def } : def;
   const command = resolveTemplate(spec.command, opts.scopes, opts.where);
+  if (opts.execInContainer && spec.host !== true) {
+    return opts.execInContainer(command).catch(() => false);
+  }
   return new Promise((resolve) => {
     const child = spawn("sh", ["-c", command], {
       cwd: opts.cwd,
@@ -97,7 +111,7 @@ function checkExec(def: NonNullable<ReadyDef["exec"]>, opts: WaitReadyOptions): 
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
       resolve(false);
-    }, 10_000);
+    }, EXEC_TIMEOUT_MS);
     child.once("error", () => {
       clearTimeout(timer);
       resolve(false);

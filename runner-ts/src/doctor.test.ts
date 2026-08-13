@@ -313,6 +313,13 @@ test("commandsUsed collects tests, hooks and services with their directory", () 
       {
         services: {
           db: { command: "postgres -D data", ready: { exec: "pg_isready" } },
+          // probed from inside its own image, so nothing is expected here
+          cache: { container: { image: "redis" }, ready: { exec: "redis-cli ping" } },
+          // ... unless the probe explicitly belongs on this machine
+          minio: {
+            container: { image: "minio" },
+            ready: { exec: { command: "mc ready local", host: true } },
+          },
         },
       },
     ),
@@ -322,6 +329,7 @@ test("commandsUsed collects tests, hooks and services with their directory", () 
     uses.map((use) => `${use.token} @ ${use.dir}`),
     [
       `./run.sh @ ${resolve(REPO, "app/e2e")}`,
+      `mc @ ${REPO}`,
       `pg_isready @ ${REPO}`,
       `postgres @ ${REPO}`,
       `prisma @ ${resolve(REPO, "app")}`,

@@ -39,8 +39,10 @@ test:
                   POSTGRES_DB: app_test
               ready:
                 # wait until the server really accepts connections, not
-                # just until the container started
-                exec: pg_isready -h 127.0.0.1 -p ${{ ports.db }} -U postgres
+                # just until the container started. The probe runs inside
+                # the container, so it uses the image's own pg_isready and
+                # the container port - nothing has to be installed here
+                exec: pg_isready -h 127.0.0.1 -p 5432 -U postgres
                 interval: 500ms
                 timeout: 60s
           env:

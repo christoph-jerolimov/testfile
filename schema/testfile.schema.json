@@ -699,7 +699,7 @@
           ]
         },
         "exec": {
-          "description": "Ready when this shell command exits with code 0, e.g. pg_isready or redis-cli ping. Runs in the service's environment and working directory.",
+          "description": "Ready when this shell command exits with code 0, e.g. pg_isready or redis-cli ping. A container service runs it inside its own container; a process service runs it in the service's environment and working directory. Set 'host: true' to always use a host shell.",
           "oneOf": [
             {
               "type": "string",
@@ -715,6 +715,11 @@
                 "command": {
                   "type": "string",
                   "minLength": 1
+                },
+                "host": {
+                  "description": "Run the command in a host shell instead of inside the container. Ignored for services without a container, which always run on the host.",
+                  "type": "boolean",
+                  "default": false
                 }
               }
             }

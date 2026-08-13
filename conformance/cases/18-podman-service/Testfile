@@ -10,6 +10,9 @@ services:
       command: ["httpd", "-f", "-p", "8080"]
     ready:
       tcp: ${{ ports.web }}
+      # an exec probe on a container service runs inside that container,
+      # where busybox's own httpd lives - this machine has no /bin/httpd
+      exec: test -x /bin/httpd
       timeout: 90s
 test:
   name: root
@@ -30,5 +33,21 @@ test:
             command: ["sh", "-c", "echo logger-ready; sleep 60"]
           ready:
             log: logger-ready
+            timeout: 90s
+      command: "true"
+    # host: true sends the probe back to this machine: it runs in the
+    # service's working directory, which is where this Testfile is - the
+    # container has no Testfile at its own working directory
+    - name: probe-from-the-host
+      services:
+        outside:
+          container:
+            image: docker.io/library/busybox:1.36
+            command: ["sh", "-c", "sleep 60"]
+          ready:
+            exec:
+              command: test -f Testfile
+              host: true
+            interval: 100ms
             timeout: 90s
       command: "true"
