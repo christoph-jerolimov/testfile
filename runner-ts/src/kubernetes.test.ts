@@ -177,9 +177,13 @@ function podJson(phase: string, extra?: object): KubectlExecResult {
 
 class FakeKubectl implements KubectlRunner {
   calls: string[][] = [];
+  streamCalls: string[][] = [];
   applied: unknown[] = [];
   logStreams: FakeStream[] = [];
   forwardStreams: FakeStream[] = [];
+  execStreams: FakeStream[] = [];
+  // What an `exec` stream reports; undefined leaves the probe hanging.
+  execExit: number | null | undefined = 0;
   // Whether port-forward streams announce their pairs (a healthy kubectl).
   announceForwards = true;
   // Answers for successive `get pod` calls; the last repeats.
@@ -207,7 +211,13 @@ class FakeKubectl implements KubectlRunner {
 
   stream(args: string[]): KubectlStream {
     const stream = new FakeStream();
+    this.streamCalls.push(args);
     if (args.includes("logs")) this.logStreams.push(stream);
+    if (args.includes("exec")) {
+      this.execStreams.push(stream);
+      const code = this.execExit;
+      if (code !== undefined) queueMicrotask(() => stream.emitExit(code));
+    }
     if (args.includes("port-forward")) {
       this.forwardStreams.push(stream);
       // kubectl announces each live pair on stdout
@@ -379,6 +389,25 @@ test("stop deletes the pod and its Service without waiting, with the grace perio
   assert.ok(kubectl.logStreams[0].killed && kubectl.forwardStreams[0].killed);
 });
 
+test("a readiness probe is executed inside the pod, and a hung one is killed", async () => {
+  const kubectl = new FakeKubectl();
+  const { service } = makeService(kubectl);
+  await service.start(1);
+
+  assert.equal(await service.exec("pg_isready -p 5432"), true);
+  const args = kubectl.streamCalls.at(-1)!;
+  assert.ok(args[0] === "exec" && args[1].startsWith("tf-db-"), `unexpected args: ${args}`);
+  assert.deepEqual(args.slice(2), ["--", "sh", "-c", "pg_isready -p 5432"]);
+
+  kubectl.execExit = 1;
+  assert.equal(await service.exec("pg_isready -p 5432"), false, "a non-zero exit is not ready");
+
+  // a probe that never finishes must not stall the poll loop
+  kubectl.execExit = undefined;
+  assert.equal(await service.exec("sleep 60", 20), false);
+  assert.ok(kubectl.execStreams.at(-1)!.killed, "the hung probe was killed");
+});
+
 // --- through the real ServiceInstance -------------------------------------
 // The engine is the run's choice now, so these runs choose kubernetes the
 // way a user would: configuration, not a field in the service.
@@ -417,6 +446,36 @@ test("a kubernetes service goes ready through the normal readiness machinery", a
   await instance.stop();
   assert.equal(instance.status, "stopped");
   assert.ok(kubectl.calls.some((c) => c.includes("delete")));
+});
+
+test("a container service's exec probe goes into the pod; host: true stays outside", async () => {
+  configureEngine("kubernetes", "test");
+  after(() => setEngineProbeForTests());
+  const scopes = { env: { PATH: process.env.PATH ?? "" }, ports: {}, matrix: {} };
+
+  const inside = new FakeKubectl();
+  const podProbe = new ServiceInstance(
+    "db",
+    { container: { image: "img" }, ready: { exec: "pg_isready", interval: "5ms", timeout: "2s" } },
+    inside,
+  );
+  await podProbe.start(scopes, process.cwd(), new AbortController().signal);
+  assert.equal(podProbe.status, "ready");
+  assert.deepEqual(inside.streamCalls.at(-1)!.slice(-4), ["--", "sh", "-c", "pg_isready"]);
+
+  const outside = new FakeKubectl();
+  const hostProbe = new ServiceInstance(
+    "db",
+    {
+      container: { image: "img" },
+      // true on this machine, and the pod is never asked
+      ready: { exec: { command: "exit 0", host: true }, interval: "5ms", timeout: "2s" },
+    },
+    outside,
+  );
+  await hostProbe.start(scopes, process.cwd(), new AbortController().signal);
+  assert.equal(hostProbe.status, "ready");
+  assert.equal(outside.execStreams.length, 0, "the probe never entered the pod");
 });
 
 test("a pod that dies while ready fails the instance and aborts dependents", async () => {

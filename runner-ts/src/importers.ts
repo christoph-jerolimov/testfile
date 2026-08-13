@@ -110,7 +110,10 @@ export function fromDockerCompose(text: string): Imported {
       : Object.keys(service.depends_on ?? {});
     if (depends.length > 0) def.needs = depends;
 
-    // healthcheck -> readiness; otherwise wait for the published port
+    // healthcheck -> readiness; otherwise wait for the published port.
+    // A compose healthcheck runs inside the container, which is exactly
+    // where `ready.exec` on a container service runs, so it carries over
+    // unchanged - container ports and all.
     const health = healthcheckCommand(service.healthcheck?.test);
     if (health) {
       def.ready = { exec: health, timeout: "60s" };

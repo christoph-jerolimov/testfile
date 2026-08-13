@@ -433,10 +433,23 @@ service and aborts the dependent tests.
 | `http` | string or object | Ready when the URL answers. String form: URL, any 2xx passes. Object form: `url` (required), `method` (default `GET`), `status` (default: any 2xx). A single attempt is capped at 5s. |
 | `tcp`  | value or object  | Ready when a TCP connect succeeds. Plain form: a port on localhost (number or template string). Object form: `host` (default `localhost`), `port`. A single connect attempt is capped at 2s. |
 | `log`  | string or object | Ready when the service output matches a regular expression. String form: pattern, matched on both streams. Object form: `pattern` (required), `stream` (`stdout`, `stderr`, `any`; default `any`). |
-| `exec` | string or object | Ready when the shell command exits with code 0 (e.g. `pg_isready`, `redis-cli ping`). Runs in the service's environment and working directory; a single attempt is capped at 10s. |
+| `exec` | string or object | Ready when the shell command exits with code 0 (e.g. `pg_isready`, `redis-cli ping`). String form: the command. Object form: `command` (required), `host` (default `false`). A single attempt is capped at 10s. Where it runs is defined below. |
 | `delay`    | duration | Wait before the first check. |
 | `interval` | duration | Poll interval. Default `1s`. |
 | `timeout`  | duration | Overall deadline. Default `30s`. |
+
+An `exec` check on a service with `container` runs **inside that container**
+(the engine's own `exec`), because the probe a service ships with lives in
+its image rather than on the machine running the tests. Such a command
+therefore addresses the container's ports, not the published ones. On a
+service without `container` there is no inside, and the command runs in a
+shell on the machine running the tests, in the service's environment and
+working directory.
+
+`host: true` forces the second form for a container service as well, for
+probes that belong outside — a tool installed on the machine, or a port
+reachable only through the published mapping. It has no effect on a service
+without a container.
 
 ### Stopping (`stop`)
 

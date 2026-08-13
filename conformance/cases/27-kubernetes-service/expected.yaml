@@ -4,8 +4,8 @@ spec:
   - Readiness (ready)
 # A service as a pod on a Kubernetes cluster: the runner applies the
 # manifests, follows the pod to Running, forwards the declared port to
-# localhost and the test talks to it there. Skipped where kubectl has no
-# reachable cluster.
+# localhost and the test talks to it there. The exec readiness probe runs
+# inside the pod. Skipped where kubectl has no reachable cluster.
 requires: [kubectl]
 env:
   TESTFILE_ENGINE: kubernetes

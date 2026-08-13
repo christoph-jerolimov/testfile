@@ -13,7 +13,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
-import type { ReadyDef, ServiceDef, TestDef, TestfileDoc } from "./model.js";
+import type { ServiceDef, TestDef, TestfileDoc } from "./model.js";
 
 export type CheckStatus = "ok" | "warn" | "fail";
 
@@ -260,9 +260,14 @@ function isPathLike(token: string): boolean {
   return token.includes("/") || token.includes("\\");
 }
 
-function readyExec(ready: ReadyDef | undefined): string | undefined {
-  if (!ready?.exec) return undefined;
-  return typeof ready.exec === "string" ? ready.exec : ready.exec.command;
+// The readiness probe, but only when it runs on this machine. A container
+// service probes itself from the inside unless it asks for `host: true`, and
+// that command lives in the image rather than on any PATH here.
+function hostReadyExec(service: ServiceDef): string | undefined {
+  const exec = service.ready?.exec;
+  if (!exec) return undefined;
+  if (typeof exec === "string") return service.container ? undefined : exec;
+  return service.container && exec.host !== true ? undefined : exec.command;
 }
 
 // Every executable the Testfile names, with the directory a relative path
@@ -279,8 +284,7 @@ export function commandsUsed(doc: TestfileDoc, baseDir: string): CommandUse[] {
       const where = `service ${name}`;
       const serviceDir = service.workdir ? resolve(dir, service.workdir) : dir;
       if (!service.container) add(service.command, serviceDir, where);
-      // the readiness probe runs on the host even for a container service
-      add(readyExec(service.ready), serviceDir, where);
+      add(hostReadyExec(service), serviceDir, where);
       add(service.stop?.command, serviceDir, where);
     }
   };

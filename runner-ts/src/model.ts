@@ -132,7 +132,9 @@ export interface ReadyDef {
   http?: string | { url: string; method?: string; status?: number };
   tcp?: number | string | { host?: string; port: number | string };
   log?: string | { pattern: string; stream?: "stdout" | "stderr" | "any" };
-  exec?: string | { command: string };
+  // A container service probes itself from the inside; host: true runs the
+  // command in a host shell instead.
+  exec?: string | { command: string; host?: boolean };
   delay?: Duration;
   interval?: Duration;
   timeout?: Duration;

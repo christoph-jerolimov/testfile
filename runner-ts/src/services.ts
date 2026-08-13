@@ -4,7 +4,7 @@ import { resolve as resolvePath } from "node:path";
 import { KubernetesService, type KubectlRunner } from "./kubernetes.js";
 import type { ContainerDef, ServiceDef } from "./model.js";
 import { OutputBuffer } from "./output.js";
-import { waitReady } from "./ready.js";
+import { EXEC_TIMEOUT_MS, waitReady } from "./ready.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
 import { parseDurationMs } from "./util.js";
 
@@ -263,6 +263,9 @@ export class ServiceInstance extends EventEmitter {
         cwd: this.cwd,
         logFrom,
         isRunning: () => !this.exited,
+        // A container brings its own client tools; the machine running the
+        // tests usually does not. Process services have no inside to run in.
+        execInContainer: this.def.container ? (cmd) => this.execInContainer(cmd) : undefined,
       });
       if (this.status === "starting") this.setStatus("ready");
     } catch (err) {
@@ -273,6 +276,32 @@ export class ServiceInstance extends EventEmitter {
       await this.stop().catch(() => {});
       throw new Error(`${where}: ${message}`);
     }
+  }
+
+  // Runs a readiness probe inside this service's container: `<engine> exec`
+  // for podman and docker, `kubectl exec` for a pod. A probe that hangs is
+  // killed so the poll loop keeps its cadence.
+  private execInContainer(command: string): Promise<boolean> {
+    if (this.k8s) return this.k8s.exec(command);
+    if (!this.engine || !this.containerId) return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const child = spawn(this.engine!, ["exec", this.containerId!, "sh", "-c", command], {
+        cwd: this.cwd,
+        stdio: "ignore",
+      });
+      const timer = setTimeout(() => {
+        child.kill("SIGKILL");
+        resolve(false);
+      }, EXEC_TIMEOUT_MS);
+      child.once("error", () => {
+        clearTimeout(timer);
+        resolve(false);
+      });
+      child.once("close", (code) => {
+        clearTimeout(timer);
+        resolve(code === 0);
+      });
+    });
   }
 
   private startProcess(scopes: Scopes, where: string): void {

@@ -14,6 +14,9 @@ services:
       command: ["httpd", "-f", "-p", "8080"]
     ready:
       tcp: ${{ ports.web }}
+      # an exec probe on a container service runs inside it - here through
+      # `kubectl exec` into the pod, where busybox's own httpd lives
+      exec: test -x /bin/httpd
       timeout: 120s
 test:
   name: root

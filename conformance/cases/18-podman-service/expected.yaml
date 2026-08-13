@@ -3,8 +3,9 @@ spec:
   - Engine selection
   - Readiness (ready)
 # Container services via podman: a run-level service with a published
-# random port (tcp readiness + reachable from a test) and a test-scoped
-# container with a log readiness check. Skipped where podman is missing.
+# random port (tcp + in-container exec readiness, reachable from a test), a
+# test-scoped container with a log readiness check, and an exec probe sent
+# back to the host with host: true. Skipped where podman is missing.
 requires: [podman]
 # The engine is the run's choice: this case pins it through the environment.
 env:
@@ -15,3 +16,4 @@ tests:
   - { path: root, status: passed }
   - { path: root/reach-service, status: passed }
   - { path: root/scoped-container, status: passed }
+  - { path: root/probe-from-the-host, status: passed }
