@@ -231,6 +231,52 @@ which is ideal for tools that ship their own readiness probe like
 (or dies later while tests still depend on it), the dependent tests are
 aborted and the run fails.
 
+### Combining checks
+
+Every configured check is evaluated in **every round**, all of them at once,
+and the service is ready the first time they are **all true together**:
+
+```yaml
+ready:
+  tcp: ${{ ports.db }}       # the published port is forwarded, and
+  exec: pg_isready -p 5432   # postgres itself accepts connections
+  timeout: 60s
+```
+
+Two port numbers in one block is not a typo. `tcp` and `http` always connect
+from the machine running the tests, so they name the published port, while
+`exec` on a container service runs [inside it](#where-exec-runs) and names
+the port the service listens on. One `ready:` block can watch from both
+sides at once.
+
+What follows from "all at once, every round":
+
+- **There is no ordering.** The checks start together, so the probe already
+  runs while the port is still refusing connections. You cannot express
+  "wait for the port, *then* run the probe" — and you rarely need to, since a
+  failing round simply repeats.
+- **Nothing is remembered.** `tcp`, `http` and `exec` are re-tested from
+  scratch each round, so a port that opened two rounds ago counts for nothing
+  if it is closed again now. `log` is the exception: it re-reads the output
+  from the service's start, so once the line has appeared it keeps matching.
+- **One clock for the group.** A single `delay`, one `interval` between
+  rounds and one `timeout` deadline — not one per check.
+- **The slowest check sets the pace.** A round cannot end before its slowest
+  leg, and a single attempt is capped per kind: 5s for `http`, 2s for `tcp`,
+  10s for `exec`. With `interval: 500ms` and a probe that takes 3s, rounds
+  come about every 3.5s.
+- **More checks can only make a service ready later**, never sooner. `tcp`
+  next to an `exec` probe that connects to that same port is redundant — the
+  probe already proves the port answers.
+
+When the deadline passes, the error names the checks that were still failing
+in the last round, so a combination stays debuggable — here the `tcp` leg
+had come up and the probe had not:
+
+```
+✘ service db failed: not ready after 1m00s (exec did not exit 0)
+```
+
 ### Where `exec` runs
 
 Most services ship their own readiness probe, and it lives *in the image* —
@@ -353,10 +399,10 @@ command sees what the container process sees: the image's own variables plus
 
 Exit code `0` means ready; anything else means *not yet* and is retried on
 the next `interval` — a failing probe is normal while a service starts and is
-never an error by itself. The run only fails when `timeout` expires (the
-clock starts after `delay`, so the longest wait is `delay + timeout`), which
-reports `service "db": not ready after 60s`, or when the service dies first,
-which reports `exited before becoming ready`.
+never an error by itself. The run only fails when `timeout` expires — the
+clock starts after `delay`, so the longest wait is `delay + timeout` — or
+when the service dies first, which reports `exited before becoming ready`
+instead of naming a check.
 
 A single attempt is capped at **10s**. One that hangs is killed and retried,
 so a wedged probe costs an interval instead of the whole run.
