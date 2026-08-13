@@ -26,8 +26,23 @@ export interface WaitReadyOptions {
   isRunning?: () => boolean;
 }
 
+// What a check says when it is the one holding the service back. Every
+// configured check is retried each round, so a timeout is only ever caused
+// by the checks that were still false in the last one - naming them saves
+// the guesswork when a service combines two or three.
+const STILL_FAILING = {
+  http: "http did not answer",
+  tcp: "tcp connect failed",
+  log: "log pattern not seen",
+  exec: "exec did not exit 0",
+} as const;
+
+type CheckName = keyof typeof STILL_FAILING;
+
 // Polls all configured checks until they all pass, the timeout expires, the
-// service dies, or the run is aborted.
+// service dies, or the run is aborted. All checks run concurrently in every
+// round and must pass in the same one: a port that opened two rounds ago
+// counts for nothing if it is closed again now.
 export async function waitReady(def: ReadyDef | undefined, opts: WaitReadyOptions): Promise<void> {
   if (!def) return;
   const delay = parseDurationMs(def.delay, 0);
@@ -40,18 +55,19 @@ export async function waitReady(def: ReadyDef | undefined, opts: WaitReadyOption
     if (opts.signal.aborted) throw new Error("aborted while waiting for readiness");
     if (opts.isRunning && !opts.isRunning()) throw new Error("exited before becoming ready");
 
-    const checks: Promise<boolean>[] = [];
-    if (def.http !== undefined) checks.push(checkHttp(def.http, opts));
-    if (def.tcp !== undefined) checks.push(checkTcp(def.tcp, opts));
-    if (def.log !== undefined) checks.push(Promise.resolve(checkLog(def.log, opts)));
-    if (def.exec !== undefined) checks.push(checkExec(def.exec, opts));
-    const results = await Promise.all(checks);
+    const checks: Array<[CheckName, Promise<boolean>]> = [];
+    if (def.http !== undefined) checks.push(["http", checkHttp(def.http, opts)]);
+    if (def.tcp !== undefined) checks.push(["tcp", checkTcp(def.tcp, opts)]);
+    if (def.log !== undefined) checks.push(["log", Promise.resolve(checkLog(def.log, opts))]);
+    if (def.exec !== undefined) checks.push(["exec", checkExec(def.exec, opts)]);
+    const results = await Promise.all(checks.map(([, result]) => result));
     if (results.every(Boolean)) {
       opts.output.system("ready");
       return;
     }
     if (Date.now() >= deadline) {
-      throw new Error(`not ready after ${formatMs(timeout)}`);
+      const failing = checks.filter((_, i) => !results[i]).map(([name]) => STILL_FAILING[name]);
+      throw new Error(`not ready after ${formatMs(timeout)} (${failing.join(", ")})`);
     }
     await sleep(Math.min(interval, Math.max(1, deadline - Date.now())), opts.signal);
   }

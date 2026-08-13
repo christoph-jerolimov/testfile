@@ -422,11 +422,17 @@ namespaces.
 
 ### Readiness (`ready`)
 
-At least one of the checks (`http`, `tcp`, `log`, `exec`) must be set; all
-set checks must pass. Checks are
-polled every `interval` (default `1s`), starting after `delay`, until they
-pass or `timeout` (default `30s`) expires — an expired timeout fails the
-service and aborts the dependent tests.
+At least one of the checks (`http`, `tcp`, `log`, `exec`) must be set. Every
+set check is evaluated in every round, and the service is ready only when
+all of them pass in the **same** round: no check's earlier success is
+remembered, and no ordering between them can be expressed. Rounds are polled
+every `interval` (default `1s`), starting after `delay`, until they pass or
+`timeout` (default `30s`) expires — an expired timeout fails the service and
+aborts the dependent tests, naming the checks that were still failing.
+
+`delay`, `interval` and `timeout` apply to the group, not to individual
+checks, and a round lasts as long as its slowest check — the per-attempt
+caps below are what bound it.
 
 | Field  | Type             | Description |
 | ------ | ---------------- | ----------- |

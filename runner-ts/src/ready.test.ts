@@ -90,6 +90,33 @@ test("every configured check must pass, not just one", async () => {
       { log: "accept connections", exec: "pg_isready", interval: "1ms", timeout: "30ms" },
       options({ output, execInContainer: probe.run }),
     ),
-    /not ready after/,
+    // the log check passed, so only the probe is named as the holdout
+    /not ready after 30ms \(exec did not exit 0\)$/,
+  );
+});
+
+test("the timeout names every check that was still failing, and only those", async () => {
+  const output = new OutputBuffer();
+  output.append("still starting up\n", "stdout");
+  await assert.rejects(
+    waitReady(
+      {
+        log: "accepting connections",
+        // port 1 is privileged and never listening in a test run
+        tcp: 1,
+        exec: "pg_isready",
+        interval: "1ms",
+        timeout: "30ms",
+      },
+      options({ output, execInContainer: () => Promise.resolve(false) }),
+    ),
+    /not ready after 30ms \(tcp connect failed, log pattern not seen, exec did not exit 0\)$/,
+  );
+});
+
+test("a single check still says what it was waiting for", async () => {
+  await assert.rejects(
+    waitReady({ tcp: 1, interval: "1ms", timeout: "30ms" }, options()),
+    /not ready after 30ms \(tcp connect failed\)$/,
   );
 });
