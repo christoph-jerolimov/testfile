@@ -451,6 +451,12 @@ probes that belong outside — a tool installed on the machine, or a port
 reachable only through the published mapping. It has no effect on a service
 without a container.
 
+Either way the command is a shell line (`sh -c`), so an image without a
+shell can only be probed with `host: true` or a check that does not enter it.
+A non-zero exit means *not ready* and is retried; only an expired `timeout`
+fails the service. The command's own output is not part of the service's
+recorded log.
+
 ### Stopping (`stop`)
 
 | Field     | Type     | Description |
