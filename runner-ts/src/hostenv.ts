@@ -36,6 +36,40 @@ export const RUNNER_ENV: Record<string, string> = {
   CLICOLOR_FORCE: "1",
 };
 
+// Two prefixes let whoever runs the suite hand variables to it without
+// editing the Testfile or naming them in forwardEnv: TESTFILE_ENV_BASE_URL
+// arrives as BASE_URL, and TESTFILE_SECRET_TOKEN arrives as TOKEN with its
+// value masked in everything the run records. The prefix is a namespace on
+// the host side only - it is stripped on the way in.
+export const ENV_PREFIX = "TESTFILE_ENV_";
+export const SECRET_PREFIX = "TESTFILE_SECRET_";
+
+export interface PrefixedEnv {
+  // The variables, under their names without the prefix.
+  env: Record<string, string>;
+  // Values to mask in recorded output. Never the empty string, which would
+  // match between every pair of characters.
+  secretValues: string[];
+}
+
+export function prefixedEnv(host: NodeJS.ProcessEnv = process.env): PrefixedEnv {
+  const env: Record<string, string> = {};
+  const secretValues: string[] = [];
+  const take = (prefix: string, secret: boolean): void => {
+    for (const [key, value] of Object.entries(host)) {
+      if (value === undefined || !key.startsWith(prefix)) continue;
+      const name = key.slice(prefix.length);
+      if (name === "") continue; // the bare prefix names nothing
+      env[name] = value;
+      if (secret && value !== "") secretValues.push(value);
+    }
+  };
+  take(ENV_PREFIX, false);
+  // Secrets last: a name given under both prefixes is the masked one.
+  take(SECRET_PREFIX, true);
+  return { env, secretValues };
+}
+
 // Simple glob matching for variable names: * matches any run of
 // characters, everything else is literal. "GITHUB_*" or just "*".
 export function matchesEnvPattern(name: string, pattern: string): boolean {
@@ -62,8 +96,9 @@ export function forwardedEnv(
 }
 
 // The clean base environment: essentials from the host, the runner's
-// defaults, and everything the given patterns forward (in that order, so
-// forwarded variables win over the defaults).
+// defaults, everything the given patterns forward, and the TESTFILE_ENV_ /
+// TESTFILE_SECRET_ variables - in that order, so the more deliberate the
+// mention of a variable, the later it lands and the more it wins.
 export function baseEnv(
   forwardPatterns: readonly string[] | undefined,
   host: NodeJS.ProcessEnv = process.env,
@@ -78,5 +113,6 @@ export function baseEnv(
   }
   Object.assign(out, RUNNER_ENV);
   Object.assign(out, forwardedEnv(forwardPatterns, host));
+  Object.assign(out, prefixedEnv(host).env);
   return out;
 }

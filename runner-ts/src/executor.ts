@@ -4,7 +4,7 @@ import { resolve as resolvePath } from "node:path";
 import { explainInputsMiss, ResultCache, type InputsState } from "./cache.js";
 import { evaluateCondition } from "./condition.js";
 import { loadEnvFiles } from "./envfile.js";
-import { baseEnv as hostBaseEnv, forwardedEnv } from "./hostenv.js";
+import { baseEnv as hostBaseEnv, forwardedEnv, prefixedEnv } from "./hostenv.js";
 import type { HookDef, ServiceDef, TestContainerDef, TestfileDoc } from "./model.js";
 import { resolvePorts } from "./ports.js";
 import { walk, type RunTest, type Status } from "./runsuite.js";
@@ -114,6 +114,9 @@ export class Runner extends EventEmitter {
     // Tests run in a clean environment: essentials + runner defaults, plus
     // whatever the Testfile's / the CLI's forwardEnv patterns let through.
     const baseEnv = hostBaseEnv([...(this.doc.forwardEnv ?? []), ...this.forwardEnv]);
+    // TESTFILE_SECRET_* is in that environment already; what it still needs
+    // is masking, so nothing it carries reaches a log or the record.
+    for (const value of prefixedEnv().secretValues) this.secrets.add(value);
     // Platform facts for `if` conditions, e.g. ${{ env.TESTFILE_OS }} == linux.
     baseEnv.TESTFILE_OS = process.platform;
     baseEnv.TESTFILE_ARCH = process.arch;

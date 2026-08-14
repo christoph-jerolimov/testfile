@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { baseEnv, forwardedEnv, matchesEnvPattern } from "./hostenv.js";
+import { baseEnv, forwardedEnv, matchesEnvPattern, prefixedEnv } from "./hostenv.js";
 
 test("matchesEnvPattern: literals, prefix globs and *", () => {
   assert.ok(matchesEnvPattern("CI", "CI"));
@@ -42,4 +42,50 @@ test("baseEnv: essentials + runner defaults + forwarded, in that order", () => {
   const forwarded = baseEnv(["CI", "SECRET_*"], host);
   assert.equal(forwarded.CI, "false");
   assert.equal(forwarded.SECRET_TOKEN, "leak");
+});
+
+test("prefixedEnv strips the prefix and collects what has to be masked", () => {
+  const { env, secretValues } = prefixedEnv({
+    TESTFILE_ENV_BASE_URL: "http://localhost:3000",
+    TESTFILE_SECRET_TOKEN: "s3cr3t",
+    TESTFILE_ENV_: "names nothing",
+    TESTFILE_SECRET_BLANK: "",
+    TESTFILE_ENGINE: "podman",
+    PATH: "/bin",
+    NOPE: undefined,
+  });
+  assert.deepEqual(env, {
+    BASE_URL: "http://localhost:3000",
+    TOKEN: "s3cr3t",
+    BLANK: "",
+  });
+  assert.deepEqual(secretValues, ["s3cr3t"], "an empty value would mask everything");
+});
+
+test("a name given under both prefixes is the masked one", () => {
+  const { env, secretValues } = prefixedEnv({
+    TESTFILE_ENV_TOKEN: "plain",
+    TESTFILE_SECRET_TOKEN: "masked",
+  });
+  assert.deepEqual(env, { TOKEN: "masked" });
+  assert.deepEqual(secretValues, ["masked"]);
+});
+
+test("baseEnv: the prefixes need no forwardEnv and beat a pattern that also matches", () => {
+  const host = {
+    PATH: "/bin",
+    CI: "false",
+    TESTFILE_ENV_BASE_URL: "http://localhost:3000",
+    TESTFILE_ENV_CI: "from-the-prefix",
+  };
+  const clean = baseEnv(undefined, host);
+  assert.equal(clean.BASE_URL, "http://localhost:3000", "no forwardEnv needed");
+  assert.equal(clean.CI, "from-the-prefix", "more deliberate than the runner default");
+  assert.equal(clean.TESTFILE_ENV_BASE_URL, undefined, "the prefixed name itself stays out");
+
+  // `forwardEnv: ["*"]` forwards TESTFILE_ENV_CI under its own name; the
+  // stripped one still lands last.
+  const everything = baseEnv(["*"], host);
+  assert.equal(everything.CI, "from-the-prefix");
+  assert.equal(everything.TESTFILE_ENV_CI, "from-the-prefix", "and the raw name comes along");
 });

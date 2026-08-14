@@ -1,9 +1,12 @@
 spec:
   - Environment and templates
-# Host env vars must not reach tests unless forwarded via forwardEnv; the
-# runner provides CI=1 and forces color output.
+# Host env vars must not reach tests unless forwarded via forwardEnv - or
+# carried in under TESTFILE_ENV_/TESTFILE_SECRET_, which need no declaration
+# at all. The runner provides CI=1 and forces color output.
 env:
   CONFTEST_LEAK: "yes"
+  TESTFILE_ENV_HANDED_IN: from-the-host
+  TESTFILE_SECRET_HANDED_SECRET: s3cr3t
 exitCode: 0
 status: passed
 tests:
@@ -16,4 +19,10 @@ tests:
   - path: env/essentials
     status: passed
   - path: env/forwarded
+    status: passed
+  - path: env/handed-in
+    status: passed
+  - path: env/handed-in-secret
+    status: passed
+  - path: env/handed-in-beats-a-pattern
     status: passed

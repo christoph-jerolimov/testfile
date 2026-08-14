@@ -13,3 +13,12 @@ test:
     - name: forwarded
       forwardEnv: [CONFTEST_*]
       command: test "$CONFTEST_LEAK" = "yes"
+    # TESTFILE_ENV_/TESTFILE_SECRET_ arrive without the prefix and without
+    # being named anywhere in this file
+    - name: handed-in
+      command: test "$HANDED_IN" = "from-the-host"
+    - name: handed-in-secret
+      command: test "$HANDED_SECRET" = "s3cr3t"
+    - name: handed-in-beats-a-pattern
+      forwardEnv: ["*"]
+      command: test "$HANDED_IN" = "from-the-host"
