@@ -141,7 +141,7 @@ Each `overrides[]` entry:
 | Field   | Type   | Required | Description |
 | ------- | ------ | -------- | ----------- |
 | `path`  | string | yes      | Dotted path into the document, e.g. `services.postgres.container.image`. |
-| `from`  | string | yes      | The host variable it came from, so the run can be repeated verbatim. |
+| `from`  | string | yes      | How it was given, so the run can be repeated verbatim: the host variable's name, or `--config` for one the runner was handed directly. |
 | `value` | string | yes      | What that variable held, masked like every other recorded value — `TESTFILE_CONFIG_` carries no secret marker, but it can carry a secret. |
 
 Absent when the environment contributed nothing, so an ordinary run records

@@ -18,3 +18,8 @@ test:
       command: test "$ADDED" = "yes"
     - name: untouched
       command: test "$MODE" = "overridden"
+    # -c does the same from the command line, and wins where both name it
+    - name: flag-overridden
+      command: test "$FROM_FLAG" = "yes"
+    - name: flag-beats-the-variable
+      command: test "$CONTESTED" = "from-the-flag"

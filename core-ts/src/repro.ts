@@ -94,12 +94,21 @@ function nodeFor(
 // The rerun command. `-n <path>` is the narrowest filter the runner has for
 // a single test; a matrix instance additionally needs its combination, and
 // a run that named an engine or variants needs those to run the same way.
+// How a `-c` override is recorded as its origin; a run that used the flag
+// is reproduced with the flag, not with a variable of that name.
+const CONFIG_FLAG = "--config";
+
 export function reproCommand(
   run: RunRecord,
   testPath: string,
   matrix?: Record<string, string>,
 ): string {
   const parts = ["testfile", "start", "-n", shellArg(testPath)];
+  for (const override of run.fromEnvironment?.overrides ?? []) {
+    if (override.from === CONFIG_FLAG) {
+      parts.push("-c", shellArg(`${override.path}=${override.value}`));
+    }
+  }
   for (const [key, value] of Object.entries(matrix ?? {})) {
     parts.push("-m", shellArg(`${key}:${value}`));
   }
@@ -118,11 +127,12 @@ export function reproEnv(run: RunRecord): Record<string, string> {
   for (const [key, value] of Object.entries(run.env ?? {})) {
     if (!ALWAYS_SET.has(key)) env[key] = value;
   }
-  // The overrides are not part of the environment the tests saw, but they
-  // are part of how the run was configured - repeating it means setting
-  // them again, under the variable they came from.
+  // Overrides are not part of the environment the tests saw, but they are
+  // part of how the run was configured - repeating it means setting them
+  // again. The ones given as a variable belong here; the ones given as
+  // `-c` belong on the command line, and reproCommand adds them there.
   for (const override of run.fromEnvironment?.overrides ?? []) {
-    env[override.from] = override.value;
+    if (override.from !== CONFIG_FLAG) env[override.from] = override.value;
   }
   return env;
 }

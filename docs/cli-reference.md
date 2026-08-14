@@ -45,6 +45,7 @@ Start the test suite (the default command).
 | `-w, --watch` | Re-run the selection whenever files change ([watch mode](./cli#watch-mode)). |
 | `--no-cache` | Ignore cached results; fresh results still refresh the cache. |
 | `--forward-env <pattern>` | Forward matching host env vars into the [isolated test env](./env-and-ports#an-isolated-environment), e.g. `"GITHUB_*"` or `"*"`. *(repeatable)* |
+| `-c, --config <path=value>` | [Override a value](./cli#overriding-the-testfile-for-one-run) in the Testfile for this run, e.g. `ports.db=15432`. Beats a `TESTFILE_CONFIG_*` variable naming the same path; both beat the file. *(repeatable)* |
 | `--engine <name>` | Container engine for this run: `podman`, `docker` or `kubernetes`. Default: `$TESTFILE_ENGINE`, else the first of the three that responds. The [Testfile itself never names one](./services#containers). |
 | `--variant <key=value>` | Record what distinguishes this run from a sibling run — e.g. `platform=linux` for one leg of a matrix. Recorded in `run.yaml` and used by [`testfile merge`](#testfile-merge-run). *(repeatable)* |
 | `-l, --label <key=value>` | Record a label with the run, e.g. `branch=main`, so it can be [found again later](./cli#labelling-runs). Split at the first `=`; a key may only be given once. *(repeatable)* |
