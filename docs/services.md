@@ -263,11 +263,104 @@ What the runner does for stability, since two clusters hops are involved:
   runner are one `kubectl delete ... -l` away.
 
 Limits worth knowing: `volumes` and `network` are rejected (host paths mean
-nothing on a cluster; DNS already covers service-to-service), a
+nothing on a cluster — see [below](#what-containers-can-see-of-your-project);
+DNS already covers service-to-service), a
 [test body container](./writing-tests#running-a-test-in-a-container) still
 runs locally, and two concurrent runs sharing a namespace would fight over
 the DNS name — give them separate namespaces. `testfile doctor` checks that
 kubectl is installed and the cluster answers.
+
+## What containers can see of your project
+
+Your project is **not** in a service container. It *is* in a test body
+container. And on a cluster it is in neither:
+
+| | project mounted? | other mounts |
+| --- | --- | --- |
+| a service `container:` (podman/docker) | no | only what `volumes:` lists |
+| a service `container:` (kubernetes) | no | none — `volumes` is rejected |
+| a [test body `container:`](./writing-tests#running-a-test-in-a-container) | yes, at `workdir` (default `/workspace`) | plus what `volumes:` lists |
+
+A service is a dependency, not a place your code runs, so nothing is mounted
+into it unless you say so:
+
+```yaml
+services:
+  postgres:
+    container:
+      image: docker.io/library/postgres:16
+      volumes:
+        - ./fixtures:/docker-entrypoint-initdb.d:ro   # you asked for this
+```
+
+A test body is the opposite: the **whole project** is mounted, not just the
+test's `workdir`, so relative paths that reach outside it (a monorepo's root
+config) still resolve, and the container's working directory is wherever the
+test would have run on the host, translated into the mount.
+
+### On a cluster, nothing is mounted at all
+
+With the kubernetes engine `volumes` is an error rather than a silent
+no-op — a host path names nothing on a cluster node, and a mount that
+quietly did nothing would be worse than a rejection. In practice:
+
+- **Your project never leaves your machine.** Tests, `setup`/`teardown`
+  hooks, host-side readiness probes and one-shot steps that are a `command`
+  or `script` all run locally, in the repository, as always.
+- **Service pods must be self-contained**: what they need is in the image,
+  in `env`, or fetched by the container itself.
+- **The only bridge is the port-forward.** Declared ports arrive on
+  `127.0.0.1`, so connections cross; files do not.
+- **Test bodies never reach the cluster** — they always use a local engine,
+  even when the run's engine is kubernetes.
+
+This is what makes a [step](#steps-between-services) that seeds from repo
+files engine-specific. The container form works on podman and docker only:
+
+```yaml
+  seed:
+    oneshot: true
+    needs: [postgres]
+    container:
+      image: docker.io/library/postgres:16
+      volumes: ["./fixtures:/fixtures"]      # rejected on kubernetes
+      command: [psql, -f, /fixtures/base.sql]
+```
+
+The portable form is a plain step: it runs on your machine, in the project,
+and talks to the published or forwarded port like any test does.
+
+```yaml
+  seed:
+    oneshot: true
+    needs: [postgres]
+    command: psql "$DATABASE_URL" -f fixtures/base.sql
+```
+
+That trade is the mirror image of the [readiness probe](#where-exec-runs)
+one: portable across engines, but the client has to be installed on every
+machine that runs the suite. Bake the fixtures into an image instead if you
+would rather keep the tooling in the container.
+
+### Where a mount path is resolved
+
+A `volumes` source — and the project mount of a test body — is a path on the
+machine whose **engine** runs the container, which is not always the machine
+you are sitting at:
+
+| running the containers | `./fixtures` means |
+| --- | --- |
+| podman or docker on this machine (Linux) | exactly what you think |
+| Docker Desktop, `podman machine` (macOS, Windows) | a path inside the engine's VM. These share your home directory by default, so a project under `$HOME` works; one outside the shared set does not |
+| a remote daemon (`DOCKER_HOST`, a remote docker context) | a path on **that** machine, which almost certainly does not have your repository |
+| kubernetes | nothing — rejected before anything runs |
+
+The awkward part is the failure mode: an engine asked to mount a path it
+cannot see usually creates an empty directory instead of refusing. A test
+body that suddenly finds no source files, or a database whose init scripts
+never ran, is worth checking against this table before it is blamed on the
+Testfile. `testfile doctor` reports which engine a run would use, which is
+the first thing to establish.
 
 ## Readiness checks
 

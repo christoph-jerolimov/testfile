@@ -358,6 +358,13 @@ point.
 A container definition never names an engine — a Testfile describes *what*
 runs, and the machine running it decides *how*.
 
+Nothing of the project is mounted into a service container: a `volumes`
+entry is the only way in. Its source is a path on the machine whose engine
+runs the container, which need not be the machine the runner is on — a
+remote daemon or a virtualised engine resolves it against *that* filesystem.
+The kubernetes engine rejects `volumes` outright rather than mounting
+nothing (see [Kubernetes](#kubernetes)).
+
 A test's own body can also run in a container (`container:` on a test,
 applying to it and everything nested below it). A test container shares
 `image`, `env`, `volumes`, `pull` and `network` with the table above, but
@@ -365,8 +372,13 @@ differs where mounting the project matters: `workdir` is the mount point of
 the project inside the container (default `/workspace`), `network` defaults
 to `host` so services stay reachable on localhost, `options` passes extra
 engine flags (e.g. `--user 1000:1000`) — and there are no `ports`,
-`entrypoint`, `command`, `context` or `namespace`. Test containers always
-run on a local engine (see [Engine selection](#engine-selection)).
+`entrypoint`, `command`, `context` or `namespace`. The mount source is the
+directory of the Testfile that declares the test — the whole project, not
+only the test's `workdir`, so paths reaching outside it keep resolving —
+and the container's working directory is the test's working directory
+translated into the mount. Because that mount cannot be provided by a
+cluster, test containers always run on a local engine (see
+[Engine selection](#engine-selection)).
 
 ### Engine selection
 
