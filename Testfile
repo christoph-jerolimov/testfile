@@ -72,6 +72,16 @@ test:
           command: npm test --workspace website
           inputs:
             - website/scripts/**
+        # Both browser suites need a chromium, and two `playwright install
+        # --with-deps` at once fight over the apt lock - so it is fetched
+        # once, here, and they wait for it.
+        - name: browsers
+          tags: [slow, e2e, browser]
+          if: ${{ env.TESTFILE_OS }} == linux
+          script: |
+            if [ ! -d /opt/pw-browsers ]; then
+              npx playwright install --with-deps chromium
+            fi
         # The "Get started" wizard, driven in a browser: the page is the
         # only thing that knows how to build the file, so the only honest
         # way to check what it produces is to answer its questions. Linux
@@ -79,13 +89,11 @@ test:
         - name: website-wizard
           tags: [slow, e2e, browser, docs]
           if: ${{ env.TESTFILE_OS }} == linux
-          needs: [website]
+          needs: [website, browsers]
           workdir: website
           script: |
             if [ -d /opt/pw-browsers ]; then
               export PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
-            else
-              npx playwright install --with-deps chromium
             fi
             npx playwright test
           artifacts:
@@ -257,7 +265,7 @@ test:
         - name: viewer-e2e
           tags: [slow, e2e, browser]
           if: ${{ env.TESTFILE_OS }} == linux
-          needs: [build-cli, viewer-web]
+          needs: [build-cli, viewer-web, browsers]
           workdir: viewer-web
           services:
             viewer:
@@ -270,8 +278,6 @@ test:
           script: |
             if [ -d /opt/pw-browsers ]; then
               export PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
-            else
-              npx playwright install --with-deps chromium
             fi
             npx playwright test
           artifacts:
