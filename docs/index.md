@@ -61,7 +61,8 @@ testfile start        # plain output
 testfile tui   # browse recorded runs (read-only terminal UI)
 ```
 
-Continue with [Getting started](./getting-started), or read the
+Continue with [Getting started](./getting-started), see
+[everything at once](./complete-example) in one annotated file, or read the
 [full specification](../spec/README.md)
 and its [versioning policy](../spec/VERSIONING.md)
 — once version 1 ships, the format will evolve additively within it, and a

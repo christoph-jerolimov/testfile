@@ -40,6 +40,8 @@ test:
             - schema/**
             - Testfile
             - examples/**/Testfile
+            # the complete Testfiles printed in the docs are validated too
+            - docs/**.md
         - name: website
           tags: [docs]
           command: npm run build --workspace website

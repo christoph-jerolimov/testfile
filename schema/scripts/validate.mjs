@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Validates the JSON schema itself, all examples in tests/valid (must pass),
-// all examples in tests/invalid (must fail), and the repository's own Testfile.
+// all examples in tests/invalid (must fail), the repository's own Testfile,
+// and every complete Testfile printed in the documentation.
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname, resolve, basename, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -133,6 +134,48 @@ if (existsSync(localRuns)) {
   for (const id of readdirSync(localRuns).sort().slice(-3)) {
     const file = join(localRuns, id, "run.yaml");
     if (existsSync(file)) checkRun(file, true, `.testfile/runs/${id}/run.yaml`);
+  }
+}
+
+// Documentation is where people copy from, so its examples have to be
+// real. Every ```yaml block that starts a document (`version:` on the
+// first line) is validated; the many fragments that show one key in
+// isolation are not documents and are skipped.
+const docsDir = join(schemaDir, "..", "docs");
+if (existsSync(docsDir)) {
+  console.log("Documentation examples:");
+  let found = 0;
+  for (const file of readdirSync(docsDir)
+    .filter((f) => f.endsWith(".md"))
+    .sort()) {
+    const text = readFileSync(join(docsDir, file), "utf8");
+    const blocks = [...text.matchAll(/```yaml\n([\s\S]*?)```/g)].map((m) => m[1]);
+    blocks.forEach((block, index) => {
+      if (!block.trimStart().startsWith("version:")) return;
+      found++;
+      const name = `docs/${file}#${index + 1}`;
+      let doc;
+      try {
+        doc = parse(block);
+      } catch (err) {
+        failures++;
+        console.error(`  FAILED  ${name} — not YAML: ${err.message.split("\n")[0]}`);
+        return;
+      }
+      if (validate(doc)) {
+        console.log(`  ok      ${name}`);
+      } else {
+        failures++;
+        console.error(`  FAILED  ${name}`);
+        for (const err of validate.errors ?? []) {
+          console.error(`          ${err.instancePath || "/"} ${err.message}`);
+        }
+      }
+    });
+  }
+  if (found === 0) {
+    failures++;
+    console.error("  FAILED  no complete Testfile found in the documentation");
   }
 }
 
