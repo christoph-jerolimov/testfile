@@ -1,7 +1,7 @@
 import type { Runner } from "./executor.js";
 import type { OutputLine } from "./output.js";
 import type { RunTest, Status } from "./runsuite.js";
-import type { ServiceInstance } from "./services.js";
+import type { ServiceInstance, ServiceStatus } from "./services.js";
 import { color, formatMs } from "./util.js";
 
 const STATUS_GLYPH: Record<Status, string> = {
@@ -46,9 +46,16 @@ export class ConsoleReporter {
     });
     runner.on("service-added", (service: ServiceInstance) => {
       this.print(`${color(36, "◆")} service ${service.name} starting`);
+      // A service emits an update whenever anything about it changed, and
+      // shutting one down emits again without moving it - so only an actual
+      // status change is worth a line.
+      let last: ServiceStatus | undefined;
       service.on("update", () => {
-        if (service.status === "ready")
-          this.print(`${color(36, "◆")} service ${service.name} ready`);
+        if (service.status === last) return;
+        last = service.status;
+        // "done" is a one-shot that finished; both mean dependents can go.
+        if (service.status === "ready" || service.status === "done")
+          this.print(`${color(36, "◆")} service ${service.name} ${service.status}`);
         if (service.status === "failed") {
           this.print(
             `${glyph("failed")} service ${service.name} failed${service.error ? `: ${service.error}` : ""}`,

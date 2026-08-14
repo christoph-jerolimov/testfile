@@ -1,0 +1,40 @@
+# yaml-language-server: $schema=../../../schema/testfile.schema.json
+version: 0
+services:
+  # A stand-in for a database: only ready after a moment, and it leaves a
+  # marker behind at the instant it reports readiness.
+  db:
+    script: |
+      sleep 0.3
+      touch db-is-ready
+      echo db-listening
+      sleep 60
+    ready:
+      log: db-listening
+      timeout: 30s
+  # A step, not a server: it runs once, after the database is ready, and
+  # what makes it "ready" is exiting with code 0. Running early fails the
+  # step (the marker is missing), which fails the run.
+  seed:
+    oneshot: true
+    needs: [db]
+    script: |
+      test -f db-is-ready
+      echo seeded > seeded.txt
+  # A service that needs the step waits for the step to finish, not just
+  # for it to have been started.
+  app:
+    needs: [seed]
+    script: |
+      test -f seeded.txt
+      echo app-listening
+      sleep 60
+    ready:
+      log: app-listening
+      timeout: 30s
+test:
+  name: root
+  sequence:
+    # the tests start only once every service in the chain is settled
+    - name: seeded-before-the-tests
+      command: test -f seeded.txt

@@ -223,6 +223,9 @@ export interface PodState {
   reason?: string;
   // Waiting reasons that can never recover on their own.
   fatal?: boolean;
+  // What the container exited with, when the cluster says - the verdict for
+  // a one-shot pod. Absent when it ended without a container status.
+  exitCode?: number;
 }
 
 const FATAL_WAITING = new Set(["InvalidImageName", "ErrImageNeverPull", "CreateContainerError"]);
@@ -244,7 +247,9 @@ export function classifyPodStatus(pod: unknown): PodState {
     const detail = terminated
       ? `${terminated.reason ?? "terminated"} (exit code ${terminated.exitCode ?? "?"})`
       : phase;
-    return { phase: "gone", reason: detail };
+    // A pod without a container status still says how it went by its phase.
+    const exitCode = terminated?.exitCode ?? (phase === "Succeeded" ? 0 : undefined);
+    return { phase: "gone", reason: detail, ...(exitCode !== undefined ? { exitCode } : {}) };
   }
   if (phase === "Running") return { phase: "running" };
   if (waiting?.reason) {
@@ -332,7 +337,29 @@ export class KubernetesService {
   // log stream and the port-forwards. When this resolves, localhost ports
   // are live and readiness checks can start.
   async start(attempt: number): Promise<void> {
-    const { scopes, where, signal } = this.opts;
+    await this.apply(attempt);
+    await this.waitForRunning(this.opts.signal);
+    this.startLogStream();
+    if (this.forwards.length > 0) await this.startPortForward(this.opts.signal);
+  }
+
+  // A one-shot pod: nothing waits for it to be Running, because a short step
+  // can be Succeeded before the first poll. Its log is collected in one call
+  // once it terminated rather than followed - `kubectl logs -f` against a
+  // pod that is still being scheduled fails, and a step's output is worth
+  // having complete rather than early.
+  async runOnce(attempt: number, timeoutMs?: number): Promise<number> {
+    await this.apply(attempt);
+    try {
+      return await this.waitForCompletion(this.opts.signal, timeoutMs);
+    } finally {
+      await this.collectLogs();
+    }
+  }
+
+  // Names the objects, builds them and applies them. Shared by both paths.
+  private async apply(attempt: number): Promise<void> {
+    const { scopes, where } = this.opts;
     const serviceName = dnsName(this.name);
     // The attempt suffix keeps a restart's pod name away from the previous
     // pod, which may still be terminating (deletes do not wait).
@@ -355,14 +382,61 @@ export class KubernetesService {
         manifests.service ? `, service/${this.ids.service}` : ""
       })`,
     );
-    const apply = await this.runner.exec([...this.base, "apply", "-f", "-"], JSON.stringify(list));
-    if (apply.code !== 0) {
-      throw new Error(`kubectl apply failed: ${(apply.stderr || apply.stdout).trim()}`);
+    const applied = await this.runner.exec(
+      [...this.base, "apply", "-f", "-"],
+      JSON.stringify(list),
+    );
+    if (applied.code !== 0) {
+      throw new Error(`kubectl apply failed: ${(applied.stderr || applied.stdout).trim()}`);
     }
+  }
 
-    await this.waitForRunning(signal);
-    this.startLogStream();
-    if (this.forwards.length > 0) await this.startPortForward(signal);
+  // Follows a one-shot pod to termination and reports its exit code. A pod
+  // that cannot start (a bad image) fails here with the cluster's reason
+  // rather than waiting out the timeout.
+  private async waitForCompletion(signal: AbortSignal, timeoutMs?: number): Promise<number> {
+    const deadline = timeoutMs === undefined ? undefined : Date.now() + timeoutMs;
+    let backoffSince: number | undefined;
+    let lastReason: string | undefined;
+    for (;;) {
+      if (signal.aborted) throw new Error("aborted while the step was running");
+      const got = await this.runner.exec([...this.base, "get", "pod", this.ids.pod, "-o", "json"]);
+      if (got.code !== 0) {
+        throw new Error(`kubectl get pod failed: ${(got.stderr || got.stdout).trim()}`);
+      }
+      const state = classifyPodStatus(JSON.parse(got.stdout));
+      if (state.phase === "gone") {
+        this.dead = true;
+        // A pod can be gone without the cluster attributing an exit code
+        // (evicted, node lost); that is a failure, not a silent success.
+        return state.exitCode ?? 1;
+      }
+      if (state.fatal) await this.failStart(`pod cannot start: ${state.reason}`);
+      if (state.reason && state.reason !== lastReason) {
+        this.output.system(`pod ${this.ids.pod}: ${state.reason}`);
+        lastReason = state.reason;
+      }
+      if (state.reason?.startsWith("ImagePullBackOff")) {
+        backoffSince ??= Date.now();
+        if (Date.now() - backoffSince >= this.pullBackoffGraceMs) {
+          await this.failStart(`image pull keeps failing: ${state.reason}`);
+        }
+      } else {
+        backoffSince = undefined;
+      }
+      if (deadline !== undefined && Date.now() >= deadline) {
+        throw new Error(`the step did not finish within ${Math.round(timeoutMs! / 1000)}s`);
+      }
+      await sleep(this.pollIntervalMs, signal);
+    }
+  }
+
+  // The whole log of a terminated pod, in one call.
+  private async collectLogs(): Promise<void> {
+    if (!this.ids) return;
+    const got = await this.runner.exec([...this.base, "logs", this.ids.pod]).catch(() => undefined);
+    if (got?.stdout) this.output.append(got.stdout, "stdout");
+    if (got?.stderr) this.output.append(got.stderr, "stderr");
   }
 
   // The pod's recent warning events - where the cluster explains problems

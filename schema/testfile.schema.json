@@ -476,7 +476,7 @@
     },
     "service": {
       "type": "object",
-      "description": "A long-running dependency (web server, database, ...) needed by tests. Exactly one of 'command', 'script' or 'container' must be set. The runner waits for the 'ready' check before starting the dependent tests and stops the service gracefully afterwards.",
+      "description": "A dependency needed by tests: a long-running one (web server, database, ...) or, with 'oneshot', a step that has to finish first (migrations, seed data). Exactly one of 'command', 'script' or 'container' must be set. The runner waits for the 'ready' check - or, for a one-shot, for a successful exit - before starting whatever depends on it, and stops long-running services gracefully afterwards.",
       "additionalProperties": false,
       "properties": {
         "description": {
@@ -494,6 +494,15 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "oneshot": {
+          "description": "Run this once as a step rather than keeping it running: exiting with code 0 means ready, and whatever needs it (another service, or the tests) starts only after it finished. A non-zero exit fails the run. Excludes 'ready' (the exit code is the signal) and 'stop' (nothing is left running).",
+          "type": "boolean",
+          "default": false
+        },
+        "timeout": {
+          "description": "Only with 'oneshot': fail the step when it has not finished by then. Unlimited by default.",
+          "$ref": "#/$defs/duration"
         },
         "env": {
           "$ref": "#/$defs/envMap"
@@ -537,7 +546,37 @@
             "container"
           ]
         }
-      ]
+      ],
+      "dependentSchemas": {
+        "ready": {
+          "properties": {
+            "oneshot": {
+              "not": {
+                "const": true
+              }
+            }
+          }
+        },
+        "stop": {
+          "properties": {
+            "oneshot": {
+              "not": {
+                "const": true
+              }
+            }
+          }
+        },
+        "timeout": {
+          "properties": {
+            "oneshot": {
+              "const": true
+            }
+          },
+          "required": [
+            "oneshot"
+          ]
+        }
+      }
     },
     "container": {
       "type": "object",

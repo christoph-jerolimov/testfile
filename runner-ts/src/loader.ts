@@ -48,10 +48,7 @@ export function validateSemantics(doc: TestfileDoc): void {
 
   // `needs` between services in one map: names must exist in that map and
   // must not form a cycle (nothing would ever start).
-  const checkServiceNeeds = (
-    services: Record<string, ServiceDef> | undefined,
-    where: string,
-  ): void => {
+  const checkServices = (services: Record<string, ServiceDef> | undefined, where: string): void => {
     const entries = Object.entries(services ?? {});
     if (entries.length === 0) return;
     const byName = new Map(entries);
@@ -80,10 +77,10 @@ export function validateSemantics(doc: TestfileDoc): void {
     };
     for (const [name] of entries) dfs(name, []);
   };
-  checkServiceNeeds(doc.services, "Testfile services");
+  checkServices(doc.services, "Testfile services");
 
   const visit = (def: TestDef, path: string, inParallel: boolean): void => {
-    checkServiceNeeds(def.services, `${path} services`);
+    checkServices(def.services, `${path} services`);
     if (def.include !== undefined) {
       errors.push(
         `${path}: unresolved include - includes are expanded when loading a Testfile from disk`,

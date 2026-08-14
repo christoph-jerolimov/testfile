@@ -1,0 +1,11 @@
+# `timeout` bounds a one-shot step; a long-running service is bounded by
+# its readiness timeout instead.
+version: 0
+services:
+  web:
+    command: npm start
+    timeout: 30s
+    ready:
+      tcp: 8080
+test:
+  command: npm test

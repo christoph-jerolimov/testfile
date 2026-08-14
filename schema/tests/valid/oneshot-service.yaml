@@ -1,0 +1,38 @@
+# A step in the service graph: migrations and seed data run between the
+# database coming up and the tests starting.
+version: 0
+ports:
+  db: random
+services:
+  postgres:
+    container:
+      image: docker.io/library/postgres:16
+      ports:
+        - "${{ ports.db }}:5432"
+      env:
+        POSTGRES_PASSWORD: test
+    ready:
+      exec: pg_isready -h 127.0.0.1 -p 5432
+      timeout: 60s
+  migrate:
+    oneshot: true
+    needs: [postgres]
+    command: npm run migrate
+    timeout: 5m
+    env:
+      DATABASE_URL: postgresql://postgres:test@127.0.0.1:${{ ports.db }}/postgres
+  seed:
+    oneshot: true
+    needs: [migrate]
+    script: |
+      psql "$DATABASE_URL" -f fixtures/base.sql
+      psql "$DATABASE_URL" -f fixtures/users.sql
+    env:
+      DATABASE_URL: postgresql://postgres:test@127.0.0.1:${{ ports.db }}/postgres
+  app:
+    needs: [seed]
+    command: npm start
+    ready:
+      http: http://127.0.0.1:8080/healthz
+test:
+  command: npm run test:e2e

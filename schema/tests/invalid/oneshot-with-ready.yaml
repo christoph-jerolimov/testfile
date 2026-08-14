@@ -1,0 +1,10 @@
+# A one-shot signals readiness by exiting; it cannot also have a ready check.
+version: 0
+services:
+  seed:
+    oneshot: true
+    command: ./seed.sh
+    ready:
+      log: seeded
+test:
+  command: npm test

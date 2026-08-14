@@ -6,9 +6,18 @@ import type { ContainerDef, ServiceDef } from "./model.js";
 import { OutputBuffer } from "./output.js";
 import { EXEC_TIMEOUT_MS, waitReady } from "./ready.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
-import { parseDurationMs } from "./util.js";
+import { formatMs, parseDurationMs } from "./util.js";
 
-export type ServiceStatus = "pending" | "starting" | "ready" | "stopping" | "stopped" | "failed";
+// "done" is a one-shot service that finished successfully - the counterpart
+// of "ready" for something that was never meant to keep running.
+export type ServiceStatus =
+  | "pending"
+  | "starting"
+  | "ready"
+  | "done"
+  | "stopping"
+  | "stopped"
+  | "failed";
 
 // Which engine runs the containers is decided by whoever runs the tests,
 // not by the Testfile: --engine beats TESTFILE_ENGINE beats the first
@@ -111,14 +120,16 @@ function waitExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
 
 // The full `run` argument list for a service container. The service name
 // becomes a network alias when a network is set, so services on the same
-// network reach each other by name.
+// network reach each other by name. A one-shot runs in the foreground
+// (`detached: false`), so the engine's exit code is the container's.
 export function buildContainerRunArgs(
   name: string,
   container: ContainerDef,
   scopes: Scopes,
   where: string,
+  opts: { detached?: boolean } = {},
 ): string[] {
-  const args = ["run", "--rm", "-d"];
+  const args = opts.detached === false ? ["run", "--rm"] : ["run", "--rm", "-d"];
   if (container.pull) args.push(`--pull=${container.pull}`);
   if (container.network) {
     args.push("--network", resolveTemplate(container.network, scopes, where));
@@ -250,6 +261,11 @@ export class ServiceInstance extends EventEmitter {
       ? resolvePath(cwd, resolveTemplate(this.def.workdir, myScopes, where))
       : cwd;
     try {
+      if (this.def.oneshot) {
+        await this.runOnce(myScopes, where, signal);
+        this.setStatus("done");
+        return;
+      }
       if (this.def.container) {
         await this.startContainer(myScopes, where, signal);
       } else {
@@ -276,6 +292,112 @@ export class ServiceInstance extends EventEmitter {
       await this.stop().catch(() => {});
       throw new Error(`${where}: ${message}`);
     }
+  }
+
+  // A one-shot service: run the step, wait for it, and let its exit code
+  // decide. Nothing is left running afterwards, so there is no readiness
+  // check to poll and nothing for stop() to do - whatever needed this one
+  // starts because it finished, not because it came up.
+  private async runOnce(scopes: Scopes, where: string, signal: AbortSignal): Promise<void> {
+    const timeoutMs =
+      this.def.timeout !== undefined ? parseDurationMs(this.def.timeout, 0) : undefined;
+    const code = this.def.container
+      ? await this.runContainerOnce(scopes, where, signal, timeoutMs)
+      : await this.runProcessOnce(scopes, where, signal, timeoutMs);
+    this.exited = true;
+    this.output.flush();
+    if (code !== 0) throw new Error(`exited with code ${code}`);
+    this.output.system("done");
+  }
+
+  // Shared plumbing for both one-shot flavours: stream the child's output
+  // into the service log, and resolve with its exit code. An abort or an
+  // expired timeout kills the process group and fails the service, because
+  // a half-applied step is not something to run tests against.
+  private awaitChild(
+    child: ChildProcess,
+    signal: AbortSignal,
+    timeoutMs: number | undefined,
+    what: string,
+  ): Promise<number | null> {
+    this.child = child;
+    child.stdout?.on("data", (d) => this.output.append(d, "stdout"));
+    child.stderr?.on("data", (d) => this.output.append(d, "stderr"));
+    return new Promise((resolve, reject) => {
+      const stop = (reason: string) => {
+        cleanup();
+        this.signalGroup("SIGKILL");
+        reject(new Error(reason));
+      };
+      const onAbort = () => stop(`aborted while running ${what}`);
+      const timer =
+        timeoutMs !== undefined
+          ? setTimeout(
+              () => stop(`${what} did not finish within ${formatMs(timeoutMs)}`),
+              timeoutMs,
+            )
+          : undefined;
+      const cleanup = () => {
+        if (timer) clearTimeout(timer);
+        signal.removeEventListener("abort", onAbort);
+      };
+      if (signal.aborted) return onAbort();
+      signal.addEventListener("abort", onAbort, { once: true });
+      child.once("error", (err) => {
+        cleanup();
+        reject(err);
+      });
+      child.once("close", (code) => {
+        cleanup();
+        resolve(code);
+      });
+    });
+  }
+
+  private runProcessOnce(
+    scopes: Scopes,
+    where: string,
+    signal: AbortSignal,
+    timeoutMs: number | undefined,
+  ): Promise<number | null> {
+    const source = this.def.script ?? this.def.command;
+    if (!source) throw new Error("service has neither command, script nor container");
+    const resolved = resolveTemplate(source, scopes, where);
+    const child = spawn("sh", this.def.script ? ["-e", "-c", resolved] : ["-c", resolved], {
+      cwd: this.cwd,
+      env: this.env,
+      detached: true, // own process group, so a timeout can take the whole tree
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return this.awaitChild(child, signal, timeoutMs, "the step");
+  }
+
+  // The container runs in the foreground: no -d, so the engine's own exit
+  // code is the container's and no log follower is needed.
+  private async runContainerOnce(
+    scopes: Scopes,
+    where: string,
+    signal: AbortSignal,
+    timeoutMs: number | undefined,
+  ): Promise<number | null> {
+    const container = this.def.container!;
+    const engine = detectEngine();
+    if (engine === "kubernetes") {
+      const k8s = this.makeKubernetes(container, scopes, where, signal);
+      return k8s.runOnce(this.k8sAttempt, timeoutMs);
+    }
+    this.engine = engine;
+    if (container.network) {
+      await ensureNetwork(engine, resolveTemplate(container.network, scopes, where), this.cwd);
+    }
+    const args = buildContainerRunArgs(this.name, container, scopes, where, { detached: false });
+    this.output.system(`${engine} ${args.join(" ")}`);
+    const child = spawn(engine, args, {
+      cwd: this.cwd,
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return this.awaitChild(child, signal, timeoutMs, "the container");
   }
 
   // Runs a readiness probe inside this service's container: `<engine> exec`
@@ -381,6 +503,17 @@ export class ServiceInstance extends EventEmitter {
     where: string,
     signal: AbortSignal,
   ): Promise<void> {
+    await this.makeKubernetes(container, scopes, where, signal).start(this.k8sAttempt);
+  }
+
+  // The pod and its lifecycle, without deciding yet whether it is a running
+  // service or a step that has to finish.
+  private makeKubernetes(
+    container: ContainerDef,
+    scopes: Scopes,
+    where: string,
+    signal: AbortSignal,
+  ): KubernetesService {
     this.engine = "kubernetes";
     this.k8sAttempt++;
     this.k8s = new KubernetesService(this.name, container, {
@@ -399,14 +532,16 @@ export class ServiceInstance extends EventEmitter {
         }
       },
     });
-    await this.k8s.start(this.k8sAttempt);
+    return this.k8s;
   }
 
   async stop(): Promise<void> {
     if (this.stopping || this.status === "pending" || this.status === "stopped") return;
     this.stopping = true;
-    const wasFailed = this.status === "failed";
-    if (!wasFailed) this.setStatus("stopping");
+    // A finished one-shot has nothing left to stop, and "done" says more in
+    // the record than "stopped" would - but its pod is still deleted below.
+    const keepStatus = this.status === "failed" || this.status === "done";
+    if (!keepStatus) this.setStatus("stopping");
     const stopDef = this.def.stop ?? {};
     const timeoutMs = parseDurationMs(stopDef.timeout, 10_000);
     try {
@@ -446,7 +581,7 @@ export class ServiceInstance extends EventEmitter {
         }
       }
     } finally {
-      if (!wasFailed) this.setStatus("stopped");
+      if (!keepStatus) this.setStatus("stopped");
       this.emit("update");
     }
   }
