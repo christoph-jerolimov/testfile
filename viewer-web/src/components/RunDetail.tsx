@@ -76,6 +76,30 @@ export function RunDetail({
           ))}
         </div>
       ) : null}
+      {/* What the environment added on top of the committed Testfile:
+          variables it handed in, the secrets that were in play, and the
+          values it rewrote. Without this the run and the file disagree and
+          nothing says why. */}
+      {run.fromEnvironment ? (
+        <div className="from-environment">
+          <div className="muted small">from the environment</div>
+          {(run.fromEnvironment.variables ?? []).map((name) => (
+            <span key={name} className="badge given">
+              {name}
+            </span>
+          ))}
+          {(run.fromEnvironment.secrets ?? []).map((name) => (
+            <span key={name} className="badge secret" title="value masked everywhere">
+              {name}
+            </span>
+          ))}
+          {(run.fromEnvironment.overrides ?? []).map((override) => (
+            <span key={override.path} className="badge override" title={override.from}>
+              {override.path}={override.value}
+            </span>
+          ))}
+        </div>
+      ) : null}
       {/* Somebody's reading of the run, added after it happened. Marked as
           an opinion, because it sits next to facts and is not one. */}
       {run.analysis ? (

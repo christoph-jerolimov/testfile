@@ -203,7 +203,10 @@ test("loadTestfile applies TESTFILE_CONFIG_ overrides and revalidates the result
   process.env.TESTFILE_CONFIG_test__command = "npm run smoke";
   try {
     const { doc, overrides } = loadTestfile(dir);
-    assert.deepEqual(overrides, ["ports.db", "test.command"]);
+    assert.deepEqual(overrides, [
+      { path: "ports.db", from: "TESTFILE_CONFIG_ports__db", value: "15432" },
+      { path: "test.command", from: "TESTFILE_CONFIG_test__command", value: "npm run smoke" },
+    ]);
     assert.deepEqual(doc.ports, { db: 15432 });
     assert.equal(doc.test.command, "npm run smoke");
   } finally {

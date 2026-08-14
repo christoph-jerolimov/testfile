@@ -76,6 +76,24 @@ export interface RunRecordService {
   log?: string;
 }
 
+// One value the environment wrote into the document (TESTFILE_CONFIG_).
+export interface RunRecordOverride {
+  path: string;
+  from: string;
+  value: string;
+}
+
+// What the environment contributed beyond the Testfile - the part of a run
+// that reading the committed file would not explain.
+export interface RunRecordFromEnvironment {
+  // Names handed in with TESTFILE_ENV_; their values are in `env`.
+  variables?: string[];
+  // Names whose values were masked in this run: the file's `secrets` that
+  // actually resolved, plus anything handed in with TESTFILE_SECRET_.
+  secrets?: string[];
+  overrides?: RunRecordOverride[];
+}
+
 export interface RunRecord {
   id: string;
   startedAt: string;
@@ -94,6 +112,8 @@ export interface RunRecord {
   labels?: Record<string, string>;
   // Env provided by the Testfile (top level, resolved) and the resolved ports.
   env: Record<string, string>;
+  // Absent when the environment added nothing to this run.
+  fromEnvironment?: RunRecordFromEnvironment;
   ports: Record<string, number>;
   // Paths of the tests the user selected for this run.
   selected: string[];
@@ -118,6 +138,7 @@ export interface RunMeta {
   variants?: Record<string, string>;
   labels?: Record<string, string>;
   env: Record<string, string>;
+  fromEnvironment?: RunRecordFromEnvironment;
   ports: Record<string, number>;
   selected: string[];
   suite?: RunRecordSuiteNode;
@@ -289,6 +310,7 @@ export class RunHistory {
         : {}),
       ...(meta.labels && Object.keys(meta.labels).length > 0 ? { labels: meta.labels } : {}),
       env: meta.env,
+      ...(meta.fromEnvironment ? { fromEnvironment: meta.fromEnvironment } : {}),
       ports: meta.ports,
       selected: meta.selected,
       // the tree first, so the file reads like the Testfile it came from

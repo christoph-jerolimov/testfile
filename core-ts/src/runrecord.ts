@@ -62,6 +62,27 @@ export interface RunRecordMerged {
   variants?: Record<string, string[]>;
 }
 
+// One value the environment wrote into the document (TESTFILE_CONFIG_).
+export interface RunRecordOverride {
+  // Dotted path into the Testfile, e.g. "services.postgres.container.image".
+  path: string;
+  // The host variable it came from, so the run can be repeated verbatim.
+  from: string;
+  // What that variable held, masked like everything else recorded.
+  value: string;
+}
+
+// What the environment contributed beyond the Testfile - the part of a run
+// that reading the committed file would not explain.
+export interface RunRecordFromEnvironment {
+  // Names handed in with TESTFILE_ENV_; their values are in `env`.
+  variables?: string[];
+  // Names whose values were masked in this run: the file's `secrets` that
+  // actually resolved, plus anything handed in with TESTFILE_SECRET_.
+  secrets?: string[];
+  overrides?: RunRecordOverride[];
+}
+
 export interface RunRecord {
   id: string;
   startedAt: string;
@@ -78,6 +99,8 @@ export interface RunRecord {
   // Present when this run was produced by merging others.
   merged?: RunRecordMerged;
   env: Record<string, string>;
+  // Absent when the environment added nothing to this run.
+  fromEnvironment?: RunRecordFromEnvironment;
   ports: Record<string, number>;
   selected: string[];
   // The Testfile's test tree, including tests the run did not execute.

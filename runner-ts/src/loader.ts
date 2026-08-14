@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import { parse } from "yaml";
-import { applyConfigOverrides } from "./configenv.js";
+import { applyConfigOverrides, type AppliedOverride } from "./configenv.js";
 import { expandForeach } from "./foreach.js";
 import type { ServiceDef, TestDef, TestfileDoc } from "./model.js";
 import { defaultName } from "./runsuite.js";
@@ -235,8 +235,8 @@ function embedFile(root: TestfileDoc, pathOrDir: string, stack: string[], where:
 export function loadTestfile(pathOrDir: string): {
   path: string;
   doc: TestfileDoc;
-  // Paths overridden from the environment, for the runner to report.
-  overrides: string[];
+  // What the environment overrode, for the runner to report and record.
+  overrides: AppliedOverride[];
 } {
   const path = findTestfile(pathOrDir);
   const doc: unknown = parse(readFileSync(path, "utf8"));

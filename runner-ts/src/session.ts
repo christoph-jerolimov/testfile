@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import { globSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { ResultCache } from "./cache.js";
+import type { AppliedOverride } from "./configenv.js";
 import { maskSecrets } from "./envfile.js";
 import { Runner } from "./executor.js";
 import { detectMachine } from "./machine.js";
@@ -14,6 +15,7 @@ import {
 } from "./history.js";
 import { validateSemantics } from "./loader.js";
 import type { TestfileDoc } from "./model.js";
+import type { RunRecordFromEnvironment } from "./history.js";
 import { buildRunSuite, resetTest, walk, type RunTest, type Status } from "./runsuite.js";
 
 // Owns the test suite, run history and the (re)creation of Runners, so the
@@ -47,6 +49,9 @@ export class Session extends EventEmitter {
       // Recorded with the run so it can be found again, e.g.
       // { branch: main } - see --label.
       labels?: Record<string, string>;
+      // What TESTFILE_CONFIG_ rewrote in the document before it was built,
+      // as loadTestfile reports it - recorded so a run explains itself.
+      overrides?: AppliedOverride[];
     } = {},
   ) {
     super();
@@ -172,6 +177,7 @@ export class Session extends EventEmitter {
         env: Object.fromEntries(
           Object.entries(runner.docEnv).map(([key, value]) => [key, maskSecrets(value, secrets)]),
         ),
+        fromEnvironment: fromEnvironment(runner, this.runDefaults.overrides, secrets),
         ports: runner.ports,
         selected: selectedIds
           .map((id) => this.byId.get(id)?.path)
@@ -224,4 +230,29 @@ function collectArtifacts(test: RunTest): { absolute: string; relative: string }
     }
   }
   return files;
+}
+
+// What the environment contributed to a run, or undefined when it
+// contributed nothing - a Testfile run with no prefixed variables and no
+// overrides records nothing here, so the field only appears when it says
+// something. Override values are masked like every other recorded value:
+// TESTFILE_CONFIG_ carries no secret marker, but it can carry a secret.
+function fromEnvironment(
+  runner: Runner,
+  overrides: AppliedOverride[] | undefined,
+  secrets: string[],
+): RunRecordFromEnvironment | undefined {
+  const variables = [...runner.handedInNames].sort();
+  const secretNames = [...runner.secretNames].sort();
+  const applied = (overrides ?? []).map((override) => ({
+    path: override.path,
+    from: override.from,
+    value: maskSecrets(override.value, secrets),
+  }));
+  if (variables.length === 0 && secretNames.length === 0 && applied.length === 0) return undefined;
+  return {
+    ...(variables.length > 0 ? { variables } : {}),
+    ...(secretNames.length > 0 ? { secrets: secretNames } : {}),
+    ...(applied.length > 0 ? { overrides: applied } : {}),
+  };
 }

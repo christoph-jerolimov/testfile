@@ -137,7 +137,11 @@ Details worth knowing:
   produces the same document.
 
 `testfile start` and `testfile validate` both print what was overridden,
-because what ran is then not quite what the file says.
+because what ran is then not quite what the file says — and the run
+**records** it, so the file plus the record still explain the run
+afterwards. `testfile inspect run <id>` shows it back, and
+[`testfile repro`](#reproducing-a-failure) puts the same variables in the
+command it hands you.
 
 ## Checking the machine
 

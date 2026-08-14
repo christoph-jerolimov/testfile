@@ -83,6 +83,8 @@ Details worth knowing:
   so a variable the file sets explicitly still wins. To override *that*, use
   a [config override](./cli#overriding-the-testfile-from-the-environment):
   `TESTFILE_CONFIG_env__DATABASE_URL=…`.
+- Both are **recorded by name** in the run (`fromEnvironment`), so a run
+  says which variables it was given — never their values, secret or not.
 - The same name under both prefixes is the masked one.
 - `TESTFILE_ENV_` on its own names nothing and is ignored, and an empty
   `TESTFILE_SECRET_` value is passed through but not registered for masking —

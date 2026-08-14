@@ -47,6 +47,10 @@ export class Runner extends EventEmitter {
   docEnv: Record<string, string> = {};
   // Values loaded from env files; masked when logs are persisted.
   readonly secrets = new Set<string>();
+  // The names behind those values, for the record: which secrets were
+  // actually in play, and which variables the environment handed in.
+  readonly secretNames = new Set<string>();
+  readonly handedInNames = new Set<string>();
   interrupted = false;
   failFastTriggered = false;
   readonly active?: Set<number>;
@@ -116,7 +120,10 @@ export class Runner extends EventEmitter {
     const baseEnv = hostBaseEnv([...(this.doc.forwardEnv ?? []), ...this.forwardEnv]);
     // TESTFILE_SECRET_* is in that environment already; what it still needs
     // is masking, so nothing it carries reaches a log or the record.
-    for (const value of prefixedEnv().secretValues) this.secrets.add(value);
+    const handedIn = prefixedEnv();
+    for (const value of handedIn.secretValues) this.secrets.add(value);
+    for (const name of handedIn.names.variables) this.handedInNames.add(name);
+    for (const name of handedIn.names.secrets) this.secretNames.add(name);
     // Platform facts for `if` conditions, e.g. ${{ env.TESTFILE_OS }} == linux.
     baseEnv.TESTFILE_OS = process.platform;
     baseEnv.TESTFILE_ARCH = process.arch;
@@ -134,7 +141,12 @@ export class Runner extends EventEmitter {
       const withFiles = { ...baseEnv, ...fileEnv };
       // Secrets named at document level come from the host (that is how CI
       // secret stores hand them over) and are registered for masking.
-      const docSecrets = collectSecrets(this.doc.secrets, withFiles, this.secrets);
+      const docSecrets = collectSecrets(
+        this.doc.secrets,
+        withFiles,
+        this.secrets,
+        this.secretNames,
+      );
       Object.assign(withFiles, docSecrets);
       this.docEnv = resolveEnvMap(this.doc.env, { ...bootstrap, env: withFiles }, "Testfile");
       // ... and a value assigned to a secret name in `env` is secret too
@@ -203,7 +215,12 @@ export class Runner extends EventEmitter {
         const withMatrix: Scopes = { ...scopes, matrix };
         // precedence: parent env < forwarded host vars < this test's own env
         const forwarded = forwardedEnv(test.def.forwardEnv);
-        const testSecrets = collectSecrets(test.def.secrets, withMatrix.env, this.secrets);
+        const testSecrets = collectSecrets(
+          test.def.secrets,
+          withMatrix.env,
+          this.secrets,
+          this.secretNames,
+        );
         const env = {
           ...withMatrix.env,
           ...forwarded,
@@ -844,6 +861,7 @@ function collectSecrets(
   names: readonly string[] | undefined,
   inherited: Record<string, string>,
   sink: Set<string>,
+  nameSink?: Set<string>,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const name of names ?? []) {
@@ -851,6 +869,7 @@ function collectSecrets(
     if (value === undefined || value === "") continue;
     out[name] = value;
     sink.add(value);
+    nameSink?.add(name);
   }
   return out;
 }

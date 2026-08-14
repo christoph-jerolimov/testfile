@@ -19,7 +19,8 @@ export function registerValidate(program: Command): void {
         // Validating the file as it stands is not the same as validating
         // what a run would use, so the difference is named.
         if (overrides.length > 0) {
-          console.log(color(90, `  with ${overrides.length} override(s): ${overrides.join(", ")}`));
+          const paths = overrides.map((override) => override.path).join(", ");
+          console.log(color(90, `  with ${overrides.length} override(s): ${paths}`));
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
