@@ -809,6 +809,36 @@ table.services {
   border-color: color-mix(in srgb, var(--magenta) 45%, var(--border));
 }
 
+/* What the environment contributed: variables handed in, secrets in play,
+   values it rewrote. Colour-coded so the three read apart at a glance. */
+.from-environment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem;
+  margin: -0.4rem 0 0.5rem;
+}
+
+.from-environment .badge {
+  margin-left: 0;
+}
+
+.from-environment .badge.given {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.from-environment .badge.secret {
+  color: var(--yellow);
+  border-color: color-mix(in srgb, var(--yellow) 45%, var(--border));
+}
+
+.from-environment .badge.override {
+  color: var(--magenta);
+  border-color: color-mix(in srgb, var(--magenta) 45%, var(--border));
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 .files {
   display: flex;
   flex-wrap: wrap;

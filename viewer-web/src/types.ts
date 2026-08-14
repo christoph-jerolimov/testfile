@@ -64,6 +64,14 @@ export interface RunRecord {
   // Present when this run was produced by merging others.
   merged?: RunMerged;
   env: Record<string, string>;
+  // What the environment contributed beyond the Testfile: variables handed
+  // in with TESTFILE_ENV_, the secret names masked in this run, and the
+  // paths TESTFILE_CONFIG_ overrode.
+  fromEnvironment?: {
+    variables?: string[];
+    secrets?: string[];
+    overrides?: { path: string; from: string; value: string }[];
+  };
   ports: Record<string, number>;
   selected: string[];
   suite?: SuiteNode;

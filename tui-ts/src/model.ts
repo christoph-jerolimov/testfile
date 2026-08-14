@@ -69,6 +69,21 @@ export function describeRun(run: RunRecord): OutputLine[] {
       lines.push({ text: `  ${line}`, stream: "system" });
     }
   }
+  // What the file alone would not explain: variables the environment handed
+  // in, the secrets that were in play, and the values it rewrote.
+  const from = run.fromEnvironment;
+  if (from?.variables?.length) {
+    lines.push({ text: `given:     ${from.variables.join(", ")}`, stream: "system" });
+  }
+  if (from?.secrets?.length) {
+    lines.push({ text: `secrets:   ${from.secrets.join(", ")}`, stream: "system" });
+  }
+  for (const override of from?.overrides ?? []) {
+    lines.push({
+      text: `override:  ${override.path} = ${override.value}  (${override.from})`,
+      stream: "system",
+    });
+  }
   const env = Object.entries(run.env)
     .map(([k, v]) => `${k}=${v}`)
     .join(" ");

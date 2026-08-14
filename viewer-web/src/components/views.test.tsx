@@ -5,6 +5,7 @@ import type { RunRecord, RunTest } from "../types.js";
 import { TestsView } from "./TestsView.js";
 import { RunsView } from "./RunsView.js";
 import { TestView } from "./TestView.js";
+import { RunDetail } from "./RunDetail.js";
 
 // The browser side of the viewer is covered by the Playwright suite in e2e/;
 // these render the views without a browser, which is enough to pin what the
@@ -228,4 +229,24 @@ test("the test page breadcrumbs its way back and tabs its logs", () => {
     <TestView runs={[record]} runId={record.id} testPath="ci/nope" />,
   );
   assert.match(missing, /not executed in this run/);
+});
+
+test("the run detail badges what the environment gave, masked and rewrote", () => {
+  const record: RunRecord = {
+    ...runs[0],
+    fromEnvironment: {
+      variables: ["BASE_URL"],
+      secrets: ["API_TOKEN"],
+      overrides: [{ path: "ports.db", from: "TESTFILE_CONFIG_ports__db", value: "15432" }],
+    },
+  };
+  const markup = renderToStaticMarkup(<RunDetail run={record} />);
+  assert.match(markup, /from the environment/);
+  assert.match(markup, /class="badge given">BASE_URL</);
+  assert.match(markup, /class="badge secret"[^>]*>API_TOKEN</);
+  assert.match(markup, /class="badge override"[^>]*>ports.db=15432</);
+
+  // nothing from the environment, nothing on the page
+  const plain = renderToStaticMarkup(<RunDetail run={runs[0]} />);
+  assert.ok(!plain.includes("from the environment"));
 });

@@ -282,3 +282,27 @@ test("the recorded-tests view carries each test's verdict", () => {
     ["ci/flaky:flaky", "ci/stable:healthy", "ci/broken:broken", "ci/new:unknown"],
   );
 });
+
+test("the run overview names what the environment gave, masked and hid", () => {
+  const lines = describeRun(
+    run({
+      fromEnvironment: {
+        variables: ["BASE_URL"],
+        secrets: ["API_TOKEN"],
+        overrides: [{ path: "ports.db", from: "TESTFILE_CONFIG_ports__db", value: "15432" }],
+      },
+    }),
+  );
+  const text = lines.map((line) => line.text);
+  assert.ok(text.some((line) => line.startsWith("given:     BASE_URL")));
+  assert.ok(text.some((line) => line.startsWith("secrets:   API_TOKEN")));
+  assert.ok(
+    text.some((line) => line.includes("override:  ports.db = 15432  (TESTFILE_CONFIG_ports__db)")),
+  );
+});
+
+test("a run the environment did not touch shows none of it", () => {
+  const text = describeRun(run({})).map((line) => line.text);
+  assert.ok(!text.some((line) => line.startsWith("given:")));
+  assert.ok(!text.some((line) => line.startsWith("override:")));
+});
