@@ -139,6 +139,58 @@
         "type": "string"
       }
     },
+    "fromEnvironment": {
+      "description": "What the environment contributed beyond the Testfile: variables handed in with TESTFILE_ENV_, the secret names masked in this run, and the document paths overridden with TESTFILE_CONFIG_. Absent when the environment added nothing.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "variables": {
+          "description": "Names handed in with TESTFILE_ENV_ (the prefix stripped); their values are in `env` where the Testfile used them.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "secrets": {
+          "description": "Names whose values were masked in this run: the Testfile's `secrets` that actually resolved, plus anything handed in with TESTFILE_SECRET_. Names only - never the values.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "overrides": {
+          "description": "Values TESTFILE_CONFIG_ wrote into the document before the run, in the order they were applied.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "from",
+              "value"
+            ],
+            "properties": {
+              "path": {
+                "description": "Dotted path into the Testfile, e.g. \"services.postgres.container.image\".",
+                "type": "string",
+                "minLength": 1
+              },
+              "from": {
+                "description": "The host variable it came from, so the run can be repeated verbatim.",
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "description": "What that variable held, masked like every other recorded value.",
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "ports": {
       "description": "The resolved named ports (may be empty).",
       "type": "object",
@@ -179,7 +231,9 @@
     "analysis": {
       "description": "Someone's reading of why this run went the way it did, added after the run by a person or a tool. Never written by the runner; viewers show it as an annotation, not as a result.",
       "type": "object",
-      "required": ["text"],
+      "required": [
+        "text"
+      ],
       "properties": {
         "text": {
           "description": "The finding, in prose. Free-form; consumers display it and must not parse it.",

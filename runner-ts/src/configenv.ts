@@ -147,15 +147,23 @@ function write(
   node[findKey(node, segment) ?? segment] = value;
 }
 
-// Applies every override to the document in place and returns the paths
-// that were written, for the runner to report. The document is validated
-// again afterwards by the caller, so an override that breaks it fails the
-// run rather than corrupting it.
+// What one override did, for the runner to report and record: where it
+// landed, which variable it came from, and the raw value - the three things
+// needed to repeat the run.
+export interface AppliedOverride {
+  path: string;
+  from: string;
+  value: string;
+}
+
+// Applies every override to the document in place. The document is
+// validated again afterwards by the caller, so an override that breaks it
+// fails the run rather than corrupting it.
 export function applyConfigOverrides(
   doc: unknown,
   host: NodeJS.ProcessEnv = process.env,
-): string[] {
-  const applied: string[] = [];
+): AppliedOverride[] {
+  const applied: AppliedOverride[] = [];
   for (const override of collectConfigOverrides(host)) {
     const { segments, source, value } = override;
     let node: unknown = doc;
@@ -165,7 +173,7 @@ export function applyConfigOverrides(
       walked.push(segment);
     }
     write(node, segments[segments.length - 1], value, walked, source);
-    applied.push(segments.join("."));
+    applied.push({ path: segments.join("."), from: source, value: host[source] ?? "" });
   }
   return applied;
 }

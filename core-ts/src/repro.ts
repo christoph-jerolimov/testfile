@@ -9,7 +9,13 @@
 //
 // The record is the only source: the viewer never reruns anything and never
 // guesses. What the run did not record simply does not appear.
-import type { RunHistory, RunRecord, RunRecordSuiteNode, RunRecordTest } from "./runrecord.js";
+import type {
+  RunHistory,
+  RunRecord,
+  RunRecordFromEnvironment,
+  RunRecordSuiteNode,
+  RunRecordTest,
+} from "./runrecord.js";
 
 export interface ReproService {
   name: string;
@@ -28,6 +34,9 @@ export interface Repro {
     // Merged runs: the leg this result came from, which is the run that
     // would have to be reproduced, not the merged one.
     origin?: string;
+    // Names the environment handed in; their values were never recorded,
+    // so reproducing the run means supplying them again.
+    fromEnvironment?: RunRecordFromEnvironment;
   };
   test: {
     path: string;
@@ -109,6 +118,12 @@ export function reproEnv(run: RunRecord): Record<string, string> {
   for (const [key, value] of Object.entries(run.env ?? {})) {
     if (!ALWAYS_SET.has(key)) env[key] = value;
   }
+  // The overrides are not part of the environment the tests saw, but they
+  // are part of how the run was configured - repeating it means setting
+  // them again, under the variable they came from.
+  for (const override of run.fromEnvironment?.overrides ?? []) {
+    env[override.from] = override.value;
+  }
   return env;
 }
 
@@ -168,6 +183,7 @@ export function reproOf(
       ...(run.variants ? { variants: run.variants } : {}),
       ...(run.labels ? { labels: run.labels } : {}),
       ...(test.origin ? { origin: test.origin } : {}),
+      ...(run.fromEnvironment ? { fromEnvironment: run.fromEnvironment } : {}),
     },
     test: {
       path: test.path,
@@ -225,6 +241,21 @@ export function formatRepro(repro: Repro): string {
     lines.push(`  export ${key}=${shellArg(value)}`);
   }
   lines.push(`  ${repro.command}`);
+
+  // Variables the environment handed in are recorded by name only, so the
+  // reader has to supply the values - saying so beats a silent difference.
+  const handedIn = repro.run.fromEnvironment;
+  if (handedIn?.variables?.length || handedIn?.secrets?.length) {
+    lines.push("");
+    lines.push("this run was also given (values not recorded):");
+    if (handedIn.variables?.length) {
+      const named = handedIn.variables.map((name: string) => `TESTFILE_ENV_${name}`);
+      lines.push(`  ${named.join(", ")}`);
+    }
+    if (handedIn.secrets?.length) {
+      lines.push(`  ${handedIn.secrets.join(", ")} (secret)`);
+    }
+  }
 
   if (repro.services.length > 0) {
     lines.push("");

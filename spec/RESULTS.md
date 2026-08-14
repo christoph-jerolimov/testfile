@@ -66,6 +66,7 @@ of every record, so editors validate and complete it.
 | `merged`     | object  | no       | Present when this run was produced by merging others — see [merged runs](#merged-runs). |
 | `cancelled`  | boolean | yes      | True when the run was interrupted. |
 | `env`        | map     | yes      | The resolved top-level `env` of the Testfile (may be empty). Secret values are masked. |
+| `fromEnvironment` | object | no  | What the environment contributed beyond the Testfile — see [`fromEnvironment`](#fromenvironment). Absent when it contributed nothing. |
 | `ports`      | map     | yes      | The resolved named ports (may be empty). |
 | `selected`   | array   | yes      | Test paths the user selected for this run (empty = the whole suite). |
 | `tests`      | array   | yes      | One entry per executed test, in **document order** (a pre-order walk of the suite; groups precede their children). Use `startedAt`/`startedAfterMs` for the temporal order — parallel groups make the two differ. See below. |
@@ -123,6 +124,28 @@ excluded from this run — `tests[]` says what actually executed.
 Producers **should** record `suite`; consumers must tolerate its absence
 (records written by earlier runners have none) and fall back to deriving
 nesting from the `path` values.
+
+### `fromEnvironment`
+
+A run is only reproducible from its record if the record says what the
+environment added. This block carries that, and nothing secret:
+
+| Field       | Type   | Required | Description |
+| ----------- | ------ | -------- | ----------- |
+| `variables` | array  | no       | Names handed in with `TESTFILE_ENV_`, the prefix stripped. Values are not repeated here; they appear in `env` wherever the Testfile used them. |
+| `secrets`   | array  | no       | Names whose values were masked in this run: the Testfile's `secrets` that actually resolved on the host, plus anything handed in with `TESTFILE_SECRET_`. **Names only** — a producer must never write the values. |
+| `overrides` | array  | no       | Values `TESTFILE_CONFIG_` wrote into the document, in the order they were applied. |
+
+Each `overrides[]` entry:
+
+| Field   | Type   | Required | Description |
+| ------- | ------ | -------- | ----------- |
+| `path`  | string | yes      | Dotted path into the document, e.g. `services.postgres.container.image`. |
+| `from`  | string | yes      | The host variable it came from, so the run can be repeated verbatim. |
+| `value` | string | yes      | What that variable held, masked like every other recorded value — `TESTFILE_CONFIG_` carries no secret marker, but it can carry a secret. |
+
+Absent when the environment contributed nothing, so an ordinary run records
+nothing extra.
 
 ### `services[]`
 
@@ -255,8 +278,9 @@ is optional.
 
 ## Secrets
 
-Values loaded from `envFile` files, and the variables a Testfile names in
-`secrets:` (see the [format specification](README.md)), are secrets:
+Values loaded from `envFile` files, the variables a Testfile names in
+`secrets:`, and anything handed in with `TESTFILE_SECRET_` (see the
+[format specification](README.md)), are secrets:
 producers must mask them (`***`) in every recorded log and must not write
 them into `run.yaml`. (Values shorter than 4 characters are exempt — masking
 them would mark ubiquitous substrings as secret without hiding anything.)

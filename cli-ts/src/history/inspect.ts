@@ -147,6 +147,25 @@ export function registerInspectRun(inspect: Command): void {
               console.log(`  ${pad(row.path, width)} |${row.bar}| ${color(90, row.label)}`);
             }
           }
+          // What the file alone would not explain about this run.
+          const from = run.fromEnvironment;
+          if (from?.variables?.length || from?.secrets?.length || from?.overrides?.length) {
+            console.log("from the environment:");
+            if (from.variables?.length) {
+              console.log(`  ${pad("variables", 9)} ${from.variables.join(", ")}`);
+            }
+            if (from.secrets?.length) {
+              console.log(`  ${pad("secrets", 9)} ${color(33, from.secrets.join(", "))}`);
+            }
+            for (const override of from.overrides ?? []) {
+              console.log(
+                `  ${pad("override", 9)} ${color(35, override.path)} = ${override.value} ${color(
+                  90,
+                  `(${override.from})`,
+                )}`,
+              );
+            }
+          }
           if (run.services?.length) {
             console.log("services:");
             for (const service of run.services) {

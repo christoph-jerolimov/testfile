@@ -10,7 +10,21 @@ labels:
   branch: main
   pr: "42"
   tier: nightly
-env: {}
+env:
+  BASE_URL: https://staging.example.com
+fromEnvironment:
+  variables:
+    - BASE_URL
+  secrets:
+    - API_TOKEN
+    - NPM_TOKEN
+  overrides:
+    - path: ports.db
+      from: TESTFILE_CONFIG_ports__db
+      value: "15432"
+    - path: services.postgres.container.image
+      from: TESTFILE_CONFIG_services__postgres__container__image
+      value: docker.io/library/postgres:17
 ports: {}
 selected:
   - root/unit

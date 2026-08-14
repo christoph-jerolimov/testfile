@@ -50,24 +50,29 @@ export interface PrefixedEnv {
   // Values to mask in recorded output. Never the empty string, which would
   // match between every pair of characters.
   secretValues: string[];
+  // The names behind them, split by prefix - what a run records to explain
+  // where a variable came from without disclosing what it held.
+  names: { variables: string[]; secrets: string[] };
 }
 
 export function prefixedEnv(host: NodeJS.ProcessEnv = process.env): PrefixedEnv {
   const env: Record<string, string> = {};
   const secretValues: string[] = [];
+  const names = { variables: [] as string[], secrets: [] as string[] };
   const take = (prefix: string, secret: boolean): void => {
-    for (const [key, value] of Object.entries(host)) {
+    for (const [key, value] of Object.entries(host).sort(([a], [b]) => a.localeCompare(b))) {
       if (value === undefined || !key.startsWith(prefix)) continue;
       const name = key.slice(prefix.length);
       if (name === "") continue; // the bare prefix names nothing
       env[name] = value;
+      (secret ? names.secrets : names.variables).push(name);
       if (secret && value !== "") secretValues.push(value);
     }
   };
   take(ENV_PREFIX, false);
   // Secrets last: a name given under both prefixes is the masked one.
   take(SECRET_PREFIX, true);
-  return { env, secretValues };
+  return { env, secretValues, names };
 }
 
 // Simple glob matching for variable names: * matches any run of

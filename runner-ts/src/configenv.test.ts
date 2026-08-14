@@ -56,12 +56,22 @@ test("overrides reach ports, services, containers and a test in a sequence", () 
     TESTFILE_CONFIG_test__sequence__1__tags: "[slow, flaky]",
     NOT_AN_OVERRIDE: "ignored",
   });
-  assert.deepEqual(applied, [
-    "ports.db",
-    "services.postgres.container.image",
-    "test.sequence.1.command",
-    "test.sequence.1.tags",
-  ]);
+  assert.deepEqual(
+    applied.map((override) => override.path),
+    [
+      "ports.db",
+      "services.postgres.container.image",
+      "test.sequence.1.command",
+      "test.sequence.1.tags",
+    ],
+  );
+  // each one also says where it came from and what it carried, so a run
+  // can be repeated from its own record
+  assert.deepEqual(applied[0], {
+    path: "ports.db",
+    from: "TESTFILE_CONFIG_ports__db",
+    value: "15432",
+  });
   const services = target.services as Record<string, { container: { image: string } }>;
   const tests = (target.test as { sequence: Record<string, unknown>[] }).sequence;
   assert.deepEqual(target.ports, { db: 15432 });
@@ -124,5 +134,9 @@ test("overrides are applied in a deterministic order", () => {
     TESTFILE_CONFIG_test__name: "second",
     TESTFILE_CONFIG_ports__db: "1",
   });
-  assert.deepEqual(applied, ["ports.db", "test.name"], "sorted by variable name");
+  assert.deepEqual(
+    applied.map((override) => override.path),
+    ["ports.db", "test.name"],
+    "sorted by variable name",
+  );
 });

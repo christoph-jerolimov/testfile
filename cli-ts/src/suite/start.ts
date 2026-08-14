@@ -142,7 +142,9 @@ export function registerStart(program: Command): void {
         console.log(
           color(
             90,
-            `${overrides.length} override(s) from the environment: ${overrides.join(", ")}`,
+            `${overrides.length} override(s) from the environment: ${overrides
+              .map((override) => override.path)
+              .join(", ")}`,
           ),
         );
       }
@@ -153,6 +155,7 @@ export function registerStart(program: Command): void {
         forwardEnv: options.forwardEnv,
         variants: parseVariants(options.variant),
         labels: parseLabels(options.label),
+        overrides,
       });
       filtered = resolveFilters(session, options);
       if (filtered.testCount === 0) throw new Error("no tests match the given filters");

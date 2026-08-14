@@ -1,0 +1,16 @@
+# An override must say which variable it came from, or the run cannot be
+# repeated from its own record.
+id: 20260803-231617-d643
+startedAt: 2026-08-03T23:16:17.064Z
+durationMs: 11
+status: passed
+exitCode: 0
+cancelled: false
+env: {}
+fromEnvironment:
+  overrides:
+    - path: ports.db
+      value: "15432"
+ports: {}
+selected: []
+tests: []

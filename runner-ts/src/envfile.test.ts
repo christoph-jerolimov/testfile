@@ -224,3 +224,53 @@ test("TESTFILE_ENV_ and TESTFILE_SECRET_ reach tests and services unannounced", 
     delete process.env.TESTFILE_SECRET_API_TOKEN;
   }
 });
+
+test("the record says what the environment contributed, values masked", async () => {
+  const { Session } = await import("./session.js");
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "testfile-from-env-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+
+  process.env.TESTFILE_ENV_BASE_URL = "http://localhost:3000";
+  process.env.TESTFILE_SECRET_API_TOKEN = "s3cr3t-recorded";
+  try {
+    const session = new Session({ version: 0, test: { name: "root", command: "true" } }, dir, {
+      // as loadTestfile would report them
+      overrides: [
+        { path: "test.command", from: "TESTFILE_CONFIG_test__command", value: "true" },
+        {
+          // an override may carry a secret even though it is not marked as one
+          path: "env.TOKEN",
+          from: "TESTFILE_CONFIG_env__TOKEN",
+          value: "s3cr3t-recorded",
+        },
+      ],
+    });
+    assert.equal(await session.runAll(), "passed");
+
+    const from = session.lastRecord!.fromEnvironment!;
+    assert.deepEqual(from.variables, ["BASE_URL"]);
+    assert.deepEqual(from.secrets, ["API_TOKEN"]);
+    assert.deepEqual(from.overrides, [
+      { path: "test.command", from: "TESTFILE_CONFIG_test__command", value: "true" },
+      { path: "env.TOKEN", from: "TESTFILE_CONFIG_env__TOKEN", value: "***" },
+    ]);
+  } finally {
+    delete process.env.TESTFILE_ENV_BASE_URL;
+    delete process.env.TESTFILE_SECRET_API_TOKEN;
+  }
+});
+
+test("a run the environment did not touch records nothing extra", async () => {
+  const { Session } = await import("./session.js");
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "testfile-from-env-none-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const session = new Session({ version: 0, test: { name: "root", command: "true" } }, dir);
+  assert.equal(await session.runAll(), "passed");
+  assert.equal(session.lastRecord!.fromEnvironment, undefined);
+});
