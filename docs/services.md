@@ -88,7 +88,7 @@ are never started and the test fails with the dependency's error.
 ## Steps between services
 
 Some things have to happen *after* a service is up and *before* the tests
-run: migrations, a fixture load, a bucket that has to exist. `oneshot: true`
+run: migrations, a fixture load, a bucket that has to exist. `once: true`
 makes an entry a step rather than a server — it runs once, and exiting with
 code 0 is what makes it ready:
 
@@ -105,8 +105,8 @@ services:
     ready:
       exec: pg_isready -h 127.0.0.1 -p 5432
   seed:
-    oneshot: true          # a step, not a server
-    needs: [postgres]      # runs once postgres is ready
+    once: true             # a step, not a server
+    needs: [postgres]      # runs when postgres is ready
     command: ./scripts/seed.sh
     timeout: 2m
     env:
@@ -124,17 +124,17 @@ happens:
 ```yaml
 services:
   postgres: { container: { image: docker.io/library/postgres:16 }, ready: { ... } }
-  migrate:  { oneshot: true, needs: [postgres], command: npm run migrate }
-  seed:     { oneshot: true, needs: [migrate],  command: npm run seed }
+  migrate:  { once: true, needs: [postgres], command: npm run migrate }
+  seed:     { once: true, needs: [migrate],  command: npm run seed }
   app:      { needs: [seed], command: npm start, ready: { http: ... } }
 ```
 
 A step that exits non-zero fails the run: nothing that needed it starts, and
 the error names the step. Its output is kept like any service's log, which
-is usually where the reason is. Because it is expected to end, a one-shot has
+is usually where the reason is. Because it is expected to end, a step has
 no `ready` check (the exit code is the signal) and no `stop` (nothing is left
 running) — both are rejected when the Testfile loads. `timeout` is the one
-field only a one-shot has; without it a wedged step waits forever.
+field only a step has; without it a wedged step waits forever.
 
 Everything else about services still applies: a step can be a `command`, a
 `script` or a `container` (`image: postgres:16` with `command: [psql, ...]`
@@ -144,8 +144,8 @@ the tests that share it.
 ### Do I need a step, or a setup hook?
 
 A [`setup` hook](./writing-tests#setup-and-teardown) runs after *all* of a
-test's services are ready and belongs to that one test. Reach for a one-shot
-service when the work belongs to the service rather than to a test — when
+test's services are ready and belongs to that one test. Reach for a step
+when the work belongs to the service rather than to a test — when
 another **service** has to wait for it (a setup hook cannot sit between two
 services), when several tests need it done once, or when you want it in the
 service log with its own name and duration. Otherwise a setup hook is the
@@ -305,7 +305,7 @@ no-op — a host path names nothing on a cluster node, and a mount that
 quietly did nothing would be worse than a rejection. In practice:
 
 - **Your project never leaves your machine.** Tests, `setup`/`teardown`
-  hooks, host-side readiness probes and one-shot steps that are a `command`
+  hooks, host-side readiness probes and once steps that are a `command`
   or `script` all run locally, in the repository, as always.
 - **Service pods must be self-contained**: what they need is in the image,
   in `env`, or fetched by the container itself.
@@ -319,7 +319,7 @@ files engine-specific. The container form works on podman and docker only:
 
 ```yaml
   seed:
-    oneshot: true
+    once: true
     needs: [postgres]
     container:
       image: docker.io/library/postgres:16
@@ -332,7 +332,7 @@ and talks to the published or forwarded port like any test does.
 
 ```yaml
   seed:
-    oneshot: true
+    once: true
     needs: [postgres]
     command: psql "$DATABASE_URL" -f fixtures/base.sql
 ```

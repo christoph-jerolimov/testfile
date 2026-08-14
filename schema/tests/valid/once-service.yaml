@@ -15,14 +15,14 @@ services:
       exec: pg_isready -h 127.0.0.1 -p 5432
       timeout: 60s
   migrate:
-    oneshot: true
+    once: true
     needs: [postgres]
     command: npm run migrate
     timeout: 5m
     env:
       DATABASE_URL: postgresql://postgres:test@127.0.0.1:${{ ports.db }}/postgres
   seed:
-    oneshot: true
+    once: true
     needs: [migrate]
     script: |
       psql "$DATABASE_URL" -f fixtures/base.sql

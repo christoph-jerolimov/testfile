@@ -1,8 +1,8 @@
-# A one-shot signals readiness by exiting; it cannot also have a ready check.
+# A once signals readiness by exiting; it cannot also have a ready check.
 version: 0
 services:
   seed:
-    oneshot: true
+    once: true
     command: ./seed.sh
     ready:
       log: seeded

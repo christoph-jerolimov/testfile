@@ -92,8 +92,8 @@ export interface ServiceDef {
   // as being ready. Whatever needs it - another service, or the tests -
   // starts only after it finished. Excludes `ready` (the exit code is the
   // signal) and `stop` (there is nothing left to stop).
-  oneshot?: boolean;
-  // Only for `oneshot`: give up when it has not finished by then.
+  once?: boolean;
+  // Only for `once`: give up when it has not finished by then.
   timeout?: Duration;
   env?: EnvMap;
   workdir?: string;

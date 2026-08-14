@@ -1,7 +1,7 @@
 spec:
-  - One-shot services
+  - Steps (once)
   - Services
-# A one-shot service is a step in the service graph: it runs after its
+# A `once` service is a step in the service graph: it runs after its
 # dependency is ready, has to exit with code 0, and everything that needs
 # it - another service, and the tests - waits for it to have finished.
 exitCode: 0

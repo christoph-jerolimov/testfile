@@ -190,13 +190,13 @@ class FakeKubectl implements KubectlRunner {
   podStates: KubectlExecResult[] = [podJson("Running")];
   // What `get events` reports for the pod.
   events: Array<{ type: string; reason: string; message: string }> = [];
-  // What a completed pod's log holds, for the one-shot path.
+  // What a completed pod's log holds, for the `once` path.
   logText = "";
   private podCall = 0;
 
   async exec(args: string[], input?: string): Promise<KubectlExecResult> {
     this.calls.push(args);
-    // `kubectl logs` without -f: what a finished one-shot pod printed.
+    // `kubectl logs` without -f: what a finished step's pod printed.
     if (args.includes("logs")) return { code: 0, stdout: this.logText, stderr: "" };
     const verb = args.find((a) => ["apply", "get", "delete"].includes(a));
     if (verb === "apply") {
@@ -402,7 +402,7 @@ function terminatedPod(exitCode: number): KubectlExecResult {
   });
 }
 
-test("a one-shot pod is followed to its exit code, and its log collected after", async () => {
+test("a step's pod is followed to its exit code, and its log collected after", async () => {
   const kubectl = new FakeKubectl();
   kubectl.podStates = [podJson("Pending"), podJson("Running"), terminatedPod(0)];
   kubectl.logText = "seeded 3 rows\n";
@@ -417,7 +417,7 @@ test("a one-shot pod is followed to its exit code, and its log collected after",
   assert.ok(output.lines.some((line) => line.text === "seeded 3 rows"));
 });
 
-test("a one-shot pod that fails reports the container's exit code", async () => {
+test("a step's pod that fails reports the container's exit code", async () => {
   const kubectl = new FakeKubectl();
   kubectl.podStates = [terminatedPod(4)];
   const { service } = makeService(kubectl);

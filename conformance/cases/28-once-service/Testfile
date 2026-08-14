@@ -16,7 +16,7 @@ services:
   # what makes it "ready" is exiting with code 0. Running early fails the
   # step (the marker is missing), which fails the run.
   seed:
-    oneshot: true
+    once: true
     needs: [db]
     script: |
       test -f db-is-ready
