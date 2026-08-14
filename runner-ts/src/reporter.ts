@@ -53,7 +53,7 @@ export class ConsoleReporter {
       service.on("update", () => {
         if (service.status === last) return;
         last = service.status;
-        // "done" is a one-shot that finished; both mean dependents can go.
+        // "done" is a `once` step that finished; both mean dependents can go.
         if (service.status === "ready" || service.status === "done")
           this.print(`${color(36, "◆")} service ${service.name} ${service.status}`);
         if (service.status === "failed") {

@@ -8,7 +8,7 @@ import { EXEC_TIMEOUT_MS, waitReady } from "./ready.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
 import { formatMs, parseDurationMs } from "./util.js";
 
-// "done" is a one-shot service that finished successfully - the counterpart
+// "done" is a `once` step that finished successfully - the counterpart
 // of "ready" for something that was never meant to keep running.
 export type ServiceStatus =
   | "pending"
@@ -120,7 +120,7 @@ function waitExit(child: ChildProcess, timeoutMs: number): Promise<boolean> {
 
 // The full `run` argument list for a service container. The service name
 // becomes a network alias when a network is set, so services on the same
-// network reach each other by name. A one-shot runs in the foreground
+// network reach each other by name. A once runs in the foreground
 // (`detached: false`), so the engine's exit code is the container's.
 export function buildContainerRunArgs(
   name: string,
@@ -261,7 +261,7 @@ export class ServiceInstance extends EventEmitter {
       ? resolvePath(cwd, resolveTemplate(this.def.workdir, myScopes, where))
       : cwd;
     try {
-      if (this.def.oneshot) {
+      if (this.def.once) {
         await this.runOnce(myScopes, where, signal);
         this.setStatus("done");
         return;
@@ -294,7 +294,7 @@ export class ServiceInstance extends EventEmitter {
     }
   }
 
-  // A one-shot service: run the step, wait for it, and let its exit code
+  // A `once` service: run the step, wait for it, and let its exit code
   // decide. Nothing is left running afterwards, so there is no readiness
   // check to poll and nothing for stop() to do - whatever needed this one
   // starts because it finished, not because it came up.
@@ -310,7 +310,7 @@ export class ServiceInstance extends EventEmitter {
     this.output.system("done");
   }
 
-  // Shared plumbing for both one-shot flavours: stream the child's output
+  // Shared plumbing for both once flavours: stream the child's output
   // into the service log, and resolve with its exit code. An abort or an
   // expired timeout kills the process group and fails the service, because
   // a half-applied step is not something to run tests against.
@@ -538,7 +538,7 @@ export class ServiceInstance extends EventEmitter {
   async stop(): Promise<void> {
     if (this.stopping || this.status === "pending" || this.status === "stopped") return;
     this.stopping = true;
-    // A finished one-shot has nothing left to stop, and "done" says more in
+    // A finished once has nothing left to stop, and "done" says more in
     // the record than "stopped" would - but its pod is still deleted below.
     const keepStatus = this.status === "failed" || this.status === "done";
     if (!keepStatus) this.setStatus("stopping");

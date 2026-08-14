@@ -138,8 +138,8 @@ test("a service with needs starts only after its dependency is ready", async () 
   );
 });
 
-test("a one-shot service runs between its dependency and the tests", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "testfile-oneshot-"));
+test("a `once` service runs between its dependency and the tests", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-once-"));
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   const session = new Session(
     {
@@ -151,7 +151,7 @@ test("a one-shot service runs between its dependency and the tests", async () =>
         },
         // the step: it exits, and that is what makes it ready
         seed: {
-          oneshot: true,
+          once: true,
           needs: ["db"],
           script: 'echo seed >> "$ORDER"',
         },
@@ -176,14 +176,14 @@ test("a one-shot service runs between its dependency and the tests", async () =>
   assert.equal(seed.status, "done", "a finished step is done, not stopped");
 });
 
-test("a one-shot that fails stops the run before the tests", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "testfile-oneshot-fail-"));
+test("a step that fails stops the run before the tests", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-once-fail-"));
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   const session = new Session(
     {
       version: 0,
       services: {
-        seed: { oneshot: true, command: "echo cannot reach the database >&2; exit 4" },
+        seed: { once: true, command: "echo cannot reach the database >&2; exit 4" },
         app: { needs: ["seed"], command: "sleep 30" },
       },
       test: { name: "root", command: "true" },
@@ -205,13 +205,13 @@ test("a one-shot that fails stops the run before the tests", async () => {
   );
 });
 
-test("a one-shot that hangs is bounded by its timeout", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "testfile-oneshot-timeout-"));
+test("a step that hangs is bounded by its timeout", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-once-timeout-"));
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   const session = new Session(
     {
       version: 0,
-      services: { seed: { oneshot: true, command: "sleep 30", timeout: "200ms" } },
+      services: { seed: { once: true, command: "sleep 30", timeout: "200ms" } },
       test: { name: "root", command: "true" },
     },
     dir,

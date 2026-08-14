@@ -1,4 +1,4 @@
-# `timeout` bounds a one-shot step; a long-running service is bounded by
+# `timeout` bounds a once step; a long-running service is bounded by
 # its readiness timeout instead.
 version: 0
 services:

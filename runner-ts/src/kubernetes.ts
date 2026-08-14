@@ -224,7 +224,7 @@ export interface PodState {
   // Waiting reasons that can never recover on their own.
   fatal?: boolean;
   // What the container exited with, when the cluster says - the verdict for
-  // a one-shot pod. Absent when it ended without a container status.
+  // a step's pod. Absent when it ended without a container status.
   exitCode?: number;
 }
 
@@ -343,7 +343,7 @@ export class KubernetesService {
     if (this.forwards.length > 0) await this.startPortForward(this.opts.signal);
   }
 
-  // A one-shot pod: nothing waits for it to be Running, because a short step
+  // A step's pod: nothing waits for it to be Running, because a short step
   // can be Succeeded before the first poll. Its log is collected in one call
   // once it terminated rather than followed - `kubectl logs -f` against a
   // pod that is still being scheduled fails, and a step's output is worth
@@ -391,7 +391,7 @@ export class KubernetesService {
     }
   }
 
-  // Follows a one-shot pod to termination and reports its exit code. A pod
+  // Follows a step's pod to termination and reports its exit code. A pod
   // that cannot start (a bad image) fails here with the cluster's reason
   // rather than waiting out the timeout.
   private async waitForCompletion(signal: AbortSignal, timeoutMs?: number): Promise<number> {
