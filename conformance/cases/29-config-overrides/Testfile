@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=../../../schema/testfile.schema.json
+version: 0
+ports:
+  api: 1
+env:
+  MODE: committed
+test:
+  name: root
+  sequence:
+    # every value here is replaced from the environment before the run
+    - name: env-overridden
+      command: test "$MODE" = "overridden"
+    - name: port-overridden
+      command: test "${{ ports.api }}" = "18080"
+    - name: command-overridden
+      command: exit 1
+    - name: added-where-nothing-was
+      command: test "$ADDED" = "yes"
+    - name: untouched
+      command: test "$MODE" = "overridden"

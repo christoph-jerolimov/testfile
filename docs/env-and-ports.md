@@ -80,7 +80,9 @@ Details worth knowing:
   variable this way beats a broad pattern that also matches it, and beats the
   runner's own `CI=1`.
 - They land **before** the Testfile's `env`, like every forwarded value —
-  so a variable the file sets explicitly still wins.
+  so a variable the file sets explicitly still wins. To override *that*, use
+  a [config override](./cli#overriding-the-testfile-from-the-environment):
+  `TESTFILE_CONFIG_env__DATABASE_URL=…`.
 - The same name under both prefixes is the masked one.
 - `TESTFILE_ENV_` on its own names nothing and is ignored, and an empty
   `TESTFILE_SECRET_` value is passed through but not registered for masking —

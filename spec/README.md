@@ -565,6 +565,30 @@ contain `}`. Referencing an undefined name **without** a default is an error
 at run start. `duration` values are either plain integers (seconds) or
 strings like `500ms`, `30s`, `5m`, `1h`.
 
+## Overrides from the environment
+
+A host variable named `TESTFILE_CONFIG_<path>` replaces one value in the
+document, for that run only. The path addresses the document from its root;
+`__` separates the segments, because a single `_` occurs in the keys
+themselves. A segment names a map key or, inside a sequence, a zero-based
+index that must already exist. Missing map keys along the path are created,
+so an override can add a block the document does not have.
+
+A segment matches a key exactly, else ignoring case, else with `_` in place
+of `-`: an environment variable name cannot contain `-`, and some platforms
+upper-case the name.
+
+The value is the string it is, unless it is a bare `true`, `false`, `null`
+or a number without leading zeros, or it starts with `[`, `{`, `"` or `'`,
+in which case it is parsed as YAML — which is also how a string that would
+otherwise be read as one of those is written.
+
+Overrides apply after `include` and `foreach` are expanded, in the order
+their variable names sort, and the resulting document must still be valid:
+an override that violates the schema or these rules fails the run. Runners
+must report which paths were overridden, because the run no longer matches
+the file as committed.
+
 ## Env files
 
 `envFile` loads dotenv-format files: `KEY=VALUE` lines, blank lines and
