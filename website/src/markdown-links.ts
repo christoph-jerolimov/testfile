@@ -17,8 +17,8 @@
 
 // where the spec documents are published, by repository path - kept in sync
 // with src/spec.ts (which cannot be imported here: this runs in the Astro
-// config, before the TypeScript pipeline).
-const specPages = {
+// config, before the content collections exist).
+const specPages: Record<string, string> = {
   "spec/README.md": "testfile",
   "spec/RESULTS.md": "test-result",
   "spec/VERSIONING.md": "versioning",
@@ -26,9 +26,18 @@ const specPages = {
 
 const repoBlobUrl = "https://github.com/christoph-jerolimov/testfile/blob/main";
 
+// A node of the rendered document; only elements and their children are
+// looked at, so this is all the shape that matters here.
+interface Node {
+  type?: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: Node[];
+}
+
 // "docs" + "../spec/VERSIONING.md" -> "spec/VERSIONING.md"
-function resolve(dir, href) {
-  const segments = [];
+function resolve(dir: string, href: string): string {
+  const segments: string[] = [];
   for (const segment of `${dir}/${href}`.split("/")) {
     if (segment === "." || segment === "") continue;
     if (segment === "..") segments.pop();
@@ -39,23 +48,24 @@ function resolve(dir, href) {
 
 // The repository folder a rendered markdown file came from ("docs" or
 // "spec"), or undefined for anything else.
-function sourceDir(path) {
+function sourceDir(path: string | undefined): string | undefined {
   return /[/\\](docs|spec)[/\\][^/\\]+\.md$/.exec(path ?? "")?.[1];
 }
 
-function walk(node, visit) {
+function walk(node: Node, visit: (node: Node) => void): void {
   visit(node);
   for (const child of node.children ?? []) walk(child, visit);
 }
 
-export function rewriteMarkdownLinks({ base }) {
-  return (tree, file) => {
+export function rewriteMarkdownLinks({ base }: { base: string }) {
+  return (tree: Node, file: { path?: string }): void => {
     const dir = sourceDir(file.path);
     if (!dir) return;
     walk(tree, (node) => {
       if (node.type !== "element" || node.tagName !== "a") return;
-      const href = node.properties?.href;
-      if (typeof href !== "string") return;
+      const properties = node.properties;
+      const href = properties?.href;
+      if (!properties || typeof href !== "string") return;
       // absolute URLs, mail links and pure anchors stay as they are
       if (/^[a-z]+:/i.test(href) || href.startsWith("#") || href.startsWith("/")) return;
 
@@ -63,12 +73,12 @@ export function rewriteMarkdownLinks({ base }) {
       const suffix = anchor ? `#${anchor}` : "";
       const target = resolve(dir, path);
       if (specPages[target]) {
-        node.properties.href = `${base}/spec/${specPages[target]}${suffix}`;
+        properties.href = `${base}/spec/${specPages[target]}${suffix}`;
       } else if (target.startsWith("docs/")) {
         // docs pages are addressed without the .md extension
-        node.properties.href = `${base}/${target.replace(/\.md$/, "")}${suffix}`;
+        properties.href = `${base}/${target.replace(/\.md$/, "")}${suffix}`;
       } else {
-        node.properties.href = `${repoBlobUrl}/${target}${suffix}`;
+        properties.href = `${repoBlobUrl}/${target}${suffix}`;
       }
     });
   };

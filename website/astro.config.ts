@@ -1,7 +1,7 @@
 // @ts-check
 import { unified } from "@astrojs/markdown-remark";
 import { defineConfig } from "astro/config";
-import { rewriteMarkdownLinks } from "./src/markdown-links.mjs";
+import { rewriteMarkdownLinks } from "./src/markdown-links";
 
 // Published on GitHub Pages under /<repo>/.
 const base = "/testfile";

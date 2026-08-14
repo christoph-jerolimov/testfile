@@ -1,21 +1,67 @@
 // The starter Testfile the "Get started" page builds from a handful of
-// answers. Kept as one pure function so the page, the tests and the schema
-// check all see the same output: every combination of answers is validated
-// against the JSON schema, which is what makes it safe to tell a reader to
-// copy the result.
+// answers, as one pure function so the server render and the browser render
+// cannot disagree.
 //
 // Each generated line carries the ids of the questions that decided it, so
 // the page can highlight exactly what the last answer changed.
+//
+// Nothing here is imported by a test. What the page produces is checked
+// through the page itself, against files written by hand - see
+// e2e/wizard.spec.ts and e2e/expected/.
 
-/**
- * @typedef {{ id: string, label: string, hint?: string, options: Option[] }} Question
- * @typedef {{ value: string, label: string, note?: string }} Option
- * @typedef {{ text: string, from: string[] }} Line
- */
+export interface Option {
+  value: string;
+  label: string;
+  note?: string;
+}
+
+export interface Question {
+  id: AnswerKey;
+  label: string;
+  hint?: string;
+  options: Option[];
+}
+
+/** A generated line, with the questions that decided it. */
+export interface Line {
+  text: string;
+  from: string[];
+}
+
+export interface Answers {
+  language: string;
+  runtime: "local" | "container";
+  version: string;
+  database: string;
+  dbVersion?: string;
+}
+
+export type AnswerKey = keyof Answers;
+
+interface Language {
+  label: string;
+  image: (version: string) => string;
+  versions: string[];
+  install: string;
+  lint: string;
+  unit: string;
+  integration: string;
+  inputs: string[];
+}
+
+interface Database {
+  label: string;
+  versions: string[];
+  image: (version: string) => string;
+  port: number;
+  env: Array<[string, string]>;
+  ready: string;
+  url: string;
+}
 
 // Language-specific facts: the image a container build uses, the commands
 // the tests run, and how the language usually installs dependencies.
-const LANGUAGES = {
+const LANGUAGES: Record<string, Language> = {
   node: {
     label: "Node.js / TypeScript",
     image: (version) => `docker.io/library/node:${version}`,
@@ -71,7 +117,7 @@ const LANGUAGES = {
 // Databases as services: the image, the port it listens on inside its
 // container, what it needs to boot, how it says it is ready, and the URL
 // the integration test connects with.
-const DATABASES = {
+const DATABASES: Record<string, Database> = {
   postgres: {
     label: "PostgreSQL",
     versions: ["18", "17", "16"],
@@ -99,7 +145,7 @@ const DATABASES = {
   },
 };
 
-export const DEFAULT_ANSWERS = {
+export const DEFAULT_ANSWERS: Answers = {
   language: "node",
   runtime: "local",
   version: "22",
@@ -109,11 +155,10 @@ export const DEFAULT_ANSWERS = {
 
 // The questions, in the order they are asked. `version` and `dbVersion`
 // only apply once an earlier answer made them mean something.
-export function questions(answers = DEFAULT_ANSWERS) {
+export function questions(answers: Answers = DEFAULT_ANSWERS): Question[] {
   const language = LANGUAGES[answers.language] ?? LANGUAGES.node;
   const database = DATABASES[answers.database];
-  /** @type {Question[]} */
-  const all = [
+  const all: Question[] = [
     {
       id: "language",
       label: "What is the project written in?",
@@ -161,7 +206,7 @@ export function questions(answers = DEFAULT_ANSWERS) {
 
 // Answers with the gaps filled in: a version that belongs to the chosen
 // language, a database version that belongs to the chosen database.
-export function normalize(answers = {}) {
+export function normalize(answers: Partial<Answers> = {}): Answers {
   const merged = { ...DEFAULT_ANSWERS, ...answers };
   const language = LANGUAGES[merged.language] ? merged.language : DEFAULT_ANSWERS.language;
   const database =
@@ -174,21 +219,19 @@ export function normalize(answers = {}) {
     version: versions.includes(merged.version) ? merged.version : versions[0],
     database,
     dbVersion:
-      dbVersions && dbVersions.includes(merged.dbVersion) ? merged.dbVersion : dbVersions?.[0],
+      dbVersions && merged.dbVersion && dbVersions.includes(merged.dbVersion)
+        ? merged.dbVersion
+        : dbVersions?.[0],
   };
 }
 
-/**
- * The Testfile for one set of answers, line by line.
- * @returns {Line[]}
- */
-export function buildTestfile(rawAnswers = {}) {
+/** The Testfile for one set of answers, line by line. */
+export function buildTestfile(rawAnswers: Partial<Answers> = {}): Line[] {
   const answers = normalize(rawAnswers);
   const language = LANGUAGES[answers.language];
   const database = DATABASES[answers.database];
-  /** @type {Line[]} */
-  const lines = [];
-  const add = (text, ...from) => lines.push({ text, from });
+  const lines: Line[] = [];
+  const add = (text: string, ...from: string[]): number => lines.push({ text, from });
 
   add("version: 0");
 
@@ -203,7 +246,7 @@ export function buildTestfile(rawAnswers = {}) {
     add("services:", "database");
     add(`  ${answers.database}:`, "database");
     add("    container:", "database");
-    add(`      image: ${database.image(answers.dbVersion)}`, "database", "dbVersion");
+    add(`      image: ${database.image(answers.dbVersion ?? "")}`, "database", "dbVersion");
     add(`      ports: ["\${{ ports.db }}:${database.port}"]`, "database");
     add("      env:", "database");
     for (const [key, value] of database.env) add(`        ${key}: ${value}`, "database");
@@ -239,27 +282,9 @@ export function buildTestfile(rawAnswers = {}) {
   return lines;
 }
 
-// The file as text, for copying and for validating.
-export function toYaml(answers) {
+// The file as text, for copying and for quoting.
+export function toYaml(answers: Partial<Answers>): string {
   return `${buildTestfile(answers)
     .map((line) => line.text)
     .join("\n")}\n`;
-}
-
-// Every combination the page can produce - what the schema check walks.
-export function allAnswerCombinations() {
-  const out = [];
-  for (const language of Object.keys(LANGUAGES)) {
-    for (const runtime of ["local", "container"]) {
-      for (const version of LANGUAGES[language].versions) {
-        for (const database of ["none", ...Object.keys(DATABASES)]) {
-          const dbVersions = DATABASES[database]?.versions ?? [undefined];
-          for (const dbVersion of dbVersions) {
-            out.push({ language, runtime, version, database, dbVersion });
-          }
-        }
-      }
-    }
-  }
-  return out;
 }

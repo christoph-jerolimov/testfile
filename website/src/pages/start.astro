@@ -4,7 +4,7 @@
 // and with the schema check, so what a reader copies is always a Testfile
 // the runner accepts.
 import Layout from "../layouts/Layout.astro";
-import { buildTestfile, DEFAULT_ANSWERS, questions } from "../wizard.mjs";
+import { buildTestfile, DEFAULT_ANSWERS, questions } from "../wizard";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 // Rendered for the default answers, so the page says something before (and
@@ -209,7 +209,7 @@ const initialLines = buildTestfile(DEFAULT_ANSWERS);
   </style>
 
   <script>
-    import { buildTestfile, DEFAULT_ANSWERS, questions } from "../wizard.mjs";
+    import { buildTestfile, DEFAULT_ANSWERS, questions } from "../wizard";
 
     const form = document.getElementById("wizard-form");
     const output = document.querySelector("#wizard-yaml code");

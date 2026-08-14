@@ -25,7 +25,9 @@ test:
             # every workspace's own sources - a "**/*.ts" from the root would
             # walk node_modules
             - "*/src/**/*.{ts,tsx,mjs,cjs}"
-            - "*/*.mjs"
+            - "*/scripts/**/*.{ts,mjs}"
+            - "*/e2e/**/*.ts"
+            - "*/*.{ts,mjs}"
             - action/*.mjs
             - .oxlintrc.json
             - .oxfmtrc.json
@@ -41,9 +43,9 @@ test:
             - Testfile
             - examples/**/Testfile
             # the complete Testfiles printed in the docs are validated too,
-            # and every file the website's wizard can generate
+            # and the files the website's wizard is expected to produce
             - docs/**.md
-            - website/src/wizard.mjs
+            - website/e2e/expected/**
         - name: website
           tags: [docs]
           command: npm run build --workspace website
@@ -54,6 +56,14 @@ test:
             - spec/**
             - examples/**
             - package-lock.json
+        # Everything in this workspace is TypeScript; the two checkers are
+        # typechecked by being compiled, this covers the site's own sources
+        # and the browser suite. After the build, not beside it: both drive
+        # astro, and two of them write its content store at once.
+        - name: website-types
+          tags: [fast, docs]
+          needs: [website]
+          command: npm run typecheck --workspace website
         # Every internal link of the built site has to point at a page and an
         # anchor that exist - the docs link each other by heading.
         - name: links
@@ -72,7 +82,32 @@ test:
           command: npm test --workspace website
           inputs:
             - website/scripts/**
-            - website/src/wizard.mjs
+        # Both browser suites need a chromium, and two `playwright install
+        # --with-deps` at once fight over the apt lock - so it is fetched
+        # once, here, and they wait for it.
+        - name: browsers
+          tags: [slow, e2e, browser]
+          if: ${{ env.TESTFILE_OS }} == linux
+          script: |
+            if [ ! -d /opt/pw-browsers ]; then
+              npx playwright install --with-deps chromium
+            fi
+        # The "Get started" wizard, driven in a browser: the page is the
+        # only thing that knows how to build the file, so the only honest
+        # way to check what it produces is to answer its questions. Linux
+        # only, like the other browser suite - it needs a chromium.
+        - name: website-wizard
+          tags: [slow, e2e, browser, docs]
+          if: ${{ env.TESTFILE_OS }} == linux
+          needs: [website, browsers]
+          workdir: website
+          script: |
+            if [ -d /opt/pw-browsers ]; then
+              export PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+            fi
+            npx playwright test
+          artifacts:
+            - test-results/**
         - name: viewer-web
           tags: [fast, unit]
           command: npm test --workspace viewer-web
@@ -240,7 +275,7 @@ test:
         - name: viewer-e2e
           tags: [slow, e2e, browser]
           if: ${{ env.TESTFILE_OS }} == linux
-          needs: [build-cli, viewer-web]
+          needs: [build-cli, viewer-web, browsers]
           workdir: viewer-web
           services:
             viewer:
@@ -253,8 +288,6 @@ test:
           script: |
             if [ -d /opt/pw-browsers ]; then
               export PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
-            else
-              npx playwright install --with-deps chromium
             fi
             npx playwright test
           artifacts:

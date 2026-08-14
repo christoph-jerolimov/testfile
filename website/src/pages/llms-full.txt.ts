@@ -9,7 +9,7 @@ import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 import { examples } from "../examples";
 import { specPages } from "../spec";
-import { toYaml } from "../wizard.mjs";
+import { toYaml } from "../wizard";
 
 const SITE = "https://christoph-jerolimov.github.io/testfile";
 
