@@ -3,14 +3,15 @@
 // reads it believes it has seen everything - so this checks the built
 // files against the pages the build produced.
 //
-// Run over dist/ after a build, like the link checker next to it.
+// Run over dist/ after a build, like the link checker next to it. A command,
+// not a module: its tests run it the way CI does. See check-llms.test.ts.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 // Every route the build produced, as "/docs/cli"-style paths. Only pages
 // count: assets and the plain-text files themselves are not indexable.
-export function pagesOf(dir, prefix = "") {
-  const pages = [];
+function pagesOf(dir: string, prefix = ""): string[] {
+  const pages: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
@@ -25,10 +26,10 @@ export function pagesOf(dir, prefix = "") {
 // The site's own pages among the links. The base has to sit at the start
 // of the path, not just anywhere in the URL: a repository link like
 // github.com/someone/testfile is not a page of this site.
-export function linkedPaths(llms, base) {
-  const found = new Set();
+function linkedPaths(llms: string, base: string): Set<string> {
+  const found = new Set<string>();
   for (const match of llms.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)) {
-    let path;
+    let path: string;
     try {
       path = new URL(match[1]).pathname;
     } catch {
@@ -43,9 +44,9 @@ export function linkedPaths(llms, base) {
 // Pages an index may leave out, and why.
 const NOT_INDEXED = new Set(["/"]);
 
-export function checkLlms(dir, { base = "/testfile" } = {}) {
-  const problems = [];
-  let index;
+function checkLlms(dir: string, { base = "/testfile" }: { base?: string } = {}): string[] {
+  const problems: string[] = [];
+  let index: string;
   try {
     index = readFileSync(join(dir, "llms.txt"), "utf8");
   } catch {
@@ -62,7 +63,7 @@ export function checkLlms(dir, { base = "/testfile" } = {}) {
     if (!linked.has(page)) problems.push(`llms.txt: ${page} is built but not indexed`);
   }
 
-  let full;
+  let full: string;
   try {
     full = readFileSync(join(dir, "llms-full.txt"), "utf8");
   } catch {
@@ -80,11 +81,9 @@ export function checkLlms(dir, { base = "/testfile" } = {}) {
   return problems;
 }
 
-// Called as a script: node scripts/check-llms.mjs dist /testfile
-if (process.argv[1]?.endsWith("check-llms.mjs")) {
-  const [dir = "dist", base = "/testfile"] = process.argv.slice(2);
-  const problems = checkLlms(dir, { base });
-  for (const problem of problems) console.error(problem);
-  if (problems.length > 0) process.exit(1);
-  console.log(`llms.txt indexes every page of ${dir}`);
-}
+// node out/check-llms.js dist /testfile
+const [dir = "dist", base = "/testfile"] = process.argv.slice(2);
+const problems = checkLlms(dir, { base });
+for (const problem of problems) console.error(problem);
+if (problems.length > 0) process.exit(1);
+console.log(`llms.txt indexes every page of ${dir}`);

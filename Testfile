@@ -25,7 +25,9 @@ test:
             # every workspace's own sources - a "**/*.ts" from the root would
             # walk node_modules
             - "*/src/**/*.{ts,tsx,mjs,cjs}"
-            - "*/*.mjs"
+            - "*/scripts/**/*.{ts,mjs}"
+            - "*/e2e/**/*.ts"
+            - "*/*.{ts,mjs}"
             - action/*.mjs
             - .oxlintrc.json
             - .oxfmtrc.json
@@ -54,6 +56,14 @@ test:
             - spec/**
             - examples/**
             - package-lock.json
+        # Everything in this workspace is TypeScript; the two checkers are
+        # typechecked by being compiled, this covers the site's own sources
+        # and the browser suite. After the build, not beside it: both drive
+        # astro, and two of them write its content store at once.
+        - name: website-types
+          tags: [fast, docs]
+          needs: [website]
+          command: npm run typecheck --workspace website
         # Every internal link of the built site has to point at a page and an
         # anchor that exist - the docs link each other by heading.
         - name: links

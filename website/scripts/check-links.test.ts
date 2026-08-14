@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-const script = fileURLToPath(new URL("./check-links.mjs", import.meta.url));
+const script = fileURLToPath(new URL("./check-links.js", import.meta.url));
 
 // The links the markdown plugin writes for files that are not pages of the
 // site. Spelled out rather than imported: if the plugin starts writing a
@@ -18,7 +18,7 @@ const script = fileURLToPath(new URL("./check-links.mjs", import.meta.url));
 const REPO_BLOB_URL = "https://github.com/christoph-jerolimov/testfile/blob/main/";
 
 // Builds a dist/-like tree: { "docs/cli/index.html": "<html>" }.
-function site(pages) {
+function site(pages: Record<string, string>): string {
   const dir = mkdtempSync(join(tmpdir(), "testfile-links-"));
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   for (const [path, html] of Object.entries(pages)) {
@@ -31,7 +31,11 @@ function site(pages) {
 // The reported broken links, and whether the run failed. The repository to
 // resolve blob links against is always passed, and defaults to a directory
 // that does not exist, so a test says which files the repository has.
-function check(dir, { base = "/testfile", repoRoot = join(dir, "no-repo") } = {}) {
+function check(
+  dir: string,
+  { base = "/testfile", repoRoot }: { base?: string; repoRoot?: string } = {},
+) {
+  repoRoot ??= join(dir, "no-repo");
   const result = spawnSync(process.execPath, [script, dir, base, repoRoot], {
     encoding: "utf8",
   });

@@ -9,11 +9,11 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 
-const script = fileURLToPath(new URL("./check-llms.mjs", import.meta.url));
+const script = fileURLToPath(new URL("./check-llms.js", import.meta.url));
 const SITE = "https://example.test/testfile";
 
 // Builds a dist/-like tree: { "docs/cli/index.html": "<html>", "llms.txt": "..." }.
-function site(files) {
+function site(files: Record<string, string>): string {
   const dir = mkdtempSync(join(tmpdir(), "testfile-llms-"));
   process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
   for (const [path, text] of Object.entries(files)) {
@@ -23,7 +23,7 @@ function site(files) {
   return dir;
 }
 
-function check(dir, base = "/testfile") {
+function check(dir: string, base = "/testfile") {
   const result = spawnSync(process.execPath, [script, dir, base], { encoding: "utf8" });
   return {
     failed: result.status !== 0,
@@ -33,7 +33,7 @@ function check(dir, base = "/testfile") {
 }
 
 // An index in the shape llms.txt promises: a title, a summary, then links.
-function index(...paths) {
+function index(...paths: string[]): string {
   return [
     "# Testfile",
     "",
@@ -46,7 +46,7 @@ function index(...paths) {
   ].join("\n");
 }
 
-function full(...paths) {
+function full(...paths: string[]): string {
   return paths.map((path) => `# page\n\nSource: ${SITE}${path}\n\nbody\n`).join("\n");
 }
 

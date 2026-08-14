@@ -8,10 +8,15 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check:links": "node scripts/check-links.mjs dist /testfile ..",
-    "test": "node --test scripts/*.test.mjs",
-    "test:e2e": "npm run build && playwright test",
-    "check:llms": "node scripts/check-llms.mjs dist /testfile"
+    "build:scripts": "tsc -p tsconfig.scripts.json",
+    "typecheck": "astro sync && tsc -p tsconfig.json --noEmit",
+    "precheck:links": "npm run build:scripts",
+    "check:links": "node out/check-links.js dist /testfile ..",
+    "precheck:llms": "npm run build:scripts",
+    "check:llms": "node out/check-llms.js dist /testfile",
+    "pretest": "npm run build:scripts",
+    "test": "node --test \"out/*.test.js\"",
+    "test:e2e": "npm run build && playwright test"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.2.2",
@@ -20,7 +25,9 @@
   },
   "devDependencies": {
     "@playwright/test": "1.62.1",
+    "@types/node": "^26.1.2",
     "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1"
+    "ajv-formats": "^3.0.1",
+    "typescript": "^7.0.2"
   }
 }
