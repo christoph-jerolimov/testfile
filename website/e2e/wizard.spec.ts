@@ -89,11 +89,11 @@ const INVENTORY: {
   databases: string[];
 } = {
   languages: {
-    "Node.js / TypeScript": ["24", "22", "20"],
-    Python: ["3.13", "3.12", "3.11"],
-    Go: ["1.25", "1.24", "1.23"],
-    Java: ["25", "21", "17"],
-    Rust: ["1.90", "1.89"],
+    "Node.js / TypeScript": ["20", "22", "24"],
+    Python: ["3.11", "3.12", "3.13"],
+    Go: ["1.23", "1.24", "1.25"],
+    Java: ["17", "21", "25"],
+    Rust: ["1.89", "1.90"],
   },
   runtimes: ["On this machine", "In a container"],
   // one database, and its versions, in one question
@@ -119,10 +119,7 @@ const CASES = [
     answers: ["Python", "3.12", "On this machine", ALL],
   },
   { file: "java-21-container-postgres-16.yaml", answers: ["Java", "21", "In a container", "16"] },
-  {
-    file: "node-all-versions-postgres-all-versions.yaml",
-    answers: ["Node.js / TypeScript", ALL, ALL],
-  },
+  { file: "node-all-versions-postgres-17.yaml", answers: ["Node.js / TypeScript", ALL, "17"] },
 ];
 
 const fieldsets = (page: Page): Locator => page.locator("#wizard-form fieldset");
@@ -191,6 +188,18 @@ test("each answer earns the next question, and nothing is chosen in advance", as
   // ... and answering the last one leaves nothing open
   await answer(page, ["Go", "1.24", "On this machine", "17"]);
   await expect(page.locator("#wizard-form input:checked")).toHaveCount(4);
+});
+
+test("a suite already running per version is not asked to fan out twice", async ({ page }) => {
+  // Every database version too would mean copies of the same container at
+  // the same time, on the one port a run allocates - so that answer is not
+  // offered here, and nothing the page can build needs `shared`.
+  await answer(page, ["Go", ALL]);
+  expect(await optionsOf(fieldsets(page).nth(2))).toEqual(
+    INVENTORY.databases.filter((option) => option !== ALL),
+  );
+  await answer(page, ["Go", ALL, "17"]);
+  expect(await testfile(page)).not.toContain("shared:");
 });
 
 test("wanting every version settles where the tests run: only a container can", async ({
@@ -282,7 +291,10 @@ test("every combination the page offers is a Testfile the runner accepts", async
     (total, versions) => total + versions.length * INVENTORY.runtimes.length + 1,
     0,
   );
-  expect(seen.length).toBe(perLanguage * INVENTORY.databases.length);
+  // ... except that "all of them" for the language takes the same answer
+  // off the database question, so those branches are one narrower.
+  const everyLanguageVersion = Object.keys(INVENTORY.languages).length;
+  expect(seen.length).toBe(perLanguage * INVENTORY.databases.length - everyLanguageVersion);
 });
 
 test("the lines the last answer changed are the ones marked", async ({ page }) => {

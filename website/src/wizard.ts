@@ -76,7 +76,7 @@ const LANGUAGES: Record<string, Language> = {
   node: {
     label: "Node.js / TypeScript",
     image: (version) => `docker.io/library/node:${version}`,
-    versions: ["24", "22", "20"],
+    versions: ["20", "22", "24"],
     install: "npm ci",
     lint: "npm run lint",
     unit: "npm test",
@@ -86,7 +86,7 @@ const LANGUAGES: Record<string, Language> = {
   python: {
     label: "Python",
     image: (version) => `docker.io/library/python:${version}`,
-    versions: ["3.13", "3.12", "3.11"],
+    versions: ["3.11", "3.12", "3.13"],
     install: "pip install -r requirements.txt",
     lint: "ruff check .",
     unit: "pytest -q tests/unit",
@@ -96,7 +96,7 @@ const LANGUAGES: Record<string, Language> = {
   go: {
     label: "Go",
     image: (version) => `docker.io/library/golang:${version}`,
-    versions: ["1.25", "1.24", "1.23"],
+    versions: ["1.23", "1.24", "1.25"],
     install: "go mod download",
     lint: "go vet ./...",
     unit: "go test ./...",
@@ -106,7 +106,7 @@ const LANGUAGES: Record<string, Language> = {
   java: {
     label: "Java",
     image: (version) => `docker.io/library/maven:3-eclipse-temurin-${version}`,
-    versions: ["25", "21", "17"],
+    versions: ["17", "21", "25"],
     install: "./mvnw -B -q dependency:go-offline",
     lint: "./mvnw -B -q spotless:check",
     unit: "./mvnw -B test",
@@ -116,7 +116,7 @@ const LANGUAGES: Record<string, Language> = {
   rust: {
     label: "Rust",
     image: (version) => `docker.io/library/rust:${version}`,
-    versions: ["1.90", "1.89"],
+    versions: ["1.89", "1.90"],
     install: "cargo fetch",
     lint: "cargo clippy -- -D warnings",
     unit: "cargo test",
@@ -223,14 +223,23 @@ export function questions(answers: Answers = {}): Question[] {
     }
   }
 
+  // Every version of the database is one fan-out too many once the suite
+  // is already running once per language version: the copies run at the
+  // same time, and a port is allocated once for the whole run, so they
+  // would fight over it.
+  const everyVersion = answers.version !== ALL;
   ask({
     id: "database",
     label: `Use a database like ${DATABASE.label}`,
-    hint: `The runner starts it, waits until it really accepts connections, and stops it again — on your machine and on CI. "All of them" runs the integration test once per version, each against its own container.`,
+    hint: everyVersion
+      ? `The runner starts it, waits until it really accepts connections, and stops it again — on your machine and on CI. "All of them" runs the integration test once per version, each against its own container.`
+      : `The runner starts it, waits until it really accepts connections, and stops it again. One version here: the suite already runs once per ${language.label.split(" ")[0]} version, and they share this database.`,
     options: [
       { value: NO_DATABASE, label: "No database" },
       ...DATABASE.versions.map((value) => ({ value, label: value })),
-      { value: ALL, label: "All of them", note: `${DATABASE.versions.length} versions` },
+      ...(everyVersion
+        ? [{ value: ALL, label: "All of them", note: `${DATABASE.versions.length} versions` }]
+        : []),
     ],
   });
   return out;
@@ -312,7 +321,7 @@ export function buildTestfile(answers: Answers = {}): Line[] {
     for (const variant of variants) {
       add(`        - name: ${variant.name}`, "database");
       add("          services:", "database");
-      addService(add, variant, "          ", answers.version === ALL);
+      addService(add, variant, "          ");
       add("          env:", "database");
       add(`            DATABASE_URL: ${DATABASE.url(variant.port)}`, "database");
       add(`          command: ${language.integration}`, "database", "language");
@@ -323,22 +332,12 @@ export function buildTestfile(answers: Answers = {}): Line[] {
 
 // One service block, indented to sit where it is written: at the top level
 // when there is a single database, inside a test when there are several.
-//
-// `shared` matters when the whole suite is a version matrix: the instances
-// run at once, and without it each would start its own copy of this
-// container on the same host port. Matching on the resolved configuration,
-// they get one between them.
 function addService(
   add: (text: string, ...from: string[]) => number,
   variant: Variant,
   indent: string,
-  shared = false,
 ): void {
   add(`${indent}  ${DATABASE.key}:`, "database");
-  if (shared) {
-    add(`${indent}    # one container for every instance of the matrix above`, "version");
-    add(`${indent}    shared: true`, "version");
-  }
   add(`${indent}    container:`, "database");
   add(`${indent}      image: ${DATABASE.image(variant.version)}`, "database");
   add(`${indent}      ports: ["\${{ ports.${variant.port} }}:${DATABASE.port}"]`, "database");
