@@ -77,6 +77,68 @@ a filter expression will run; tests whose [inputs](./writing-tests#result-cachin
 are unchanged are marked `[cached]`, with a would-run/served-from-cache
 summary.
 
+## Overriding the Testfile from the environment
+
+Some runs need a file that is *almost* the committed one: the same suite
+against a newer database image, a fixed port instead of a random one, one
+command swapped for a smoke-test variant. `TESTFILE_CONFIG_<path>` writes
+that value into the loaded document, for that run only — the file on disk is
+never touched:
+
+```sh
+TESTFILE_CONFIG_ports__db=15432 \
+TESTFILE_CONFIG_services__postgres__container__image=docker.io/library/postgres:17 \
+  testfile start
+
+2 override(s) from the environment: ports.db, services.postgres.container.image
+```
+
+`__` (two underscores) separates the path segments, because a single `_` is
+a legitimate character in the keys themselves. Segments walk maps by key and
+lists by index, so anything in the document can be addressed:
+
+| variable | what it changes |
+| -------- | --------------- |
+| `TESTFILE_CONFIG_env__LOG_LEVEL=debug` | a top-level environment variable |
+| `TESTFILE_CONFIG_ports__db=15432` | a named port |
+| `TESTFILE_CONFIG_services__postgres__container__image=…` | the image of one service |
+| `TESTFILE_CONFIG_services__postgres__ready__timeout=5m` | that service's readiness timeout |
+| `TESTFILE_CONFIG_test__sequence__1__command=…` | the second test of the root sequence |
+| `TESTFILE_CONFIG_test__maxParallel=4` | a group's parallel cap |
+
+Values are read as the strings they are, so `postgres:17`, `1.20.3` and
+`0755` arrive unchanged. Four things are read as more than a string:
+
+- a bare `true`, `false` or `null`,
+- a plain number without leading zeros — `15432` becomes the integer a port
+  wants,
+- something starting with `[` or `{` — `[slow, flaky]` becomes a list,
+  `{count: 2, delay: 1s}` a map,
+- something starting with a quote, which is also the escape hatch when you
+  need the literal string `"true"` or `'15432'`.
+
+Details worth knowing:
+
+- **The result is validated again.** An override that breaks the document —
+  a list where a command belongs, a timeout that is not a duration — fails
+  the run with the usual message instead of half-applying.
+- **A path that does not exist yet is created**, so `test__env__DEBUG=1` adds
+  an `env` block to a test that had none. Lists are the exception: an index
+  must already exist, because what a new element would mean is anyone's
+  guess.
+- **Segments match loosely**, in this order: exactly, then ignoring case,
+  then with `_` standing in for `-`. An environment variable name cannot
+  contain a `-` at all, and Windows upper-cases the name on the way in — so
+  `SERVICES__MY_DB__CONTAINER__IMAGE` finds `services.my-db.container.image`.
+- **Overrides land on the expanded document**, after
+  [includes](./writing-tests#composing-testfiles) and `foreach` — so
+  they can reach into what those generated.
+- They are applied in variable-name order, so the same environment always
+  produces the same document.
+
+`testfile start` and `testfile validate` both print what was overridden,
+because what ran is then not quite what the file says.
+
 ## Checking the machine
 
 A Testfile says what a run needs: the tools its commands call, a container

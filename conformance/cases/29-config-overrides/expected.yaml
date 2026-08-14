@@ -1,0 +1,21 @@
+spec:
+  - Overrides from the environment
+# TESTFILE_CONFIG_<path> replaces a value in the document for one run: a
+# top-level env entry, a named port, the command of a test in a sequence,
+# and a block the file does not have at all. `__` separates the path
+# segments; the file on disk is never touched.
+env:
+  TESTFILE_CONFIG_env__MODE: overridden
+  TESTFILE_CONFIG_ports__api: "18080"
+  # quoted, or the bare word would be read as the boolean it looks like
+  TESTFILE_CONFIG_test__sequence__2__command: "'true'"
+  TESTFILE_CONFIG_test__sequence__3__env__ADDED: "yes"
+exitCode: 0
+status: passed
+tests:
+  - { path: root, status: passed }
+  - { path: root/env-overridden, status: passed }
+  - { path: root/port-overridden, status: passed }
+  - { path: root/command-overridden, status: passed }
+  - { path: root/added-where-nothing-was, status: passed }
+  - { path: root/untouched, status: passed }

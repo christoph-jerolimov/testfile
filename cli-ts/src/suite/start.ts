@@ -136,7 +136,16 @@ export function registerStart(program: Command): void {
       // environment, and with neither the first responding engine is used.
       if (options.engine !== undefined) configureEngine(options.engine, "--engine");
       else configureEngine(process.env.TESTFILE_ENGINE, "TESTFILE_ENGINE");
-      const { path: file, doc } = loadTestfile(path);
+      const { path: file, doc, overrides } = loadTestfile(path);
+      // What ran is not quite what the file says; say so before it does.
+      if (overrides.length > 0) {
+        console.log(
+          color(
+            90,
+            `${overrides.length} override(s) from the environment: ${overrides.join(", ")}`,
+          ),
+        );
+      }
       session = new Session(doc, dirname(file), {
         failFast: options.failFast,
         maxParallel: options.maxParallel,

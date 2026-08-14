@@ -10,12 +10,17 @@ export function registerValidate(program: Command): void {
     .description("Validate a Testfile against the schema")
     .action((path: string, options: { json?: string | boolean }) => {
       try {
-        const { path: file } = loadTestfile(path);
+        const { path: file, overrides } = loadTestfile(path);
         if (wantsJson(options.json)) {
-          writeJson({ path: file, valid: true }, options.json, "result");
+          writeJson({ path: file, valid: true, overrides }, options.json, "result");
           return;
         }
         console.log(`${color(32, "✔")} ${file} is valid`);
+        // Validating the file as it stands is not the same as validating
+        // what a run would use, so the difference is named.
+        if (overrides.length > 0) {
+          console.log(color(90, `  with ${overrides.length} override(s): ${overrides.join(", ")}`));
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         // The loader reports every schema violation in one message, one per

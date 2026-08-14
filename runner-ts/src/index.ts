@@ -7,6 +7,7 @@
 // without going through a shell.
 export * from "./cache-predict.js";
 export * from "./completion.js";
+export * from "./configenv.js";
 export * from "./doctor.js";
 export * from "./filter.js";
 export * from "./gitchanges.js";

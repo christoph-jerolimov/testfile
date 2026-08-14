@@ -190,3 +190,32 @@ test("conflicting included ports are rejected", () => {
   );
   assert.throws(() => loadTestfile(dir), /port "web".*conflicts/);
 });
+
+test("loadTestfile applies TESTFILE_CONFIG_ overrides and revalidates the result", () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-config-env-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  writeFileSync(
+    join(dir, "Testfile"),
+    ["version: 0", "ports:", "  db: random", "test:", "  command: npm test", ""].join("\n"),
+  );
+
+  process.env.TESTFILE_CONFIG_ports__db = "15432";
+  process.env.TESTFILE_CONFIG_test__command = "npm run smoke";
+  try {
+    const { doc, overrides } = loadTestfile(dir);
+    assert.deepEqual(overrides, ["ports.db", "test.command"]);
+    assert.deepEqual(doc.ports, { db: 15432 });
+    assert.equal(doc.test.command, "npm run smoke");
+  } finally {
+    delete process.env.TESTFILE_CONFIG_ports__db;
+    delete process.env.TESTFILE_CONFIG_test__command;
+  }
+
+  // an override that breaks the document fails the load, it does not run
+  process.env.TESTFILE_CONFIG_test__command = "[not, a, command]";
+  try {
+    assert.throws(() => loadTestfile(dir), /Testfile is not valid/);
+  } finally {
+    delete process.env.TESTFILE_CONFIG_test__command;
+  }
+});

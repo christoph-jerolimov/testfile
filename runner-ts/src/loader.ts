@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import { parse } from "yaml";
+import { applyConfigOverrides } from "./configenv.js";
 import { expandForeach } from "./foreach.js";
 import type { ServiceDef, TestDef, TestfileDoc } from "./model.js";
 import { defaultName } from "./runsuite.js";
@@ -231,11 +232,21 @@ function embedFile(root: TestfileDoc, pathOrDir: string, stack: string[], where:
   };
 }
 
-export function loadTestfile(pathOrDir: string): { path: string; doc: TestfileDoc } {
+export function loadTestfile(pathOrDir: string): {
+  path: string;
+  doc: TestfileDoc;
+  // Paths overridden from the environment, for the runner to report.
+  overrides: string[];
+} {
   const path = findTestfile(pathOrDir);
   const doc: unknown = parse(readFileSync(path, "utf8"));
   validateDoc(doc);
   expandIncludes(doc, path);
+  // Overrides land on the expanded document, so they can reach into what an
+  // include or a foreach generated - and are validated again afterwards, so
+  // one that breaks the document fails the run instead of corrupting it.
+  const overrides = applyConfigOverrides(doc);
+  if (overrides.length > 0) validateDoc(doc);
   validateSemantics(doc);
-  return { path, doc };
+  return { path, doc, overrides };
 }
