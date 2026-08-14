@@ -4,7 +4,7 @@
 // and every complete Testfile printed in the documentation.
 import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { join, dirname, resolve, basename, relative } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { parse } from "yaml";
@@ -177,6 +177,40 @@ if (existsSync(docsDir)) {
     failures++;
     console.error("  FAILED  no complete Testfile found in the documentation");
   }
+}
+
+// The "Get started" page on the website builds a Testfile from a handful of
+// answers and tells the reader to copy it, so every answer it can be given
+// has to produce a file the runner accepts - not just the default one.
+const wizard = join(schemaDir, "..", "website", "src", "wizard.mjs");
+if (existsSync(wizard)) {
+  console.log("Website wizard (every combination of answers):");
+  const { allAnswerCombinations, toYaml } = await import(pathToFileURL(wizard).href);
+  const combinations = allAnswerCombinations();
+  let bad = 0;
+  for (const answers of combinations) {
+    const name = `wizard ${Object.values(answers).filter(Boolean).join(" ")}`;
+    let doc;
+    try {
+      doc = parse(toYaml(answers));
+    } catch (err) {
+      bad++;
+      console.error(`  FAILED  ${name} — not YAML: ${err.message.split("\n")[0]}`);
+      continue;
+    }
+    if (validate(doc)) continue;
+    bad++;
+    console.error(`  FAILED  ${name}`);
+    for (const err of validate.errors ?? []) {
+      console.error(`          ${err.instancePath || "/"} ${err.message}`);
+    }
+  }
+  if (combinations.length === 0) {
+    bad++;
+    console.error("  FAILED  the wizard offers no answers");
+  }
+  failures += bad;
+  if (bad === 0) console.log(`  ok      ${combinations.length} combinations`);
 }
 
 if (failures > 0) {

@@ -29,6 +29,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
     <header>
       <a class="brand" href={`${base}/`}><span class="brand-icon">🐙</span>Testfile</a>
       <nav class="top">
+        <a href={`${base}/start`}>Get started</a>
         <a href={`${base}/docs/${docs[0].id}`}>Documentation</a>
         <a href={`${base}/examples/${firstExample.id}`}>Examples</a>
       </nav>

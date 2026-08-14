@@ -9,6 +9,7 @@ import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 import { examples } from "../examples";
 import { specPages } from "../spec";
+import { toYaml } from "../wizard.mjs";
 
 const SITE = "https://christoph-jerolimov.github.io/testfile";
 
@@ -52,6 +53,30 @@ export const GET: APIRoute = async () => {
       "This file is the whole documentation, concatenated: the guides, the normative",
       "specification and the worked examples. An index of the same pages is at",
       `${SITE}/llms.txt.`,
+      "",
+    ].join("\n"),
+    // The wizard page is interactive, so quoting its markup would say
+    // nothing. What it produces is the useful part: one of its answers,
+    // rendered, as the shape of a starter file.
+    [
+      "# Get started",
+      "",
+      `Source: ${SITE}/start`,
+      "",
+      "An interactive page: choose the language, whether the tests run on the machine",
+      "or in a container, and whether they need a database, and it writes the starter",
+      "Testfile for that combination. For Node.js in a container with PostgreSQL it",
+      "produces:",
+      "",
+      "```yaml",
+      toYaml({
+        language: "node",
+        runtime: "container",
+        version: "22",
+        database: "postgres",
+        dbVersion: "17",
+      }).trimEnd(),
+      "```",
       "",
     ].join("\n"),
     ...docs.map((doc) => section(doc.data.title, `${SITE}/docs/${doc.id}`, doc.body ?? "")),

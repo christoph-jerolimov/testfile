@@ -40,8 +40,10 @@ test:
             - schema/**
             - Testfile
             - examples/**/Testfile
-            # the complete Testfiles printed in the docs are validated too
+            # the complete Testfiles printed in the docs are validated too,
+            # and every file the website's wizard can generate
             - docs/**.md
+            - website/src/wizard.mjs
         - name: website
           tags: [docs]
           command: npm run build --workspace website
@@ -70,6 +72,7 @@ test:
           command: npm test --workspace website
           inputs:
             - website/scripts/**
+            - website/src/wizard.mjs
         - name: viewer-web
           tags: [fast, unit]
           command: npm test --workspace viewer-web

@@ -1,0 +1,309 @@
+---
+// A wizard rather than a tutorial: answer four or five questions, watch the
+// file appear next to them, copy it. The generator is shared with the tests
+// and with the schema check, so what a reader copies is always a Testfile
+// the runner accepts.
+import Layout from "../layouts/Layout.astro";
+import { buildTestfile, DEFAULT_ANSWERS, questions } from "../wizard.mjs";
+
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+// Rendered for the default answers, so the page says something before (and
+// without) JavaScript; the client script takes over on the first change.
+const initialQuestions = questions(DEFAULT_ANSWERS);
+const initialLines = buildTestfile(DEFAULT_ANSWERS);
+---
+
+<Layout
+  title="Get started"
+  description="Answer a few questions and get a Testfile for your project — language, container or local, and the database your tests need."
+  sidebar={false}
+>
+  <h1>Get started</h1>
+  <p class="lead">
+    Answer these, and the file on the right becomes yours to copy. Nothing is
+    sent anywhere — the page builds it in your browser.
+  </p>
+
+  <div class="wizard">
+    <form id="wizard-form" class="wizard-questions">
+      {
+        initialQuestions.map((question) => (
+          <fieldset data-question={question.id}>
+            <legend>{question.label}</legend>
+            {question.hint && <p class="hint">{question.hint}</p>}
+            <div class="choices">
+              {question.options.map((option) => (
+                <label>
+                  <input
+                    type="radio"
+                    name={question.id}
+                    value={option.value}
+                    checked={DEFAULT_ANSWERS[question.id] === option.value}
+                  />
+                  <span>{option.label}</span>
+                  {option.note && <span class="note">{option.note}</span>}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ))
+      }
+    </form>
+
+    <div class="wizard-output">
+      <div class="output-head">
+        <span class="filename">Testfile</span>
+        <span id="wizard-changed" class="changed" hidden></span>
+        <button id="wizard-copy" type="button">Copy</button>
+      </div>
+      <pre id="wizard-yaml"><code>{initialLines.map((line) => (
+        <span class="yline">{line.text}{"\n"}</span>
+      ))}</code></pre>
+    </div>
+  </div>
+
+  <h2>Then</h2>
+  <p>
+    Save it as <code>Testfile</code> in the root of your project and run it.
+    The same command runs it on your machine and on CI:
+  </p>
+  <pre><code>npx @testfile/cli start</code></pre>
+  <p>
+    <code>testfile doctor</code> checks that this machine has what the file
+    needs before you run it, and <code>testfile init</code> does what this
+    page does from inside an existing project — it reads what is already
+    there (a <code>package.json</code>, a <code>docker-compose.yaml</code>, a
+    CI workflow) and writes a first draft.
+  </p>
+  <p>
+    From here: <a href={`${base}/docs/getting-started`}>Getting started</a>
+    walks through the same ground in prose,
+    <a href={`${base}/docs/writing-tests`}>Writing tests</a> covers the test
+    tree, and <a href={`${base}/docs/complete-example`}>a complete Testfile</a>
+    shows nearly every option at once.
+  </p>
+
+  {/* Global rather than scoped: the script below rebuilds the form as the
+      answers change, and elements it creates have no scope attribute - so
+      scoped rules would apply to the first render only. Every selector is
+      rooted in .wizard, which only this page has. */}
+  <style is:global>
+    .wizard {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 1.5rem;
+      align-items: start;
+      margin: 1.5rem 0 2rem;
+    }
+    @media (max-width: 900px) {
+      .wizard {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+    .wizard fieldset {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1rem 1rem;
+      margin: 0 0 1rem;
+    }
+    .wizard legend {
+      font-weight: 600;
+      padding: 0 0.35rem;
+    }
+    .wizard .hint {
+      margin: 0 0 0.6rem;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+    .wizard .choices {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .wizard .choices label {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 0.25rem 0.75rem;
+      cursor: pointer;
+    }
+    .wizard .choices label:hover {
+      border-color: var(--accent);
+    }
+    /* the radio itself is redundant once the pill is styled */
+    .wizard .choices input {
+      margin: 0;
+    }
+    .wizard .choices input:checked + span {
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .wizard .choices .note {
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .wizard-output {
+      position: sticky;
+      top: 4.5rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .wizard-output .output-head {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.4rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--code-bg);
+    }
+    .wizard-output .filename {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85rem;
+    }
+    .wizard-output .changed {
+      color: var(--accent);
+      font-size: 0.8rem;
+      margin-left: auto;
+    }
+    .wizard-output .output-head button {
+      margin-left: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 0.15rem 0.6rem;
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .wizard-output .changed:not([hidden]) + button {
+      margin-left: 0;
+    }
+    .wizard-output pre {
+      margin: 0;
+      padding: 0.75rem;
+      overflow-x: auto;
+      background: var(--code-bg);
+      max-height: 70vh;
+    }
+    .wizard-output .yline {
+      display: block;
+      border-left: 3px solid transparent;
+      padding-left: 0.5rem;
+      margin-left: -0.5rem;
+    }
+    /* What the last answer changed. It stays until the next answer, so a
+       reader can look away and back. */
+    .wizard-output .yline.changed-line {
+      border-left-color: var(--accent);
+      background: color-mix(in srgb, var(--accent) 12%, transparent);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .wizard-output .yline {
+        transition: background-color 0.25s ease;
+      }
+    }
+  </style>
+
+  <script>
+    import { buildTestfile, DEFAULT_ANSWERS, questions } from "../wizard.mjs";
+
+    const form = document.getElementById("wizard-form");
+    const output = document.querySelector("#wizard-yaml code");
+    const changedLabel = document.getElementById("wizard-changed");
+    const copy = document.getElementById("wizard-copy");
+    if (form && output && changedLabel && copy) {
+      const answers = { ...DEFAULT_ANSWERS };
+
+      // Questions come and go with the answers (a database version only
+      // exists once a database does), so the form is re-rendered too - and
+      // the answer of a question that disappeared is left alone, so going
+      // back to it restores what was chosen before.
+      const renderForm = () => {
+        form.innerHTML = "";
+        for (const question of questions(answers)) {
+          const fieldset = document.createElement("fieldset");
+          fieldset.dataset.question = question.id;
+          const legend = document.createElement("legend");
+          legend.textContent = question.label;
+          fieldset.append(legend);
+          if (question.hint) {
+            const hint = document.createElement("p");
+            hint.className = "hint";
+            hint.textContent = question.hint;
+            fieldset.append(hint);
+          }
+          const choices = document.createElement("div");
+          choices.className = "choices";
+          const known = question.options.some((option) => option.value === answers[question.id]);
+          if (!known) answers[question.id] = question.options[0].value;
+          for (const option of question.options) {
+            const label = document.createElement("label");
+            const input = document.createElement("input");
+            input.type = "radio";
+            input.name = question.id;
+            input.value = option.value;
+            input.checked = answers[question.id] === option.value;
+            const text = document.createElement("span");
+            text.textContent = option.label;
+            label.append(input, text);
+            if (option.note) {
+              const note = document.createElement("span");
+              note.className = "note";
+              note.textContent = option.note;
+              label.append(note);
+            }
+            choices.append(label);
+          }
+          fieldset.append(choices);
+          form.append(fieldset);
+        }
+      };
+
+      const renderYaml = (changedQuestion) => {
+        output.replaceChildren();
+        let touched = 0;
+        for (const line of buildTestfile(answers)) {
+          const span = document.createElement("span");
+          span.className = "yline";
+          if (changedQuestion && line.from.includes(changedQuestion)) {
+            span.classList.add("changed-line");
+            touched++;
+          }
+          span.textContent = `${line.text}\n`;
+          output.append(span);
+        }
+        if (changedQuestion && touched > 0) {
+          changedLabel.textContent = `${touched} line${touched === 1 ? "" : "s"} from your last answer`;
+          changedLabel.hidden = false;
+        } else {
+          changedLabel.hidden = true;
+        }
+      };
+
+      form.addEventListener("change", (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement)) return;
+        answers[input.name] = input.value;
+        renderForm();
+        renderYaml(input.name);
+      });
+
+      copy.addEventListener("click", async () => {
+        const text = buildTestfile(answers)
+          .map((line) => line.text)
+          .join("\n");
+        try {
+          await navigator.clipboard.writeText(`${text}\n`);
+          copy.textContent = "Copied";
+          setTimeout(() => (copy.textContent = "Copy"), 1500);
+        } catch {
+          copy.textContent = "Press ⌘C";
+        }
+      });
+    }
+  </script>
+</Layout>

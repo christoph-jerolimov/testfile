@@ -35,6 +35,11 @@ export const GET: APIRoute = async () => {
     "",
     "## Documentation",
     "",
+    entry(
+      "Get started",
+      "/start",
+      "a wizard: pick a language, local or container, and a database, and the page writes a starter Testfile for exactly that",
+    ),
     ...docs.map((doc) =>
       entry(doc.data.title, `/docs/${doc.id}`, doc.data.description ?? doc.data.title),
     ),
