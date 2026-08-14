@@ -100,6 +100,13 @@ host network by default and a test reaches its database on
 `127.0.0.1:${{ ports.db }}` exactly as it would outside. Set `network` if
 you need something else — then publish the ports accordingly.
 
+The whole project is mounted, not just the test's `workdir`, so paths that
+reach outside it still resolve. Two consequences are worth reading up on
+before they surprise you: a test body always runs on a **local** engine
+(podman or docker, never a Kubernetes cluster), and the mount is resolved by
+whatever machine runs that engine — see
+[what containers can see of your project](./services#what-containers-can-see-of-your-project).
+
 ## Sequences
 
 ```yaml
