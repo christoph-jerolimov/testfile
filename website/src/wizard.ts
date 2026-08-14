@@ -38,17 +38,14 @@ export interface Answers {
   version?: string;
   /** Not asked when every version is wanted - those need a container. */
   runtime?: string;
-  /** NO_DATABASE, one engine, or ALL for every engine. */
+  /** NO_DATABASE, a version of the database, or ALL for every version. */
   database?: string;
-  /** A version, ALL, or NEWEST when every engine is wanted. */
-  dbVersion?: string;
 }
 
 export type AnswerKey = keyof Answers;
 
-/** The answer that means "one instance per version, or per engine". */
+/** The answer that means "one instance per version". */
 export const ALL = "all";
-export const NEWEST = "newest";
 const NO_DATABASE = "none";
 
 interface Language {
@@ -64,6 +61,7 @@ interface Language {
 
 interface Database {
   label: string;
+  key: string;
   versions: string[];
   image: (version: string) => string;
   port: number;
@@ -127,78 +125,49 @@ const LANGUAGES: Record<string, Language> = {
   },
 };
 
-// Databases as services: the image, the port it listens on inside its
+// The database as a service: the image, the port it listens on inside its
 // container, what it needs to boot, how it says it is ready, and the URL
 // the integration test connects with.
-const DATABASES: Record<string, Database> = {
-  postgres: {
-    label: "PostgreSQL",
-    versions: ["18", "17", "16"],
-    image: (version) => `docker.io/library/postgres:${version}-alpine`,
-    port: 5432,
-    env: [
-      ["POSTGRES_PASSWORD", "test"],
-      ["POSTGRES_DB", "app_test"],
-    ],
-    // runs inside the container, so the image's own client is used
-    ready: "pg_isready -h 127.0.0.1 -p 5432 -U postgres",
-    url: (port) => `postgres://postgres:test@127.0.0.1:\${{ ports.${port} }}/app_test`,
-  },
-  mysql: {
-    label: "MySQL",
-    versions: ["9", "8.4"],
-    image: (version) => `docker.io/library/mysql:${version}`,
-    port: 3306,
-    env: [
-      ["MYSQL_ROOT_PASSWORD", "test"],
-      ["MYSQL_DATABASE", "app_test"],
-    ],
-    ready: "mysqladmin ping -h 127.0.0.1 --silent",
-    url: (port) => `mysql://root:test@127.0.0.1:\${{ ports.${port} }}/app_test`,
-  },
+//
+// One engine, on purpose. A starter file wants a database that works, not a
+// choice of them; anything else is the same shape with its own image,
+// readiness check and URL.
+const DATABASE: Database = {
+  label: "PostgreSQL",
+  key: "postgres",
+  versions: ["16", "17", "18"],
+  image: (version) => `docker.io/library/postgres:${version}-alpine`,
+  port: 5432,
+  env: [
+    ["POSTGRES_PASSWORD", "test"],
+    ["POSTGRES_DB", "app_test"],
+  ],
+  // runs inside the container, so the image's own client is used
+  ready: "pg_isready -h 127.0.0.1 -p 5432 -U postgres",
+  url: (port) => `postgres://postgres:test@127.0.0.1:\${{ ports.${port} }}/app_test`,
 };
 
-// One database the tests run against: which engine, which version, and the
-// named port it is published on. More than one of these means the file
-// needs a port per database, since ports are allocated once per run.
+// One database the tests run against: which version, and the named port it
+// is published on. More than one of these means the file needs a port per
+// database, since ports are allocated once per run.
 interface Variant {
-  key: string;
-  database: Database;
   version: string;
   port: string;
   name: string;
 }
 
 function variantsOf(answers: Answers): Variant[] {
-  const { database, dbVersion } = answers;
+  const { database } = answers;
   if (!database || database === NO_DATABASE) return [];
-  const engines = database === ALL ? Object.keys(DATABASES) : [database];
-  const pairs: Array<[string, string]> = [];
-  for (const key of engines) {
-    const entry = DATABASES[key];
-    if (!entry) continue;
-    if (dbVersion === ALL) for (const version of entry.versions) pairs.push([key, version]);
-    // Newest until the version is answered, so choosing a database shows
-    // what it brings straight away.
-    else if (!dbVersion || !entry.versions.includes(dbVersion))
-      pairs.push([key, entry.versions[0]]);
-    else pairs.push([key, dbVersion]);
-  }
-  // The engine names the port and the test - unless the same engine is
-  // there more than once, when the version has to tell them apart.
-  const versions = new Map<string, number>();
-  for (const [key] of pairs) versions.set(key, (versions.get(key) ?? 0) + 1);
-  return pairs.map(([key, version]) => {
-    const many = (versions.get(key) ?? 0) > 1;
-    return {
-      key,
-      database: DATABASES[key],
-      version,
-      // port names allow letters, digits and underscores only
-      port: many ? `${key}${version.replace(/\W/g, "")}` : key,
-      name: many ? `${key}-${version}` : key,
-    };
-  });
+  const wanted = database === ALL ? DATABASE.versions : [database];
+  const many = wanted.length > 1;
+  return wanted.map((version) => ({
+    version,
+    // port names allow letters, digits and underscores only, and only need
+    // the version when there is more than one to tell apart
+    port: many ? `${DATABASE.key}${version.replace(/\W/g, "")}` : DATABASE.key,
+    name: many ? `${DATABASE.key}-${version}` : DATABASE.key,
+  }));
 }
 
 // The questions, in the order they are asked - up to and including the
@@ -254,36 +223,15 @@ export function questions(answers: Answers = {}): Question[] {
     }
   }
 
-  if (
-    !ask({
-      id: "database",
-      label: "Do the tests need a database?",
-      hint: "The runner starts it, waits until it really accepts connections, and stops it again — on your machine and on CI.",
-      options: [
-        { value: NO_DATABASE, label: "No" },
-        ...Object.entries(DATABASES).map(([value, entry]) => ({ value, label: entry.label })),
-        { value: ALL, label: "All of them", note: "one test per engine" },
-      ],
-    })
-  ) {
-    return out;
-  }
-  if (answers.database === NO_DATABASE) return out;
-
-  const engine = answers.database ? DATABASES[answers.database] : undefined;
   ask({
-    id: "dbVersion",
-    label: engine ? `Which ${engine.label} version?` : "Which database versions?",
-    hint: `"All of them" runs the integration test once per version, each against its own container.`,
-    options: engine
-      ? [
-          ...engine.versions.map((value) => ({ value, label: value })),
-          { value: ALL, label: "All of them", note: `${engine.versions.length} versions` },
-        ]
-      : [
-          { value: NEWEST, label: "The newest of each" },
-          { value: ALL, label: "All of them", note: "every version of both" },
-        ],
+    id: "database",
+    label: `Use a database like ${DATABASE.label}`,
+    hint: `The runner starts it, waits until it really accepts connections, and stops it again — on your machine and on CI. "All of them" runs the integration test once per version, each against its own container.`,
+    options: [
+      { value: NO_DATABASE, label: "No database" },
+      ...DATABASE.versions.map((value) => ({ value, label: value })),
+      { value: ALL, label: "All of them", note: `${DATABASE.versions.length} versions` },
+    ],
   });
   return out;
 }
@@ -307,11 +255,7 @@ export function buildTestfile(answers: Answers = {}): Line[] {
     add("", "database");
     add("# A free port is picked per run, so two runs never collide.", "database");
     add("ports:", "database");
-    for (const variant of variants) {
-      // with one database the port is named after it; with several the name
-      // has to carry the version too, so it moves with that answer
-      add(`  ${variant.port}: random`, "database", ...(variants.length > 1 ? ["dbVersion"] : []));
-    }
+    for (const variant of variants) add(`  ${variant.port}: random`, "database");
     if (variants.length === 1) {
       add("", "database");
       add("services:", "database");
@@ -359,18 +303,18 @@ export function buildTestfile(answers: Answers = {}): Line[] {
   if (variants.length === 1) {
     add("    - name: integration", "database");
     add("      env:", "database");
-    add(`        DATABASE_URL: ${variants[0].database.url(variants[0].port)}`, "database");
+    add(`        DATABASE_URL: ${DATABASE.url(variants[0].port)}`, "database");
     add(`      command: ${language.integration}`, "database", "language");
   } else if (variants.length > 1) {
     add("    - name: integration", "database");
-    add("      # one run per database, each with a container of its own", "dbVersion");
+    add("      # one run per version, each with a container of its own", "database");
     add("      parallel:", "database");
     for (const variant of variants) {
-      add(`        - name: ${variant.name}`, "database", "dbVersion");
+      add(`        - name: ${variant.name}`, "database");
       add("          services:", "database");
       addService(add, variant, "          ", answers.version === ALL);
       add("          env:", "database");
-      add(`            DATABASE_URL: ${variant.database.url(variant.port)}`, "database");
+      add(`            DATABASE_URL: ${DATABASE.url(variant.port)}`, "database");
       add(`          command: ${language.integration}`, "database", "language");
     }
   }
@@ -390,20 +334,19 @@ function addService(
   indent: string,
   shared = false,
 ): void {
-  const { database } = variant;
-  add(`${indent}  ${variant.key}:`, "database");
+  add(`${indent}  ${DATABASE.key}:`, "database");
   if (shared) {
     add(`${indent}    # one container for every instance of the matrix above`, "version");
     add(`${indent}    shared: true`, "version");
   }
   add(`${indent}    container:`, "database");
-  add(`${indent}      image: ${database.image(variant.version)}`, "database", "dbVersion");
-  add(`${indent}      ports: ["\${{ ports.${variant.port} }}:${database.port}"]`, "database");
+  add(`${indent}      image: ${DATABASE.image(variant.version)}`, "database");
+  add(`${indent}      ports: ["\${{ ports.${variant.port} }}:${DATABASE.port}"]`, "database");
   add(`${indent}      env:`, "database");
-  for (const [key, value] of database.env) add(`${indent}        ${key}: ${value}`, "database");
+  for (const [key, value] of DATABASE.env) add(`${indent}        ${key}: ${value}`, "database");
   add(`${indent}    ready:`, "database");
   add(`${indent}      # runs inside the container, so the image's own client is used`, "database");
-  add(`${indent}      exec: ${database.ready}`, "database");
+  add(`${indent}      exec: ${DATABASE.ready}`, "database");
   add(`${indent}      timeout: 60s`, "database");
 }
 

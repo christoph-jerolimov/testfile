@@ -38,7 +38,7 @@ export const GET: APIRoute = async () => {
     entry(
       "Get started",
       "/start",
-      "a wizard: pick a language and version, local or container, and a database - or all of them, which becomes a matrix - and the page writes the starter Testfile for exactly that",
+      "a wizard: pick a language and version, local or container, and a PostgreSQL version - or all of them, which fans the suite out over every one - and the page writes the starter Testfile for exactly that",
     ),
     ...docs.map((doc) =>
       entry(doc.data.title, `/docs/${doc.id}`, doc.data.description ?? doc.data.title),

@@ -86,8 +86,7 @@ const ALL = "All of them";
 const INVENTORY: {
   languages: Record<string, string[]>;
   runtimes: string[];
-  databases: Record<string, string[]>;
-  everyDatabase: string[];
+  databases: string[];
 } = {
   languages: {
     "Node.js / TypeScript": ["24", "22", "20"],
@@ -97,8 +96,8 @@ const INVENTORY: {
     Rust: ["1.90", "1.89"],
   },
   runtimes: ["On this machine", "In a container"],
-  databases: { No: [], PostgreSQL: ["18", "17", "16"], MySQL: ["9", "8.4"] },
-  everyDatabase: ["The newest of each", ALL],
+  // one database, and its versions, in one question
+  databases: ["No database", "16", "17", "18", ALL],
 };
 
 // The answers behind each committed file. The labels are the reader's, not
@@ -106,26 +105,23 @@ const INVENTORY: {
 const CASES = [
   {
     file: "node-22-local-no-database.yaml",
-    answers: ["Node.js / TypeScript", "22", "On this machine", "No"],
+    answers: ["Node.js / TypeScript", "22", "On this machine", "No database"],
   },
   {
     file: "node-22-container-postgres-17.yaml",
-    answers: ["Node.js / TypeScript", "22", "In a container", "PostgreSQL", "17"],
+    answers: ["Node.js / TypeScript", "22", "In a container", "17"],
   },
   // "All of them" skips the next question: only a container can give one
   // machine three toolchains, so there is nothing left to ask.
-  { file: "go-all-versions-no-database.yaml", answers: ["Go", ALL, "No"] },
+  { file: "go-all-versions-no-database.yaml", answers: ["Go", ALL, "No database"] },
   {
-    file: "python-3.12-local-mysql-all-versions.yaml",
-    answers: ["Python", "3.12", "On this machine", "MySQL", ALL],
+    file: "python-3.12-local-postgres-all-versions.yaml",
+    answers: ["Python", "3.12", "On this machine", ALL],
   },
-  {
-    file: "rust-1.90-container-all-databases-newest.yaml",
-    answers: ["Rust", "1.90", "In a container", ALL, "The newest of each"],
-  },
+  { file: "java-21-container-postgres-16.yaml", answers: ["Java", "21", "In a container", "16"] },
   {
     file: "node-all-versions-postgres-all-versions.yaml",
-    answers: ["Node.js / TypeScript", ALL, "PostgreSQL", ALL],
+    answers: ["Node.js / TypeScript", ALL, ALL],
   },
 ];
 
@@ -189,16 +185,12 @@ test("each answer earns the next question, and nothing is chosen in advance", as
   await open();
 
   await answer(page, ["Go", "1.24", "On this machine"]);
-  expect((await legends()).at(-1)).toBe("Do the tests need a database?");
-  await open();
-
-  await answer(page, ["Go", "1.24", "On this machine", "PostgreSQL"]);
-  expect((await legends()).at(-1)).toBe("Which PostgreSQL version?");
+  expect((await legends()).at(-1)).toBe("Use a database like PostgreSQL");
   await open();
 
   // ... and answering the last one leaves nothing open
-  await answer(page, ["Go", "1.24", "On this machine", "PostgreSQL", "17"]);
-  await expect(page.locator("#wizard-form input:checked")).toHaveCount(5);
+  await answer(page, ["Go", "1.24", "On this machine", "17"]);
+  await expect(page.locator("#wizard-form input:checked")).toHaveCount(4);
 });
 
 test("wanting every version settles where the tests run: only a container can", async ({
@@ -208,7 +200,7 @@ test("wanting every version settles where the tests run: only a container can", 
   expect(await fieldsets(page).locator("legend").allTextContents()).toEqual([
     "What is the project written in?",
     "Which Go version?",
-    "Do the tests need a database?",
+    "Use a database like PostgreSQL",
   ]);
   expect(await testfile(page)).toContain("image: docker.io/library/golang:${{ matrix.go }}");
 });
@@ -230,19 +222,10 @@ test("the questions offer exactly the answers we decided to support", async ({ p
   expect(await optionsOf(fieldsets(page).nth(2))).toEqual(INVENTORY.runtimes);
 
   await answer(page, [...first, "On this machine"]);
-  expect(await optionsOf(fieldsets(page).nth(3))).toEqual([
-    ...Object.keys(INVENTORY.databases),
-    ALL,
-  ]);
-  for (const [database, versions] of Object.entries(INVENTORY.databases)) {
-    if (versions.length === 0) continue;
-    await answer(page, [...first, "On this machine", database]);
-    expect(await optionsOf(fieldsets(page).nth(4))).toEqual([...versions, ALL]);
-  }
-  // every engine at once: their version lists differ, so the only answers
-  // that mean the same thing for both are these two
+  expect(await optionsOf(fieldsets(page).nth(3))).toEqual(INVENTORY.databases);
+  // the last question, whichever way it is answered
   await answer(page, [...first, "On this machine", ALL]);
-  expect(await optionsOf(fieldsets(page).nth(4))).toEqual(INVENTORY.everyDatabase);
+  await expect(fieldsets(page)).toHaveCount(4);
 });
 
 test("the answers behind each committed file produce exactly that file", async ({ page }) => {
@@ -299,16 +282,7 @@ test("every combination the page offers is a Testfile the runner accepts", async
     (total, versions) => total + versions.length * INVENTORY.runtimes.length + 1,
     0,
   );
-  // Per database: no database, one engine at a version or all its versions,
-  // or every engine at the newest or at all of them.
-  const perDatabase =
-    1 +
-    Object.values(INVENTORY.databases).reduce(
-      (total, versions) => total + (versions.length === 0 ? 0 : versions.length + 1),
-      0,
-    ) +
-    INVENTORY.everyDatabase.length;
-  expect(seen.length).toBe(perLanguage * perDatabase);
+  expect(seen.length).toBe(perLanguage * INVENTORY.databases.length);
 });
 
 test("the lines the last answer changed are the ones marked", async ({ page }) => {
@@ -336,23 +310,19 @@ test("the lines the last answer changed are the ones marked", async ({ page }) =
   await expect(changedLabel).toHaveText("3 lines from your last answer");
 
   // a database is a whole block, marked as one band rather than in pieces
-  await answer(page, ["Node.js / TypeScript", "20", "In a container", "PostgreSQL"]);
+  await answer(page, ["Node.js / TypeScript", "20", "In a container", "17"]);
   const database = await marked();
   expect(database[0].trim()).toBe("");
-  expect(database.map((line) => line.trimEnd())).toContain("ports:");
-  expect(database.map((line) => line.trimEnd())).toContain("    - name: integration");
+  const text = database.map((line) => line.trimEnd());
+  expect(text).toContain("ports:");
+  expect(text).toContain("      image: docker.io/library/postgres:17-alpine");
+  expect(text).toContain("    - name: integration");
   await expect(changedLabel).toHaveText(`${database.length} lines from your last answer`);
-
-  // and its version moves the image it pulls, nothing else
-  await answer(page, ["Node.js / TypeScript", "20", "In a container", "PostgreSQL", "16"]);
-  expect((await marked()).map((line) => line.trimEnd())).toEqual([
-    "      image: docker.io/library/postgres:16-alpine",
-  ]);
 });
 
 test("the file can be copied", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await answer(page, ["Go", ALL, "No"]);
+  await answer(page, ["Go", ALL, "No database"]);
   await page.getByRole("button", { name: "Copy" }).click();
   await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
   const copied = await page.evaluate(() => navigator.clipboard.readText());
