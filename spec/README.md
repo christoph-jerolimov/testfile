@@ -531,6 +531,16 @@ available at the top level (applies to the whole run) and on any test
 (applies to its nested tests). Forwarded values override the runner-provided
 defaults, so forwarding `CI` restores the host's value.
 
+Two host prefixes need no declaration in the document at all, so a suite can
+be given a value it does not mention: a host variable named
+`TESTFILE_ENV_<NAME>` enters the base environment as `<NAME>`, and
+`TESTFILE_SECRET_<NAME>` does the same and additionally registers its value
+as a [secret](#secrets). The prefix is stripped; the bare prefix with no
+name is ignored, and an empty value is passed on but never registered for
+masking. Both are applied after `forwardEnv`, so they win over a pattern
+that also matched them, and before the document's own `env`. A name carried
+by both prefixes takes the secret's value.
+
 On top of that base, the environment of a test/service is built by
 merging, child over parent:
 

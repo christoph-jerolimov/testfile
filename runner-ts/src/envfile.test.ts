@@ -174,3 +174,53 @@ test("a secret still reaches a test that also loads an env file", async () => {
     delete process.env.TESTFILE_TEST_TOKEN;
   }
 });
+
+test("TESTFILE_ENV_ and TESTFILE_SECRET_ reach tests and services unannounced", async () => {
+  const { Session } = await import("./session.js");
+  const { mkdtempSync, rmSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "testfile-prefixed-env-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+
+  process.env.TESTFILE_ENV_BASE_URL = "http://localhost:3000";
+  process.env.TESTFILE_SECRET_API_TOKEN = "s3cr3t-prefixed";
+  try {
+    const session = new Session(
+      {
+        version: 0,
+        // no forwardEnv, no secrets, no env - nothing declares either name
+        services: {
+          probe: {
+            once: true,
+            script: 'test "$BASE_URL" = "http://localhost:3000"\necho "service saw $API_TOKEN"',
+          },
+        },
+        test: {
+          name: "root",
+          command:
+            'test "$BASE_URL" = "http://localhost:3000" && echo "test saw $API_TOKEN, url ${BASE_URL}"',
+        },
+      },
+      dir,
+    );
+    assert.equal(await session.runAll(), "passed", "both the step and the test saw the variables");
+
+    const record = session.lastRecord!;
+    const history = new (await import("./history.js")).RunHistory(dir);
+    const log = history.readLog(
+      record,
+      record.tests.find((t) => t.path === "root")!,
+    )!;
+    assert.ok(log.includes("http://localhost:3000"), "a plain variable is not masked");
+    assert.ok(!log.includes("s3cr3t-prefixed"), "the secret is masked in the test log");
+    assert.ok(log.includes("***"));
+    const probe = record.services!.find((service) => service.name === "probe")!;
+    const serviceLog = history.readServiceLog(record, probe)!;
+    assert.ok(serviceLog.includes("service saw ***"), "and in the service's own log");
+    assert.ok(!serviceLog.includes("s3cr3t-prefixed"));
+  } finally {
+    delete process.env.TESTFILE_ENV_BASE_URL;
+    delete process.env.TESTFILE_SECRET_API_TOKEN;
+  }
+});

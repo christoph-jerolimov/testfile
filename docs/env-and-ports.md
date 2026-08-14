@@ -49,6 +49,43 @@ the host's value), while explicit `env` entries and env files win over
 forwarded values. Ad-hoc forwarding without editing the Testfile:
 `testfile start --forward-env 'GITHUB_*'`.
 
+### Handing variables in from outside
+
+Sometimes the Testfile should not have to know a variable exists at all —
+a base URL that differs per environment, a token your CI holds. Two
+prefixes carry a variable in with **no** declaration anywhere: no
+`forwardEnv`, no `env`, no `secrets`.
+
+```bash
+TESTFILE_ENV_BASE_URL=https://staging.example.com \
+TESTFILE_SECRET_API_TOKEN="$CI_TOKEN" \
+  testfile start
+```
+
+Inside the run those arrive as `BASE_URL` and `API_TOKEN` — the prefix is a
+namespace on the host side and is stripped on the way in. Both reach every
+test and every service, and both are visible to templates
+(`${{ env.BASE_URL }}`) and to [`if` conditions](./writing-tests#conditional-tests)
+like any other variable.
+
+The difference between the two is what happens to the value afterwards:
+`TESTFILE_SECRET_` **masks** it in everything the run records — test logs,
+service logs, the recorded environment — exactly like naming it under
+[`secrets`](#secrets-from-the-ci-environment). Use it for anything you would
+not paste into a bug report.
+
+Details worth knowing:
+
+- They land **after** `forwardEnv` in the base environment, so naming a
+  variable this way beats a broad pattern that also matches it, and beats the
+  runner's own `CI=1`.
+- They land **before** the Testfile's `env`, like every forwarded value —
+  so a variable the file sets explicitly still wins.
+- The same name under both prefixes is the masked one.
+- `TESTFILE_ENV_` on its own names nothing and is ignored, and an empty
+  `TESTFILE_SECRET_` value is passed through but not registered for masking —
+  masking the empty string would blank out every line.
+
 ## Environment variables
 
 `env` can be set at the top level, on any test and on any service. Maps merge
