@@ -85,6 +85,72 @@ still start immediately and in parallel, so only the actual chain is
 serialized. If a dependency never becomes ready, the services that need it
 are never started and the test fails with the dependency's error.
 
+## Steps between services
+
+Some things have to happen *after* a service is up and *before* the tests
+run: migrations, a fixture load, a bucket that has to exist. `oneshot: true`
+makes an entry a step rather than a server — it runs once, and exiting with
+code 0 is what makes it ready:
+
+```yaml
+ports:
+  db: random
+services:
+  postgres:
+    container:
+      image: docker.io/library/postgres:16
+      ports: ["${{ ports.db }}:5432"]
+      env:
+        POSTGRES_PASSWORD: test
+    ready:
+      exec: pg_isready -h 127.0.0.1 -p 5432
+  seed:
+    oneshot: true          # a step, not a server
+    needs: [postgres]      # runs once postgres is ready
+    command: ./scripts/seed.sh
+    timeout: 2m
+    env:
+      DATABASE_URL: postgresql://postgres:test@127.0.0.1:${{ ports.db }}/postgres
+test:
+  command: yarn e2e        # starts after seed finished
+```
+
+The point is that the step is *in the graph*. It waits for the database
+itself — no polling loop of your own, no second copy of the readiness check
+inside `seed.sh`. And anything that names it in `needs` waits for it to have
+**finished**, not merely to have started, so a chain reads in the order it
+happens:
+
+```yaml
+services:
+  postgres: { container: { image: docker.io/library/postgres:16 }, ready: { ... } }
+  migrate:  { oneshot: true, needs: [postgres], command: npm run migrate }
+  seed:     { oneshot: true, needs: [migrate],  command: npm run seed }
+  app:      { needs: [seed], command: npm start, ready: { http: ... } }
+```
+
+A step that exits non-zero fails the run: nothing that needed it starts, and
+the error names the step. Its output is kept like any service's log, which
+is usually where the reason is. Because it is expected to end, a one-shot has
+no `ready` check (the exit code is the signal) and no `stop` (nothing is left
+running) — both are rejected when the Testfile loads. `timeout` is the one
+field only a one-shot has; without it a wedged step waits forever.
+
+Everything else about services still applies: a step can be a `command`, a
+`script` or a `container` (`image: postgres:16` with `command: [psql, ...]`
+needs no client installed locally), and `shared: true` runs it once for all
+the tests that share it.
+
+### Do I need a step, or a setup hook?
+
+A [`setup` hook](./writing-tests#setup-and-teardown) runs after *all* of a
+test's services are ready and belongs to that one test. Reach for a one-shot
+service when the work belongs to the service rather than to a test — when
+another **service** has to wait for it (a setup hook cannot sit between two
+services), when several tests need it done once, or when you want it in the
+service log with its own name and duration. Otherwise a setup hook is the
+simpler thing.
+
 ## Sharing services
 
 By default every test (and every matrix instance) starts its own copy of the

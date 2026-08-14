@@ -290,10 +290,11 @@ A service is an object with **exactly one** of:
 | `script`    | string | Run a local process with this shell script (`sh -e`). |
 | `container` | object | Run a container, see below. |
 
-plus the common fields `description`, `shared`, `needs`, `env`, `workdir`,
-`ready` and `stop`. `needs` names services in the same map that must be
-**ready** before this one starts (a health-gated `depends_on`); unknown
-names, self-references and cycles are rejected when the document loads.
+plus the common fields `description`, `shared`, `needs`, `oneshot`,
+`timeout`, `env`, `workdir`, `ready` and `stop`. `needs` names services in
+the same map that must be **ready** before this one starts (a health-gated
+`depends_on`); unknown names, self-references and cycles are rejected when
+the document loads.
 
 Services declared at the top level start before the root test and stop after
 the whole run. Services declared on a test start before that test (after the
@@ -316,6 +317,29 @@ unexpectedly, all tests depending on it are aborted.
 
 If a service exits by itself while dependent tests are still running, the
 runner marks the service as failed and aborts the dependent tests.
+
+### One-shot services
+
+`oneshot: true` makes the entry a **step** rather than a server: it is run
+once, and exiting with code `0` is what makes it ready. Everything that
+waits for a service waits for a one-shot to have *finished* — services that
+`need` it, and the tests the map belongs to. A non-zero exit fails the
+service, so nothing that needed it is started and the run fails, exactly as
+a readiness timeout does.
+
+| Field     | Type     | Description |
+| --------- | -------- | ----------- |
+| `oneshot` | boolean  | Run once and treat a zero exit as ready. Default `false`. |
+| `timeout` | duration | Only with `oneshot`: fail the step when it has not finished by then. Unlimited by default. |
+
+A one-shot has no `ready` (its exit code is the signal) and no `stop`
+(nothing is left running); both combinations are rejected, as is `timeout`
+on a service that is not a one-shot. Everything else is unchanged: it may be
+a `command`, a `script` or a `container`, it may `need` other services and
+be needed by them, `shared: true` runs it once for all tests that share it,
+and its output is recorded like any service's. A step that exits before the
+run ends is not the "exited by itself" failure above — finishing is the
+point.
 
 ### Containers
 

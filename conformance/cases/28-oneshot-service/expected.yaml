@@ -1,0 +1,11 @@
+spec:
+  - One-shot services
+  - Services
+# A one-shot service is a step in the service graph: it runs after its
+# dependency is ready, has to exit with code 0, and everything that needs
+# it - another service, and the tests - waits for it to have finished.
+exitCode: 0
+status: passed
+tests:
+  - { path: root, status: passed }
+  - { path: root/seeded-before-the-tests, status: passed }

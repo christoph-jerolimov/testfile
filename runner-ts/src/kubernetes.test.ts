@@ -190,10 +190,14 @@ class FakeKubectl implements KubectlRunner {
   podStates: KubectlExecResult[] = [podJson("Running")];
   // What `get events` reports for the pod.
   events: Array<{ type: string; reason: string; message: string }> = [];
+  // What a completed pod's log holds, for the one-shot path.
+  logText = "";
   private podCall = 0;
 
   async exec(args: string[], input?: string): Promise<KubectlExecResult> {
     this.calls.push(args);
+    // `kubectl logs` without -f: what a finished one-shot pod printed.
+    if (args.includes("logs")) return { code: 0, stdout: this.logText, stderr: "" };
     const verb = args.find((a) => ["apply", "get", "delete"].includes(a));
     if (verb === "apply") {
       this.applied.push(JSON.parse(input ?? "null"));
@@ -387,6 +391,45 @@ test("stop deletes the pod and its Service without waiting, with the grace perio
   assert.ok(del.includes("--wait=false"));
   assert.ok(del.includes("--grace-period=7"));
   assert.ok(kubectl.logStreams[0].killed && kubectl.forwardStreams[0].killed);
+});
+
+// A pod that ran and terminated, the way the cluster reports it.
+function terminatedPod(exitCode: number): KubectlExecResult {
+  return podJson(exitCode === 0 ? "Succeeded" : "Failed", {
+    containerStatuses: [
+      { state: { terminated: { reason: exitCode === 0 ? "Completed" : "Error", exitCode } } },
+    ],
+  });
+}
+
+test("a one-shot pod is followed to its exit code, and its log collected after", async () => {
+  const kubectl = new FakeKubectl();
+  kubectl.podStates = [podJson("Pending"), podJson("Running"), terminatedPod(0)];
+  kubectl.logText = "seeded 3 rows\n";
+  const { service, output } = makeService(kubectl);
+
+  assert.equal(await service.runOnce(1), 0);
+  assert.equal(kubectl.logStreams.length, 0, "a step is not followed, it is collected");
+  assert.ok(
+    kubectl.calls.some((c) => c.includes("logs") && !c.includes("-f")),
+    "the whole log was fetched in one call",
+  );
+  assert.ok(output.lines.some((line) => line.text === "seeded 3 rows"));
+});
+
+test("a one-shot pod that fails reports the container's exit code", async () => {
+  const kubectl = new FakeKubectl();
+  kubectl.podStates = [terminatedPod(4)];
+  const { service } = makeService(kubectl);
+  assert.equal(await service.runOnce(1), 4);
+});
+
+test("a pod that vanished without a verdict counts as failed, not as success", async () => {
+  const kubectl = new FakeKubectl();
+  // Phase "Failed" with no container status at all: evicted, node lost.
+  kubectl.podStates = [podJson("Failed")];
+  const { service } = makeService(kubectl);
+  assert.equal(await service.runOnce(1), 1);
 });
 
 test("a readiness probe is executed inside the pod, and a hung one is killed", async () => {

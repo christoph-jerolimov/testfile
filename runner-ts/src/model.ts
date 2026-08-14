@@ -88,6 +88,13 @@ export interface ServiceDef {
   // Names of services in the same map that must be ready before this one
   // starts (docker-compose's depends_on, but always health-gated).
   needs?: string[];
+  // A step rather than a server: run it once, and treat exiting with code 0
+  // as being ready. Whatever needs it - another service, or the tests -
+  // starts only after it finished. Excludes `ready` (the exit code is the
+  // signal) and `stop` (there is nothing left to stop).
+  oneshot?: boolean;
+  // Only for `oneshot`: give up when it has not finished by then.
+  timeout?: Duration;
   env?: EnvMap;
   workdir?: string;
   command?: string;

@@ -138,6 +138,89 @@ test("a service with needs starts only after its dependency is ready", async () 
   );
 });
 
+test("a one-shot service runs between its dependency and the tests", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-oneshot-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const session = new Session(
+    {
+      version: 0,
+      services: {
+        db: {
+          script: 'sleep 0.3; echo db-ready; echo db >> "$ORDER"; sleep 30',
+          ready: { log: "db-ready", timeout: "10s" },
+        },
+        // the step: it exits, and that is what makes it ready
+        seed: {
+          oneshot: true,
+          needs: ["db"],
+          script: 'echo seed >> "$ORDER"',
+        },
+        app: {
+          needs: ["seed"],
+          script: 'echo app-ready; echo app >> "$ORDER"; sleep 30',
+          ready: { log: "app-ready", timeout: "10s" },
+        },
+      },
+      env: { ORDER: join(dir, "order.txt") },
+      test: { name: "root", script: 'echo test >> "$ORDER"' },
+    },
+    dir,
+  );
+  assert.equal(await session.runAll(), "passed");
+  assert.deepEqual(
+    readFileSync(join(dir, "order.txt"), "utf8").trim().split("\n"),
+    ["db", "seed", "app", "test"],
+    "the step ran after the database and before everything that needed it",
+  );
+  const seed = session.runner!.services.find((s) => s.name === "seed")!;
+  assert.equal(seed.status, "done", "a finished step is done, not stopped");
+});
+
+test("a one-shot that fails stops the run before the tests", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-oneshot-fail-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const session = new Session(
+    {
+      version: 0,
+      services: {
+        seed: { oneshot: true, command: "echo cannot reach the database >&2; exit 4" },
+        app: { needs: ["seed"], command: "sleep 30" },
+      },
+      test: { name: "root", command: "true" },
+    },
+    dir,
+  );
+  assert.equal(await session.runAll(), "failed");
+  const seed = session.runner!.services.find((s) => s.name === "seed")!;
+  assert.equal(seed.status, "failed");
+  assert.match(seed.error ?? "", /exited with code 4/);
+  assert.ok(
+    seed.output.lines.some((line) => line.text.includes("cannot reach the database")),
+    "the step's own output is kept, which is where the reason usually is",
+  );
+  assert.equal(
+    session.runner!.services.find((s) => s.name === "app"),
+    undefined,
+    "nothing that needed it was started",
+  );
+});
+
+test("a one-shot that hangs is bounded by its timeout", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-oneshot-timeout-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const session = new Session(
+    {
+      version: 0,
+      services: { seed: { oneshot: true, command: "sleep 30", timeout: "200ms" } },
+      test: { name: "root", command: "true" },
+    },
+    dir,
+  );
+  assert.equal(await session.runAll(), "failed");
+  const seed = session.runner!.services.find((s) => s.name === "seed")!;
+  assert.match(seed.error ?? "", /did not finish within 200ms/);
+});
+
 test("service needs are validated: unknown names and cycles", () => {
   assert.throws(
     () =>
