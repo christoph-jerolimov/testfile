@@ -10,16 +10,26 @@
 // `__` separates the path segments, because a single `_` is a legitimate
 // character inside the keys themselves. Segments address map keys and array
 // indices; the last one is what gets written.
+//
+// The same overriding is available on the command line, where a path can be
+// written the way it reads in the file - `-c ports.db=15432`. A flag beats
+// a variable, because typing it is the more immediate intent.
 import { parse } from "yaml";
 
 export const CONFIG_PREFIX = "TESTFILE_CONFIG_";
 export const PATH_SEPARATOR = "__";
 
+export const CONFIG_FLAG = "--config";
+
 export interface ConfigOverride {
-  // The host variable, for error messages that can be acted on.
+  // How it was given, as recorded: the host variable, or `--config`.
   source: string;
+  // How to name it in an error - the variable, or the flag with its path.
+  where: string;
   segments: string[];
   value: unknown;
+  // The value as written, for the record.
+  raw: string;
 }
 
 // Env values are strings, and most of the document is strings too - so a
@@ -60,9 +70,41 @@ export function collectConfigOverrides(host: NodeJS.ProcessEnv = process.env): C
     if (segments.length === 0 || segments.some((segment) => segment === "")) {
       throw new Error(`${key}: not a path - expected TESTFILE_CONFIG_<key>${PATH_SEPARATOR}<key>`);
     }
-    out.push({ source: key, segments, value: wrap(key, () => parseOverrideValue(value)) });
+    out.push({
+      source: key,
+      where: key,
+      segments,
+      value: wrap(key, () => parseOverrideValue(value)),
+      raw: value,
+    });
   }
   return out;
+}
+
+// The overrides given on the command line, as `path=value`. The path reads
+// the way it does in the file - `ports.db`, `test.sequence.0.command` - and
+// `__` is accepted too, so a variable name can be pasted straight in.
+export function configOverridesFromArgs(args: readonly string[] = []): ConfigOverride[] {
+  return args.map((arg) => {
+    const eq = arg.indexOf("=");
+    if (eq <= 0) {
+      throw new Error(`${CONFIG_FLAG} ${arg}: expected <path>=<value>, e.g. ports.db=15432`);
+    }
+    const path = arg.slice(0, eq);
+    const raw = arg.slice(eq + 1);
+    const segments = path.split(PATH_SEPARATOR).join(".").split(".");
+    const where = `${CONFIG_FLAG} ${path}`;
+    if (segments.some((segment) => segment === "")) {
+      throw new Error(`${where}: not a path - expected segments separated by "."`);
+    }
+    return {
+      source: CONFIG_FLAG,
+      where,
+      segments,
+      value: wrap(where, () => parseOverrideValue(raw)),
+      raw,
+    };
+  });
 }
 
 function wrap<T>(source: string, run: () => T): T {
@@ -148,32 +190,39 @@ function write(
 }
 
 // What one override did, for the runner to report and record: where it
-// landed, which variable it came from, and the raw value - the three things
-// needed to repeat the run.
+// landed, how it was given (the variable, or `--config`), and the raw
+// value - the three things needed to repeat the run.
 export interface AppliedOverride {
   path: string;
   from: string;
   value: string;
 }
 
-// Applies every override to the document in place. The document is
-// validated again afterwards by the caller, so an override that breaks it
-// fails the run rather than corrupting it.
+// Applies every override to the document in place. Variables first, flags
+// after, so a flag wins where both name the same path - the document is
+// what a run was told last. The document is validated again afterwards by
+// the caller, so an override that breaks it fails the run rather than
+// corrupting it.
 export function applyConfigOverrides(
   doc: unknown,
   host: NodeJS.ProcessEnv = process.env,
+  config: readonly string[] = [],
 ): AppliedOverride[] {
-  const applied: AppliedOverride[] = [];
-  for (const override of collectConfigOverrides(host)) {
-    const { segments, source, value } = override;
+  // One entry per path: when a variable and a flag name the same one, both
+  // are written but only the winner is reported, because that is what the
+  // run used. Listing the loser too would read like it had an effect.
+  const applied = new Map<string, AppliedOverride>();
+  for (const override of [...collectConfigOverrides(host), ...configOverridesFromArgs(config)]) {
+    const { segments, where, value } = override;
     let node: unknown = doc;
     const walked: string[] = [];
     for (const segment of segments.slice(0, -1)) {
-      node = step(node, segment, walked, source);
+      node = step(node, segment, walked, where);
       walked.push(segment);
     }
-    write(node, segments[segments.length - 1], value, walked, source);
-    applied.push({ path: segments.join("."), from: source, value: host[source] ?? "" });
+    write(node, segments[segments.length - 1], value, walked, where);
+    const path = segments.join(".");
+    applied.set(path, { path, from: override.source, value: override.raw });
   }
-  return applied;
+  return [...applied.values()];
 }

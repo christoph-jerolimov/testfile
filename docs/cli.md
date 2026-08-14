@@ -77,34 +77,47 @@ a filter expression will run; tests whose [inputs](./writing-tests#result-cachin
 are unchanged are marked `[cached]`, with a would-run/served-from-cache
 summary.
 
-## Overriding the Testfile from the environment
+## Overriding the Testfile for one run
 
 Some runs need a file that is *almost* the committed one: the same suite
 against a newer database image, a fixed port instead of a random one, one
-command swapped for a smoke-test variant. `TESTFILE_CONFIG_<path>` writes
-that value into the loaded document, for that run only — the file on disk is
-never touched:
+command swapped for a smoke-test variant. Both `-c` and a
+`TESTFILE_CONFIG_<path>` variable write a value into the loaded document for
+that run only — the file on disk is never touched:
+
+```sh
+testfile start -c ports.db=15432 -c services.postgres.container.image=postgres:17
+
+2 override(s) applied: ports.db, services.postgres.container.image
+```
 
 ```sh
 TESTFILE_CONFIG_ports__db=15432 \
 TESTFILE_CONFIG_services__postgres__container__image=docker.io/library/postgres:17 \
   testfile start
-
-2 override(s) from the environment: ports.db, services.postgres.container.image
 ```
 
-`__` (two underscores) separates the path segments, because a single `_` is
-a legitimate character in the keys themselves. Segments walk maps by key and
-lists by index, so anything in the document can be addressed:
+The flag is the one to reach for by hand; the variable is for the places
+that only have an environment — a CI job's `env:` block, a container, a
+`docker run -e`. **Where both name the same path, the flag wins**, and the
+file loses to either. That is the whole order: `-c`, then
+`TESTFILE_CONFIG_`, then what the Testfile says.
 
-| variable | what it changes |
-| -------- | --------------- |
-| `TESTFILE_CONFIG_env__LOG_LEVEL=debug` | a top-level environment variable |
-| `TESTFILE_CONFIG_ports__db=15432` | a named port |
-| `TESTFILE_CONFIG_services__postgres__container__image=…` | the image of one service |
-| `TESTFILE_CONFIG_services__postgres__ready__timeout=5m` | that service's readiness timeout |
-| `TESTFILE_CONFIG_test__sequence__1__command=…` | the second test of the root sequence |
-| `TESTFILE_CONFIG_test__maxParallel=4` | a group's parallel cap |
+The two forms take the same path, written the way each medium allows: `-c`
+separates the segments with `.` as the file reads, and the variable uses
+`__` (two underscores) because an environment variable name cannot hold a
+dot. A pasted `__` path works with `-c` too, so the two are interchangeable.
+Segments walk maps by key and lists by index, so anything in the document
+can be addressed:
+
+| `-c` | as a variable | what it changes |
+| ---- | ------------- | --------------- |
+| `-c env.LOG_LEVEL=debug` | `TESTFILE_CONFIG_env__LOG_LEVEL` | a top-level environment variable |
+| `-c ports.db=15432` | `TESTFILE_CONFIG_ports__db` | a named port |
+| `-c services.postgres.container.image=…` | `TESTFILE_CONFIG_services__postgres__container__image` | the image of one service |
+| `-c services.postgres.ready.timeout=5m` | `TESTFILE_CONFIG_services__postgres__ready__timeout` | that service's readiness timeout |
+| `-c test.sequence.1.command=…` | `TESTFILE_CONFIG_test__sequence__1__command` | the second test of the root sequence |
+| `-c test.maxParallel=4` | `TESTFILE_CONFIG_test__maxParallel` | a group's parallel cap |
 
 Values are read as the strings they are, so `postgres:17`, `1.20.3` and
 `0755` arrive unchanged. Four things are read as more than a string:
@@ -130,11 +143,20 @@ Details worth knowing:
   then with `_` standing in for `-`. An environment variable name cannot
   contain a `-` at all, and Windows upper-cases the name on the way in — so
   `SERVICES__MY_DB__CONTAINER__IMAGE` finds `services.my-db.container.image`.
+  With `-c` you can simply write the name as it is.
+- **Only the winner is reported and recorded.** A path set by both a
+  variable and a flag appears once, as the flag — listing the loser would
+  read as if it had an effect.
 - **Overrides land on the expanded document**, after
   [includes](./writing-tests#composing-testfiles) and `foreach` — so
   they can reach into what those generated.
 - They are applied in variable-name order, so the same environment always
   produces the same document.
+
+`-c` is a `start` flag; `TESTFILE_CONFIG_` applies to every command that
+reads the file, so `testfile validate` and `testfile inspect` see the same
+document a run would. `testfile start --dry-run -c …` previews a flag's
+effect without running anything.
 
 `testfile start` and `testfile validate` both print what was overridden,
 because what ran is then not quite what the file says — and the run

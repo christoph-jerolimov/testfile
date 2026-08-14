@@ -140,3 +140,67 @@ test("overrides are applied in a deterministic order", () => {
     "sorted by variable name",
   );
 });
+
+test("the same override can be given on the command line, with dots", () => {
+  const target = doc();
+  const applied = applyConfigOverrides(target, {}, [
+    "ports.db=15432",
+    "services.postgres.container.image=docker.io/library/postgres:17",
+    // a pasted variable path works too, so the two forms are interchangeable
+    "test__sequence__0__command=npm run smoke",
+  ]);
+  assert.deepEqual(applied, [
+    { path: "ports.db", from: "--config", value: "15432" },
+    {
+      path: "services.postgres.container.image",
+      from: "--config",
+      value: "docker.io/library/postgres:17",
+    },
+    { path: "test.sequence.0.command", from: "--config", value: "npm run smoke" },
+  ]);
+  assert.deepEqual(target.ports, { db: 15432 });
+  const tests = (target.test as { sequence: Record<string, unknown>[] }).sequence;
+  assert.equal(tests[0].command, "npm run smoke");
+});
+
+test("a flag beats a variable naming the same path, and is reported once", () => {
+  const target = doc();
+  const applied = applyConfigOverrides(target, { TESTFILE_CONFIG_ports__db: "1111" }, [
+    "ports.db=2222",
+  ]);
+  assert.deepEqual(target.ports, { db: 2222 }, "the flag was written last");
+  assert.deepEqual(
+    applied,
+    [{ path: "ports.db", from: "--config", value: "2222" }],
+    "only the winner is reported - the other had no effect",
+  );
+});
+
+test("a variable still wins over the file when no flag names that path", () => {
+  const target = doc();
+  applyConfigOverrides(target, { TESTFILE_CONFIG_ports__db: "1111" }, ["test.name=other"]);
+  assert.deepEqual(target.ports, { db: 1111 });
+  assert.equal((target.test as { name: string }).name, "other");
+});
+
+test("a config argument that is not path=value says what was expected", () => {
+  assert.throws(
+    () => applyConfigOverrides(doc(), {}, ["nonsense"]),
+    /--config nonsense: expected <path>=<value>/,
+  );
+  assert.throws(
+    () => applyConfigOverrides(doc(), {}, ["=15432"]),
+    /--config =15432: expected <path>=<value>/,
+  );
+  assert.throws(
+    () => applyConfigOverrides(doc(), {}, ["ports..db=1"]),
+    /--config ports\.\.db: not a path/,
+  );
+});
+
+test("a flag naming a list index that is out of range names the flag", () => {
+  assert.throws(
+    () => applyConfigOverrides(doc(), {}, ["test.sequence.7.command=x"]),
+    /--config test\.sequence\.7\.command: test\.sequence has 2 entries/,
+  );
+});

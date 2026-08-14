@@ -61,6 +61,7 @@ export function registerStart(program: Command): void {
     watch: boolean;
     cache: boolean;
     forwardEnv: string[];
+    config: string[];
     reporter?: ReporterKind;
     jsonStream: boolean;
     output: string;
@@ -87,6 +88,12 @@ export function registerStart(program: Command): void {
       .option(
         "--forward-env <pattern>",
         'forward matching host env vars into the (isolated) test env, e.g. "GITHUB_*" or "*" (repeatable)',
+        collect,
+        [],
+      )
+      .option(
+        "-c, --config <path=value>",
+        'override a value in the Testfile for this run, e.g. "ports.db=15432" (repeatable; beats TESTFILE_CONFIG_*)',
         collect,
         [],
       )
@@ -136,13 +143,13 @@ export function registerStart(program: Command): void {
       // environment, and with neither the first responding engine is used.
       if (options.engine !== undefined) configureEngine(options.engine, "--engine");
       else configureEngine(process.env.TESTFILE_ENGINE, "TESTFILE_ENGINE");
-      const { path: file, doc, overrides } = loadTestfile(path);
+      const { path: file, doc, overrides } = loadTestfile(path, { config: options.config });
       // What ran is not quite what the file says; say so before it does.
       if (overrides.length > 0) {
         console.log(
           color(
             90,
-            `${overrides.length} override(s) from the environment: ${overrides
+            `${overrides.length} override(s) applied: ${overrides
               .map((override) => override.path)
               .join(", ")}`,
           ),

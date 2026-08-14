@@ -81,7 +81,7 @@ Details worth knowing:
   runner's own `CI=1`.
 - They land **before** the Testfile's `env`, like every forwarded value —
   so a variable the file sets explicitly still wins. To override *that*, use
-  a [config override](./cli#overriding-the-testfile-from-the-environment):
+  a [config override](./cli#overriding-the-testfile-for-one-run):
   `TESTFILE_CONFIG_env__DATABASE_URL=…`.
 - Both are **recorded by name** in the run (`fromEnvironment`), so a run
   says which variables it was given — never their values, secret or not.

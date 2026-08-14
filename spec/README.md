@@ -583,11 +583,18 @@ or a number without leading zeros, or it starts with `[`, `{`, `"` or `'`,
 in which case it is parsed as YAML — which is also how a string that would
 otherwise be read as one of those is written.
 
-Overrides apply after `include` and `foreach` are expanded, in the order
-their variable names sort, and the resulting document must still be valid:
-an override that violates the schema or these rules fails the run. Runners
-must report which paths were overridden, because the run no longer matches
-the file as committed.
+A runner may offer the same overriding through its own interface — the
+reference runner's `testfile start -c <path>=<value>`, where the path is
+written with `.` because a command line can hold one. Such an override
+takes precedence over a variable naming the same path, and both take
+precedence over the document.
+
+Overrides apply after `include` and `foreach` are expanded — variables in
+the order their names sort, then any the runner was given directly — and
+the resulting document must still be valid: an override that violates the
+schema or these rules fails the run. Runners must report which paths were
+overridden, because the run no longer matches the file as committed; a path
+set twice is reported once, as whichever won.
 
 ## Env files
 

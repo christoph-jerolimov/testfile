@@ -232,10 +232,14 @@ function embedFile(root: TestfileDoc, pathOrDir: string, stack: string[], where:
   };
 }
 
-export function loadTestfile(pathOrDir: string): {
+export function loadTestfile(
+  pathOrDir: string,
+  // `-c path=value` arguments, which beat the TESTFILE_CONFIG_ variables.
+  options: { config?: readonly string[] } = {},
+): {
   path: string;
   doc: TestfileDoc;
-  // What the environment overrode, for the runner to report and record.
+  // What was overridden, for the runner to report and record.
   overrides: AppliedOverride[];
 } {
   const path = findTestfile(pathOrDir);
@@ -245,7 +249,7 @@ export function loadTestfile(pathOrDir: string): {
   // Overrides land on the expanded document, so they can reach into what an
   // include or a foreach generated - and are validated again afterwards, so
   // one that breaks the document fails the run instead of corrupting it.
-  const overrides = applyConfigOverrides(doc);
+  const overrides = applyConfigOverrides(doc, process.env, options.config);
   if (overrides.length > 0) validateDoc(doc);
   validateSemantics(doc);
   return { path, doc, overrides };
