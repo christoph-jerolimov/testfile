@@ -4,7 +4,7 @@ test:
   name: ci
   # one instance per version, each in its own container
   matrix:
-    go: ["1.25", "1.24", "1.23"]
+    go: ["1.23", "1.24", "1.25"]
   container:
     image: docker.io/library/golang:${{ matrix.go }}
   sequence:
