@@ -2,6 +2,7 @@ version: 0
 
 test:
   name: ci
+  # the project targets Node.js 22; this runs with whatever is installed
   sequence:
     - name: install
       command: npm ci

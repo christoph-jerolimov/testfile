@@ -2,8 +2,11 @@
 // answers, as one pure function so the server render and the browser render
 // cannot disagree.
 //
-// Each generated line carries the ids of the questions that decided it, so
-// the page can highlight exactly what the last answer changed.
+// The questions are asked one at a time: nothing is preselected, and the
+// next question appears once the current one is answered. The file grows
+// with them, and each generated line carries the ids of the questions that
+// decided it, so the page can highlight exactly what the last answer
+// changed.
 //
 // Nothing here is imported by a test. What the page produces is checked
 // through the page itself, against files written by hand - see
@@ -28,15 +31,25 @@ export interface Line {
   from: string[];
 }
 
+/** Every answer is optional: unanswered means the question is still open. */
 export interface Answers {
-  language: string;
-  runtime: "local" | "container";
-  version: string;
-  database: string;
+  language?: string;
+  /** A version, or ALL for one instance per version. */
+  version?: string;
+  /** Not asked when every version is wanted - those need a container. */
+  runtime?: string;
+  /** NO_DATABASE, one engine, or ALL for every engine. */
+  database?: string;
+  /** A version, ALL, or NEWEST when every engine is wanted. */
   dbVersion?: string;
 }
 
 export type AnswerKey = keyof Answers;
+
+/** The answer that means "one instance per version, or per engine". */
+export const ALL = "all";
+export const NEWEST = "newest";
+const NO_DATABASE = "none";
 
 interface Language {
   label: string;
@@ -56,7 +69,7 @@ interface Database {
   port: number;
   env: Array<[string, string]>;
   ready: string;
-  url: string;
+  url: (port: string) => string;
 }
 
 // Language-specific facts: the image a container build uses, the commands
@@ -129,7 +142,7 @@ const DATABASES: Record<string, Database> = {
     ],
     // runs inside the container, so the image's own client is used
     ready: "pg_isready -h 127.0.0.1 -p 5432 -U postgres",
-    url: "postgres://postgres:test@127.0.0.1:${{ ports.db }}/app_test",
+    url: (port) => `postgres://postgres:test@127.0.0.1:\${{ ports.${port} }}/app_test`,
   },
   mysql: {
     label: "MySQL",
@@ -141,128 +154,197 @@ const DATABASES: Record<string, Database> = {
       ["MYSQL_DATABASE", "app_test"],
     ],
     ready: "mysqladmin ping -h 127.0.0.1 --silent",
-    url: "mysql://root:test@127.0.0.1:${{ ports.db }}/app_test",
+    url: (port) => `mysql://root:test@127.0.0.1:\${{ ports.${port} }}/app_test`,
   },
 };
 
-export const DEFAULT_ANSWERS: Answers = {
-  language: "node",
-  runtime: "local",
-  version: "22",
-  database: "none",
-  dbVersion: "17",
-};
+// One database the tests run against: which engine, which version, and the
+// named port it is published on. More than one of these means the file
+// needs a port per database, since ports are allocated once per run.
+interface Variant {
+  key: string;
+  database: Database;
+  version: string;
+  port: string;
+  name: string;
+}
 
-// The questions, in the order they are asked. `version` and `dbVersion`
-// only apply once an earlier answer made them mean something.
-export function questions(answers: Answers = DEFAULT_ANSWERS): Question[] {
-  const language = LANGUAGES[answers.language] ?? LANGUAGES.node;
-  const database = DATABASES[answers.database];
-  const all: Question[] = [
-    {
-      id: "language",
-      label: "What is the project written in?",
-      options: Object.entries(LANGUAGES).map(([value, entry]) => ({
-        value,
-        label: entry.label,
-      })),
-    },
-    {
-      id: "runtime",
-      label: "Where do the tests run?",
-      hint: "A container pins the toolchain for everyone; running locally is faster and uses what you have installed.",
-      options: [
-        { value: "local", label: "On this machine", note: "whatever is installed" },
-        { value: "container", label: "In a container", note: "pinned image" },
-      ],
-    },
-  ];
-  if (answers.runtime === "container") {
-    all.push({
-      id: "version",
-      label: `Which ${language.label.split(" ")[0]} version?`,
-      hint: "This is the image tag, so everyone tests against the same one. Running locally there is nothing to pin — testfile doctor reports what the machine is missing instead.",
-      options: language.versions.map((value) => ({ value, label: value })),
-    });
+function variantsOf(answers: Answers): Variant[] {
+  const { database, dbVersion } = answers;
+  if (!database || database === NO_DATABASE) return [];
+  const engines = database === ALL ? Object.keys(DATABASES) : [database];
+  const pairs: Array<[string, string]> = [];
+  for (const key of engines) {
+    const entry = DATABASES[key];
+    if (!entry) continue;
+    if (dbVersion === ALL) for (const version of entry.versions) pairs.push([key, version]);
+    // Newest until the version is answered, so choosing a database shows
+    // what it brings straight away.
+    else if (!dbVersion || !entry.versions.includes(dbVersion))
+      pairs.push([key, entry.versions[0]]);
+    else pairs.push([key, dbVersion]);
   }
-  all.push({
-    id: "database",
-    label: "Do the tests need a database?",
-    hint: "The runner starts it, waits until it really accepts connections, and stops it again — on your machine and on CI.",
-    options: [
-      { value: "none", label: "No" },
-      ...Object.entries(DATABASES).map(([value, entry]) => ({ value, label: entry.label })),
-    ],
+  // The engine names the port and the test - unless the same engine is
+  // there more than once, when the version has to tell them apart.
+  const versions = new Map<string, number>();
+  for (const [key] of pairs) versions.set(key, (versions.get(key) ?? 0) + 1);
+  return pairs.map(([key, version]) => {
+    const many = (versions.get(key) ?? 0) > 1;
+    return {
+      key,
+      database: DATABASES[key],
+      version,
+      // port names allow letters, digits and underscores only
+      port: many ? `${key}${version.replace(/\W/g, "")}` : key,
+      name: many ? `${key}-${version}` : key,
+    };
   });
-  if (database) {
-    all.push({
-      id: "dbVersion",
-      label: `Which ${database.label} version?`,
-      options: database.versions.map((value) => ({ value, label: value })),
-    });
-  }
-  return all;
 }
 
-// Answers with the gaps filled in: a version that belongs to the chosen
-// language, a database version that belongs to the chosen database.
-export function normalize(answers: Partial<Answers> = {}): Answers {
-  const merged = { ...DEFAULT_ANSWERS, ...answers };
-  const language = LANGUAGES[merged.language] ? merged.language : DEFAULT_ANSWERS.language;
-  const database =
-    merged.database in DATABASES || merged.database === "none" ? merged.database : "none";
-  const versions = LANGUAGES[language].versions;
-  const dbVersions = DATABASES[database]?.versions;
-  return {
-    language,
-    runtime: merged.runtime === "container" ? "container" : "local",
-    version: versions.includes(merged.version) ? merged.version : versions[0],
-    database,
-    dbVersion:
-      dbVersions && merged.dbVersion && dbVersions.includes(merged.dbVersion)
-        ? merged.dbVersion
-        : dbVersions?.[0],
+// The questions, in the order they are asked - up to and including the
+// first one that has no answer yet. Nothing is preselected, so the page
+// starts with one question and grows.
+export function questions(answers: Answers = {}): Question[] {
+  const language = answers.language ? LANGUAGES[answers.language] : undefined;
+  const out: Question[] = [];
+  // Adds a question, and reports whether it has been answered - the caller
+  // stops at the first one that has not.
+  const ask = (question: Question): boolean => {
+    out.push(question);
+    return question.options.some((option) => option.value === answers[question.id]);
   };
+
+  const answered = ask({
+    id: "language",
+    label: "What is the project written in?",
+    options: Object.entries(LANGUAGES).map(([value, entry]) => ({ value, label: entry.label })),
+  });
+  if (!answered || !language) return out;
+
+  const name = language.label.split(" ")[0];
+  if (
+    !ask({
+      id: "version",
+      label: `Which ${name} version?`,
+      hint: `"All of them" builds a matrix: the suite runs once per version, each in its own container.`,
+      options: [
+        ...language.versions.map((value) => ({ value, label: value })),
+        { value: ALL, label: "All of them", note: `${language.versions.length} versions` },
+      ],
+    })
+  ) {
+    return out;
+  }
+
+  // A version matrix only means something in containers - nothing else can
+  // give one machine three toolchains - so that answer settles this one.
+  if (answers.version !== ALL) {
+    if (
+      !ask({
+        id: "runtime",
+        label: "Where do the tests run?",
+        hint: "A container pins the toolchain for everyone; running locally is faster and uses what you have installed.",
+        options: [
+          { value: "local", label: "On this machine", note: "whatever is installed" },
+          { value: "container", label: "In a container", note: `pinned to ${answers.version}` },
+        ],
+      })
+    ) {
+      return out;
+    }
+  }
+
+  if (
+    !ask({
+      id: "database",
+      label: "Do the tests need a database?",
+      hint: "The runner starts it, waits until it really accepts connections, and stops it again — on your machine and on CI.",
+      options: [
+        { value: NO_DATABASE, label: "No" },
+        ...Object.entries(DATABASES).map(([value, entry]) => ({ value, label: entry.label })),
+        { value: ALL, label: "All of them", note: "one test per engine" },
+      ],
+    })
+  ) {
+    return out;
+  }
+  if (answers.database === NO_DATABASE) return out;
+
+  const engine = answers.database ? DATABASES[answers.database] : undefined;
+  ask({
+    id: "dbVersion",
+    label: engine ? `Which ${engine.label} version?` : "Which database versions?",
+    hint: `"All of them" runs the integration test once per version, each against its own container.`,
+    options: engine
+      ? [
+          ...engine.versions.map((value) => ({ value, label: value })),
+          { value: ALL, label: "All of them", note: `${engine.versions.length} versions` },
+        ]
+      : [
+          { value: NEWEST, label: "The newest of each" },
+          { value: ALL, label: "All of them", note: "every version of both" },
+        ],
+  });
+  return out;
 }
 
-/** The Testfile for one set of answers, line by line. */
-export function buildTestfile(rawAnswers: Partial<Answers> = {}): Line[] {
-  const answers = normalize(rawAnswers);
-  const language = LANGUAGES[answers.language];
-  const database = DATABASES[answers.database];
+/**
+ * The Testfile for the answers given so far, line by line. Empty until the
+ * first question is answered - before that there is no project to describe.
+ */
+export function buildTestfile(answers: Answers = {}): Line[] {
+  const language = answers.language ? LANGUAGES[answers.language] : undefined;
+  if (!language) return [];
+  const variants = variantsOf(answers);
   const lines: Line[] = [];
   const add = (text: string, ...from: string[]): number => lines.push({ text, from });
 
   add("version: 0");
 
-  if (database) {
+  if (variants.length > 0) {
     // The blank lines inside this block belong to it too, so choosing a
     // database highlights one unbroken band rather than a band with holes.
     add("", "database");
     add("# A free port is picked per run, so two runs never collide.", "database");
     add("ports:", "database");
-    add("  db: random", "database");
-    add("", "database");
-    add("services:", "database");
-    add(`  ${answers.database}:`, "database");
-    add("    container:", "database");
-    add(`      image: ${database.image(answers.dbVersion ?? "")}`, "database", "dbVersion");
-    add(`      ports: ["\${{ ports.db }}:${database.port}"]`, "database");
-    add("      env:", "database");
-    for (const [key, value] of database.env) add(`        ${key}: ${value}`, "database");
-    add("    ready:", "database");
-    add("      # runs inside the container, so the image's own client is used", "database");
-    add(`      exec: ${database.ready}`, "database");
-    add("      timeout: 60s", "database");
+    for (const variant of variants) {
+      // with one database the port is named after it; with several the name
+      // has to carry the version too, so it moves with that answer
+      add(`  ${variant.port}: random`, "database", ...(variants.length > 1 ? ["dbVersion"] : []));
+    }
+    if (variants.length === 1) {
+      add("", "database");
+      add("services:", "database");
+      addService(add, variants[0], "");
+    }
   }
 
   add("");
   add("test:");
   add("  name: ci");
-  if (answers.runtime === "container") {
+  if (answers.version === ALL) {
+    add("  # one instance per version, each in its own container", "version");
+    add("  matrix:", "version");
+    add(
+      `    ${answers.language}: [${language.versions.map((v) => `"${v}"`).join(", ")}]`,
+      "version",
+    );
+    add("  container:", "version");
+    add(
+      `    image: ${language.image(`\${{ matrix.${answers.language} }}`)}`,
+      "version",
+      "language",
+    );
+  } else if (answers.runtime === "container") {
     add("  # every command below runs in this image, with the project mounted", "runtime");
     add("  container:", "runtime");
-    add(`    image: ${language.image(answers.version)}`, "runtime", "version", "language");
+    add(`    image: ${language.image(answers.version ?? "")}`, "runtime", "version", "language");
+  } else if (answers.version) {
+    add(
+      `  # the project targets ${language.label.split(" ")[0]} ${answers.version}; this runs with whatever is installed`,
+      "runtime",
+      "version",
+    );
   }
   add("  sequence:");
   add("    - name: install", "language");
@@ -273,17 +355,60 @@ export function buildTestfile(rawAnswers: Partial<Answers> = {}): Line[] {
   add(`      command: ${language.unit}`, "language");
   add("      # skipped when none of these changed since the last passing run", "language");
   add(`      inputs: [${language.inputs.join(", ")}]`, "language");
-  if (database) {
+
+  if (variants.length === 1) {
     add("    - name: integration", "database");
     add("      env:", "database");
-    add(`        DATABASE_URL: ${database.url}`, "database", "dbVersion");
+    add(`        DATABASE_URL: ${variants[0].database.url(variants[0].port)}`, "database");
     add(`      command: ${language.integration}`, "database", "language");
+  } else if (variants.length > 1) {
+    add("    - name: integration", "database");
+    add("      # one run per database, each with a container of its own", "dbVersion");
+    add("      parallel:", "database");
+    for (const variant of variants) {
+      add(`        - name: ${variant.name}`, "database", "dbVersion");
+      add("          services:", "database");
+      addService(add, variant, "          ", answers.version === ALL);
+      add("          env:", "database");
+      add(`            DATABASE_URL: ${variant.database.url(variant.port)}`, "database");
+      add(`          command: ${language.integration}`, "database", "language");
+    }
   }
   return lines;
 }
 
-// The file as text, for copying and for quoting.
-export function toYaml(answers: Partial<Answers>): string {
+// One service block, indented to sit where it is written: at the top level
+// when there is a single database, inside a test when there are several.
+//
+// `shared` matters when the whole suite is a version matrix: the instances
+// run at once, and without it each would start its own copy of this
+// container on the same host port. Matching on the resolved configuration,
+// they get one between them.
+function addService(
+  add: (text: string, ...from: string[]) => number,
+  variant: Variant,
+  indent: string,
+  shared = false,
+): void {
+  const { database } = variant;
+  add(`${indent}  ${variant.key}:`, "database");
+  if (shared) {
+    add(`${indent}    # one container for every instance of the matrix above`, "version");
+    add(`${indent}    shared: true`, "version");
+  }
+  add(`${indent}    container:`, "database");
+  add(`${indent}      image: ${database.image(variant.version)}`, "database", "dbVersion");
+  add(`${indent}      ports: ["\${{ ports.${variant.port} }}:${database.port}"]`, "database");
+  add(`${indent}      env:`, "database");
+  for (const [key, value] of database.env) add(`${indent}        ${key}: ${value}`, "database");
+  add(`${indent}    ready:`, "database");
+  add(`${indent}      # runs inside the container, so the image's own client is used`, "database");
+  add(`${indent}      exec: ${database.ready}`, "database");
+  add(`${indent}      timeout: 60s`, "database");
+}
+
+/** The file as text, for copying and for quoting. */
+export function toYaml(answers: Answers): string {
   return `${buildTestfile(answers)
     .map((line) => line.text)
     .join("\n")}\n`;

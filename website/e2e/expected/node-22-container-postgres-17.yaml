@@ -2,13 +2,13 @@ version: 0
 
 # A free port is picked per run, so two runs never collide.
 ports:
-  db: random
+  postgres: random
 
 services:
   postgres:
     container:
       image: docker.io/library/postgres:17-alpine
-      ports: ["${{ ports.db }}:5432"]
+      ports: ["${{ ports.postgres }}:5432"]
       env:
         POSTGRES_PASSWORD: test
         POSTGRES_DB: app_test
@@ -33,5 +33,5 @@ test:
       inputs: ["src/**", "package-lock.json"]
     - name: integration
       env:
-        DATABASE_URL: postgres://postgres:test@127.0.0.1:${{ ports.db }}/app_test
+        DATABASE_URL: postgres://postgres:test@127.0.0.1:${{ ports.postgres }}/app_test
       command: npm run test:integration

@@ -40,10 +40,12 @@ Nothing here is tested by importing it. The two checkers are run as the
 commands the CI job runs, over a directory of built pages, and judged by
 what they report and the code they exit with.
 
-The [`/start`](src/pages/start.astro) wizard is tested the same way, one
-level up: [`e2e/wizard.spec.ts`](e2e/wizard.spec.ts) opens the built page in
-a browser, answers its questions by clicking the labels a reader sees, and
-compares the file it builds with the ones committed in
+The [`/start`](src/pages/start.astro) wizard asks its questions one at a
+time — nothing is preselected, and the next one appears once the current one
+is answered — and it is tested the same way, one level up:
+[`e2e/wizard.spec.ts`](e2e/wizard.spec.ts) opens the built page in a
+browser, answers by clicking the labels a reader sees, and compares the file
+it builds with the ones committed in
 [`e2e/expected/`](e2e/expected/) — written by hand, not generated. A test
 that asked [`src/wizard.ts`](src/wizard.ts) what it produces could only
 prove that the code equals itself, so there is deliberately no way to
