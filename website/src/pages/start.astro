@@ -1,16 +1,15 @@
 ---
-// A wizard rather than a tutorial: answer four or five questions, watch the
-// file appear next to them, copy it. The generator is shared with the tests
-// and with the schema check, so what a reader copies is always a Testfile
-// the runner accepts.
+// A wizard rather than a tutorial: answer the questions one at a time and
+// watch the file appear next to them, then copy it. Nothing is preselected,
+// so the page opens on a single question.
 import Layout from "../layouts/Layout.astro";
-import { buildTestfile, DEFAULT_ANSWERS, questions } from "../wizard";
+import { buildTestfile, questions } from "../wizard";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-// Rendered for the default answers, so the page says something before (and
-// without) JavaScript; the client script takes over on the first change.
-const initialQuestions = questions(DEFAULT_ANSWERS);
-const initialLines = buildTestfile(DEFAULT_ANSWERS);
+// The unanswered state, so the page says something before (and without)
+// JavaScript; the client script takes over on the first answer.
+const initialQuestions = questions();
+const initialLines = buildTestfile();
 ---
 
 <Layout
@@ -20,8 +19,8 @@ const initialLines = buildTestfile(DEFAULT_ANSWERS);
 >
   <h1>Get started</h1>
   <p class="lead">
-    Answer these, and the file on the right becomes yours to copy. Nothing is
-    sent anywhere — the page builds it in your browser.
+    One question at a time, and the file on the right becomes yours to copy.
+    Nothing is sent anywhere — the page builds it in your browser.
   </p>
 
   <div class="wizard">
@@ -38,7 +37,6 @@ const initialLines = buildTestfile(DEFAULT_ANSWERS);
                     type="radio"
                     name={question.id}
                     value={option.value}
-                    checked={DEFAULT_ANSWERS[question.id] === option.value}
                   />
                   <span>{option.label}</span>
                   {option.note && <span class="note">{option.note}</span>}
@@ -54,11 +52,14 @@ const initialLines = buildTestfile(DEFAULT_ANSWERS);
       <div class="output-head">
         <span class="filename">Testfile</span>
         <span id="wizard-changed" class="changed" hidden></span>
-        <button id="wizard-copy" type="button">Copy</button>
+        <button id="wizard-copy" type="button" hidden={initialLines.length === 0}>Copy</button>
       </div>
-      <pre id="wizard-yaml"><code>{initialLines.map((line) => (
+      <pre id="wizard-yaml" hidden={initialLines.length === 0}><code>{initialLines.map((line) => (
         <span class="yline">{line.text}{"\n"}</span>
       ))}</code></pre>
+      <p id="wizard-empty" class="empty" hidden={initialLines.length > 0}>
+        Answer the first question and the file appears here.
+      </p>
     </div>
   </div>
 
@@ -76,10 +77,10 @@ const initialLines = buildTestfile(DEFAULT_ANSWERS);
     CI workflow) and writes a first draft.
   </p>
   <p>
-    From here: <a href={`${base}/docs/getting-started`}>Getting started</a>
-    walks through the same ground in prose,
+    From here: <a href={`${base}/docs/getting-started`}>Getting started</a>{" "}
+    walks through the same ground in prose,{" "}
     <a href={`${base}/docs/writing-tests`}>Writing tests</a> covers the test
-    tree, and <a href={`${base}/docs/complete-example`}>a complete Testfile</a>
+    tree, and <a href={`${base}/docs/complete-example`}>a complete Testfile</a>{" "}
     shows nearly every option at once.
   </p>
 
@@ -182,6 +183,13 @@ const initialLines = buildTestfile(DEFAULT_ANSWERS);
     .wizard-output .changed:not([hidden]) + button {
       margin-left: 0;
     }
+    .wizard-output .empty {
+      margin: 0;
+      padding: 0.75rem;
+      background: var(--code-bg);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
     .wizard-output pre {
       margin: 0;
       padding: 0.75rem;
@@ -209,19 +217,21 @@ const initialLines = buildTestfile(DEFAULT_ANSWERS);
   </style>
 
   <script>
-    import { buildTestfile, DEFAULT_ANSWERS, questions } from "../wizard";
+    import { buildTestfile, questions } from "../wizard";
 
     const form = document.getElementById("wizard-form");
     const output = document.querySelector("#wizard-yaml code");
     const changedLabel = document.getElementById("wizard-changed");
+    const empty = document.getElementById("wizard-empty");
     const copy = document.getElementById("wizard-copy");
-    if (form && output && changedLabel && copy) {
-      const answers = { ...DEFAULT_ANSWERS };
+    if (form && output && changedLabel && empty && copy) {
+      const answers = {};
 
-      // Questions come and go with the answers (a database version only
-      // exists once a database does), so the form is re-rendered too - and
-      // the answer of a question that disappeared is left alone, so going
-      // back to it restores what was chosen before.
+      // Questions appear as they are earned: the next one only once the
+      // current one is answered, and some of them go again when an earlier
+      // answer makes them meaningless. The answer of a question that
+      // disappeared is left alone, so going back to it restores what was
+      // chosen before.
       const renderForm = () => {
         form.innerHTML = "";
         for (const question of questions(answers)) {
@@ -238,8 +248,6 @@ const initialLines = buildTestfile(DEFAULT_ANSWERS);
           }
           const choices = document.createElement("div");
           choices.className = "choices";
-          const known = question.options.some((option) => option.value === answers[question.id]);
-          if (!known) answers[question.id] = question.options[0].value;
           for (const option of question.options) {
             const label = document.createElement("label");
             const input = document.createElement("input");
@@ -276,6 +284,10 @@ const initialLines = buildTestfile(DEFAULT_ANSWERS);
           span.textContent = `${line.text}\n`;
           output.append(span);
         }
+        const anything = output.childElementCount > 0;
+        empty.hidden = anything;
+        copy.hidden = !anything;
+        output.parentElement.hidden = !anything;
         if (changedQuestion && touched > 0) {
           changedLabel.textContent = `${touched} line${touched === 1 ? "" : "s"} from your last answer`;
           changedLabel.hidden = false;
