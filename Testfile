@@ -41,9 +41,9 @@ test:
             - Testfile
             - examples/**/Testfile
             # the complete Testfiles printed in the docs are validated too,
-            # and every file the website's wizard can generate
+            # and the files the website's wizard is expected to produce
             - docs/**.md
-            - website/src/wizard.mjs
+            - website/e2e/expected/**
         - name: website
           tags: [docs]
           command: npm run build --workspace website
@@ -72,7 +72,24 @@ test:
           command: npm test --workspace website
           inputs:
             - website/scripts/**
-            - website/src/wizard.mjs
+        # The "Get started" wizard, driven in a browser: the page is the
+        # only thing that knows how to build the file, so the only honest
+        # way to check what it produces is to answer its questions. Linux
+        # only, like the other browser suite - it needs a chromium.
+        - name: website-wizard
+          tags: [slow, e2e, browser, docs]
+          if: ${{ env.TESTFILE_OS }} == linux
+          needs: [website]
+          workdir: website
+          script: |
+            if [ -d /opt/pw-browsers ]; then
+              export PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers
+            else
+              npx playwright install --with-deps chromium
+            fi
+            npx playwright test
+          artifacts:
+            - test-results/**
         - name: viewer-web
           tags: [fast, unit]
           command: npm test --workspace viewer-web

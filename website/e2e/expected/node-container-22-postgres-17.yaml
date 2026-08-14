@@ -1,0 +1,37 @@
+version: 0
+
+# A free port is picked per run, so two runs never collide.
+ports:
+  db: random
+
+services:
+  postgres:
+    container:
+      image: docker.io/library/postgres:17-alpine
+      ports: ["${{ ports.db }}:5432"]
+      env:
+        POSTGRES_PASSWORD: test
+        POSTGRES_DB: app_test
+    ready:
+      # runs inside the container, so the image's own client is used
+      exec: pg_isready -h 127.0.0.1 -p 5432 -U postgres
+      timeout: 60s
+
+test:
+  name: ci
+  # every command below runs in this image, with the project mounted
+  container:
+    image: docker.io/library/node:22
+  sequence:
+    - name: install
+      command: npm ci
+    - name: lint
+      command: npm run lint
+    - name: unit
+      command: npm test
+      # skipped when none of these changed since the last passing run
+      inputs: ["src/**", "package-lock.json"]
+    - name: integration
+      env:
+        DATABASE_URL: postgres://postgres:test@127.0.0.1:${{ ports.db }}/app_test
+      command: npm run test:integration

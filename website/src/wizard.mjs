@@ -1,11 +1,13 @@
 // The starter Testfile the "Get started" page builds from a handful of
-// answers. Kept as one pure function so the page, the tests and the schema
-// check all see the same output: every combination of answers is validated
-// against the JSON schema, which is what makes it safe to tell a reader to
-// copy the result.
+// answers, as one pure function so the server render and the browser render
+// cannot disagree.
 //
 // Each generated line carries the ids of the questions that decided it, so
 // the page can highlight exactly what the last answer changed.
+//
+// Nothing here is imported by a test. What the page produces is checked
+// through the page itself, against files written by hand - see
+// e2e/wizard.spec.ts and e2e/expected/.
 
 /**
  * @typedef {{ id: string, label: string, hint?: string, options: Option[] }} Question
@@ -244,22 +246,4 @@ export function toYaml(answers) {
   return `${buildTestfile(answers)
     .map((line) => line.text)
     .join("\n")}\n`;
-}
-
-// Every combination the page can produce - what the schema check walks.
-export function allAnswerCombinations() {
-  const out = [];
-  for (const language of Object.keys(LANGUAGES)) {
-    for (const runtime of ["local", "container"]) {
-      for (const version of LANGUAGES[language].versions) {
-        for (const database of ["none", ...Object.keys(DATABASES)]) {
-          const dbVersions = DATABASES[database]?.versions ?? [undefined];
-          for (const dbVersion of dbVersions) {
-            out.push({ language, runtime, version, database, dbVersion });
-          }
-        }
-      }
-    }
-  }
-  return out;
 }

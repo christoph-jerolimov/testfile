@@ -1,0 +1,16 @@
+version: 0
+
+test:
+  name: ci
+  # every command below runs in this image, with the project mounted
+  container:
+    image: docker.io/library/golang:1.25
+  sequence:
+    - name: install
+      command: go mod download
+    - name: lint
+      command: go vet ./...
+    - name: unit
+      command: go test ./...
+      # skipped when none of these changed since the last passing run
+      inputs: ["**/*.go", "go.sum"]

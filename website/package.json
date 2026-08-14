@@ -10,11 +10,17 @@
     "preview": "astro preview",
     "check:links": "node scripts/check-links.mjs dist /testfile ..",
     "test": "node --test scripts/*.test.mjs",
+    "test:e2e": "npm run build && playwright test",
     "check:llms": "node scripts/check-llms.mjs dist /testfile"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.2.2",
     "astro": "^7.1.6",
     "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
   }
 }
