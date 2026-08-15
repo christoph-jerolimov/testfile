@@ -92,6 +92,7 @@ extension with schema validation, run-from-editor and a runs view.
 | [`testfile-ts/tui/`](testfile-ts/tui/) | The terminal UI over recorded runs (Ink) — the only package that needs a renderer. |
 | [`testfile-ts/mcp/`](testfile-ts/mcp/) | The MCP server: read-only tools over the history for an AI assistant. |
 | [`testfile-ts/web/`](testfile-ts/web/) | The localhost REST API that serves the web viewer. |
+| [`testfile-ts/eve/`](testfile-ts/eve/) | `eve`: ask questions about the recorded runs from a terminal - the MCP tools, driven by an agent instead of an editor. |
 | [`testfile-ts/deno-bundle/`](testfile-ts/deno-bundle/) | Experimental: the CLI as a single binary, built with `deno compile`. Not part of CI. |
 | [`testfile-ts/bun-bundle/`](testfile-ts/bun-bundle/) | Experimental: the same, built with `bun build --compile`. Not part of CI. |
 | [`testfile-ts/nodejs-bundle/`](testfile-ts/nodejs-bundle/) | Experimental: the same, built by node itself with `--build-sea` (node 25.5+). Not part of CI. |

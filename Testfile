@@ -202,6 +202,23 @@ test:
             - testfile-ts/web/src/**
             - testfile-ts/web/package.json
             - testfile-ts/web/tsconfig.json
+        # `eve` asks the model about recorded runs over the same tools the MCP
+        # server serves. Its own tests never reach the network: the adapter is
+        # checked against what `testfile mcp` answers for the same call.
+        #
+        # `npm test`, not `node --test dist/...` like its neighbours: nothing
+        # else depends on this package, so no earlier step builds it - and an
+        # unbuilt dist/ makes `node --test` match no files and pass. Its
+        # pretest builds it (and core and mcp, which it references).
+        - name: eve
+          tags: [fast, unit]
+          command: npm test --workspace @testfile/eve
+          inputs:
+            - testfile-ts/core/src/**
+            - testfile-ts/mcp/src/**
+            - testfile-ts/eve/src/**
+            - testfile-ts/eve/package.json
+            - testfile-ts/eve/tsconfig.json
         - name: cli
           tags: [fast, unit]
           needs: [build-cli]
