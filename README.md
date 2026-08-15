@@ -94,6 +94,7 @@ extension with schema validation, run-from-editor and a runs view.
 | [`testfile-ts/web/`](testfile-ts/web/) | The localhost REST API that serves the web viewer. |
 | [`testfile-ts/deno-bundle/`](testfile-ts/deno-bundle/) | Experimental: the CLI as a single binary, built with `deno compile`. Not part of CI. |
 | [`testfile-ts/bun-bundle/`](testfile-ts/bun-bundle/) | Experimental: the same, built with `bun build --compile`. Not part of CI. |
+| [`testfile-ts/nodejs-bundle/`](testfile-ts/nodejs-bundle/) | Experimental: the same, built by node itself with `--build-sea` (node 25.5+). Not part of CI. |
 | [`viewer-web/`](viewer-web/) | The React web viewer over recorded runs, served locally by `testfile serve`. |
 | [`vscode-extension/`](vscode-extension/) | VS Code extension: schema validation, run-from-editor code lenses and the recorded-runs view. |
 | [`conformance/`](conformance/) | Runner-independent conformance suite: cases with expected outcomes that any runner implementation must satisfy. |
