@@ -64,3 +64,11 @@ npx ovsx create-namespace testfile --pat "$OVSX_PAT"
 OVSX_PAT=... npm run publish:open-vsx
 VSCE_PAT=... npm run publish:marketplace
 ```
+
+## Which VS Code it needs
+
+`engines.vscode` and `@types/vscode` say the same thing — the oldest editor
+this extension supports — so they move together and neither follows the
+latest release. At `^1.90.0` the extension installs on anything from June
+2024 onwards; raise both, deliberately, when something here needs a newer
+API.
