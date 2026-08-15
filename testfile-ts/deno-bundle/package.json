@@ -1,0 +1,13 @@
+{
+  "name": "@testfile/deno-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Experimental: the testfile CLI compiled into a single binary with deno compile",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "prebundle": "npm run bundle --workspace @testfile/cli --prefix ../..",
+    "bundle": "deno compile --no-check --allow-all --node-modules-dir=none --output dist/testfile ../cli/dist/testfile.bundle.mjs",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  }
+}

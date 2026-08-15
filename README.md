@@ -92,6 +92,7 @@ extension with schema validation, run-from-editor and a runs view.
 | [`testfile-ts/tui/`](testfile-ts/tui/) | The terminal UI over recorded runs (Ink) — the only package that needs a renderer. |
 | [`testfile-ts/mcp/`](testfile-ts/mcp/) | The MCP server: read-only tools over the history for an AI assistant. |
 | [`testfile-ts/web/`](testfile-ts/web/) | The localhost REST API that serves the web viewer. |
+| [`testfile-ts/deno-bundle/`](testfile-ts/deno-bundle/) | Experimental: the CLI as a single binary, built with `deno compile`. Not part of CI. |
 | [`viewer-web/`](viewer-web/) | The React web viewer over recorded runs, served locally by `testfile serve`. |
 | [`vscode-extension/`](vscode-extension/) | VS Code extension: schema validation, run-from-editor code lenses and the recorded-runs view. |
 | [`conformance/`](conformance/) | Runner-independent conformance suite: cases with expected outcomes that any runner implementation must satisfy. |
