@@ -13,6 +13,7 @@
     "testfile-ts/tui",
     "testfile-ts/web",
     "testfile-ts/cli",
+    "testfile-ts/eve",
     "testfile-ts/deno-bundle",
     "testfile-ts/bun-bundle",
     "testfile-ts/nodejs-bundle",
