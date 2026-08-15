@@ -14,6 +14,7 @@
     "testfile-ts/web",
     "testfile-ts/cli",
     "testfile-ts/deno-bundle",
+    "testfile-ts/bun-bundle",
     "viewer-web",
     "vscode-extension",
     "website",
