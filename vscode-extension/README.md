@@ -26,12 +26,10 @@ format and runner.
 
 ## Settings
 
-- `testfile.command` — the runner CLI to invoke (default `testfile`). Point
-  it at `node /path/to/testfile-ts/cli/dist/cli.js` when working inside this
-  repository.
-- `testfile.viewerCommand` — the viewer CLI the TUI/serve shortcuts invoke
-  (default `testfile-viewer`). Point it at
-  `node /path/to/testfile-ts/cli/dist/cli.js` when working inside this repository.
+- `testfile.command` — the CLI to invoke (default `testfile`). Point it at
+  `node /path/to/testfile-ts/cli/dist/cli.js` when working inside this
+  repository. Every command uses it, the TUI and web viewer shortcuts
+  included — they are subcommands of the same CLI.
 
 ## Installing
 
@@ -48,6 +46,63 @@ npm test            # typecheck + unit tests + bundle
 npm run build       # bundle to dist/ and copy the schema
 npm run package     # build the .vsix (vsce)
 ```
+
+### Trying the packaged extension
+
+`npm run package` writes `vscode-extension/testfile-vscode-<version>.vsix`.
+Installing that file is the only way to try what users actually get: the
+bundle from `dist/`, the schemas copied next to it, and the `contributes`
+section as `package.json` declares it.
+
+**From the VS Code UI** — open the Extensions view (`Ctrl`/`Cmd`+`Shift`+`X`),
+the `...` menu in its title bar, *Install from VSIX...*, and pick the file.
+Reload when asked.
+
+**From the command line** — the same thing, minus the clicking:
+
+```sh
+code --install-extension testfile-vscode-0.1.0.vsix --force
+code --uninstall-extension testfile.testfile-vscode
+```
+
+`--force` replaces an install of the same version, which is what you want
+while iterating: the version in `package.json` does not change between
+builds, so without it a second install is ignored. `codium`, `code-insiders`
+and Cursor take the same flags.
+
+### Where an installed extension lands
+
+| | |
+| ---------- | ----------------------------------- |
+| Linux, macOS | `~/.vscode/extensions/` |
+| Windows | `%USERPROFILE%\.vscode\extensions\` |
+
+VSCodium uses `~/.vscode-oss/extensions/` and Insiders
+`~/.vscode-insiders/extensions/`; `--extensions-dir <path>` overrides all of
+them, which is the tidy way to try a build without touching your everyday
+editor:
+
+```sh
+code --extensions-dir /tmp/testfile-ext --install-extension testfile-vscode-0.1.0.vsix
+code --extensions-dir /tmp/testfile-ext .
+```
+
+**Copying the `.vsix` into that folder does nothing.** A `.vsix` is a zip
+whose payload sits under `extension/`, and the editor only scans the folder
+for *directories* holding a `package.json`. To install one by hand, extract
+that inner folder to `<extensions-dir>/testfile.testfile-vscode-0.1.0/` —
+`<publisher>.<name>-<version>` — and restart the editor:
+
+```sh
+unzip -q testfile-vscode-0.1.0.vsix -d /tmp/vsix
+mv /tmp/vsix/extension ~/.vscode/extensions/testfile.testfile-vscode-0.1.0
+```
+
+Either way, check it took: the Extensions view lists *Testfile* under
+Installed, and opening a `Testfile` gives you completion and the `▶ run`
+code lens. `Developer: Show Running Extensions` confirms it activated —
+that only happens in a folder that contains a `Testfile`, `testfile.yaml`
+or `testfile.yml`, per `activationEvents`.
 
 ## Publishing
 
