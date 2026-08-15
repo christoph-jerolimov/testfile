@@ -54,6 +54,14 @@ Installing that file is the only way to try what users actually get: the
 bundle from `dist/`, the schemas copied next to it, and the `contributes`
 section as `package.json` declares it.
 
+You do not have to build it yourself: every change to this workspace is
+packaged by
+[`build-vscode.yaml`](../.github/workflows/build-vscode.yaml), which keeps
+the `.vsix` as a build artifact for 14 days (and runs on demand from the
+Actions tab, for any branch). The artifact downloads as a **zip around the
+`.vsix`** — unzip it first, then install as below. The run's summary repeats
+these commands.
+
 **From the VS Code UI** — open the Extensions view (`Ctrl`/`Cmd`+`Shift`+`X`),
 the `...` menu in its title bar, *Install from VSIX...*, and pick the file.
 Reload when asked.
@@ -105,6 +113,9 @@ that only happens in a folder that contains a `Testfile`, `testfile.yaml`
 or `testfile.yml`, per `activationEvents`.
 
 ## Publishing
+
+Building and releasing are two workflows: `build-vscode.yaml` above packages
+every change into a throwaway artifact, and this one publishes.
 
 Pushing a `vscode-v*` tag runs the release workflow
 (`.github/workflows/release-vscode.yaml`): it packages the `.vsix`,

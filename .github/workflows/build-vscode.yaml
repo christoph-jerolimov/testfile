@@ -1,0 +1,77 @@
+name: Build VS Code extension
+
+# Packages the extension and keeps the .vsix as a build artifact, so a change
+# can be installed and tried in a real editor without cutting a release.
+# Releasing is the other workflow (release-vscode.yaml), on a vscode-v* tag.
+#
+# The paths are repeated per trigger on purpose: GitHub Actions does not
+# expand YAML anchors in workflow files.
+on:
+  push:
+    branches: [main]
+    paths:
+      - vscode-extension/**
+      # build.mjs copies these into the package, so they change what ships
+      - schema/testfile.schema.json
+      - schema/testrun.schema.json
+      - .github/workflows/build-vscode.yaml
+  pull_request:
+    paths:
+      - vscode-extension/**
+      - schema/testfile.schema.json
+      - schema/testrun.schema.json
+      - .github/workflows/build-vscode.yaml
+  # and on demand, for any branch
+  workflow_dispatch:
+
+jobs:
+  package:
+    name: Package the .vsix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      # typecheck, unit tests and the bundle - the same command the repository
+      # Testfile runs as `vscode-extension`
+      - run: npm test --workspace vscode-extension
+      - run: npm run package --workspace vscode-extension
+
+      # The file is named after the version in package.json, which does not
+      # change between builds; the commit does, so the artifact carries it.
+      - name: Name the artifact after the version and the commit
+        id: vsix
+        run: |
+          file=$(ls vscode-extension/*.vsix)
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "${file%.vsix}")-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.vsix.outputs.name }}
+          path: ${{ steps.vsix.outputs.file }}
+          if-no-files-found: error
+          # a build per commit, kept long enough to try it
+          retention-days: 14
+
+      # Downloading an artifact gives you a zip *containing* the .vsix, which
+      # is the one surprising step - so the summary spells it out.
+      - name: Say how to install it
+        run: |
+          {
+            echo "### VS Code extension packaged"
+            echo
+            echo "Download the **${{ steps.vsix.outputs.name }}** artifact from this run"
+            echo "(it is a zip around the \`.vsix\`), then:"
+            echo
+            echo '```sh'
+            echo "unzip ${{ steps.vsix.outputs.name }}.zip"
+            echo "code --install-extension $(basename '${{ steps.vsix.outputs.file }}') --force"
+            echo '```'
+            echo
+            readme="https://github.com/${GITHUB_REPOSITORY}/blob/${GITHUB_SHA}/vscode-extension/README.md"
+            echo "See [the extension README]($readme#trying-the-packaged-extension) for the UI"
+            echo "route and for trying it in a throwaway \`--extensions-dir\`."
+          } >> "$GITHUB_STEP_SUMMARY"
