@@ -1,6 +1,8 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import assert from "node:assert/strict";
+import React from "react";
 import { test } from "node:test";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup as renderReact } from "react-dom/server";
 import type { RunRecord, RunTest } from "../types.js";
 import { TestsView } from "./TestsView.js";
 import { RunsView } from "./RunsView.js";
@@ -10,6 +12,17 @@ import { RunDetail } from "./RunDetail.js";
 // The browser side of the viewer is covered by the Playwright suite in e2e/;
 // these render the views without a browser, which is enough to pin what the
 // selection from the URL does.
+//
+// The views read their logs through TanStack Query, so they need a client.
+// Nothing here waits for one to resolve: what is asserted is the markup of
+// the first render, and a query has no data yet at that point - which is
+// also what a reader sees for the instant before the log arrives.
+function renderToStaticMarkup(element: React.ReactElement): string {
+  return renderReact(
+    <QueryClientProvider client={new QueryClient()}>{element}</QueryClientProvider>,
+  );
+}
+
 const run = (id: string, startedAt: string, status: RunRecord["status"]): RunRecord => ({
   id,
   startedAt,

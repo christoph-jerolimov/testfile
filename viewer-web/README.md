@@ -11,6 +11,22 @@ npm run build --workspace viewer-web   # bundle with esbuild into dist/
 npm test --workspace viewer-web        # typecheck + unit tests + build
 ```
 
+## The two TanStack libraries
+
+**Query** owns everything read from the server. [`src/api.ts`](src/api.ts)
+declares one `queryOptions` per endpoint and nothing else calls `fetch`, so
+a view asks for `runsQuery` and gets the cached copy. Nothing polls: the
+server pushes over `/api/events`, and that ping is a single
+`invalidateQueries` — the runs refetch, and so does the log of whichever
+view is open, which is why no component is handed a revision counter to
+notice that a running test wrote another line.
+
+**Table** owns the two sortable grids, the runs and the tests, through
+[`src/components/DataTable.tsx`](src/components/DataTable.tsx) — the row
+model and the sorting, with only the features the viewer asks for compiled
+in. The suite tree and the services list stay plain `<table>`s: they are a
+hierarchy and a three-row list, neither of which sorts or paginates.
+
 ## End-to-end tests
 
 The Playwright suite drives the real viewer in a real browser: it serves

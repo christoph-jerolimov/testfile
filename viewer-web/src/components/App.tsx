@@ -1,7 +1,7 @@
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useEffect, useState } from "react";
-import { fetchRuns, fetchSummary, subscribeRunsChanged } from "../api.js";
+import { api, runsQuery, subscribeRunsChanged, summaryQuery } from "../api.js";
 import { navigate, parseRoute, type Route } from "../router.js";
-import type { RunRecord, Summary } from "../types.js";
 import { RunsView } from "./RunsView.js";
 import { TestsView } from "./TestsView.js";
 import { TestView } from "./TestView.js";
@@ -20,28 +20,18 @@ function useRoute(): Route {
 
 export function App(): React.ReactElement {
   const route = useRoute();
-  const [summary, setSummary] = useState<Summary | undefined>();
-  const [runs, setRuns] = useState<RunRecord[]>([]);
   const [live, setLive] = useState(false);
-  // Bumped on every server ping. Views that read something the API does not
-  // hand out with the runs - a log - use it to re-read.
-  const [revision, setRevision] = useState(0);
-
-  const refresh = (): void => {
-    void fetchSummary()
-      .then(setSummary)
-      .catch(() => undefined);
-    void fetchRuns()
-      .then(setRuns)
-      .catch(() => undefined);
-    setRevision((current) => current + 1);
-  };
+  const client = useQueryClient();
+  const { data: summary } = useQuery(summaryQuery);
+  const { data: runs = [] } = useQuery(runsQuery);
 
   useEffect(() => {
-    refresh();
-    // live updates: the server watches .testfile/runs/ and pings us
-    return subscribeRunsChanged(refresh, setLive);
-  }, []);
+    // Live updates: the server watches .testfile/runs/ and pings us. One
+    // invalidation covers everything read from it - the runs, and the log
+    // of whichever view is open, which re-reads itself rather than being
+    // handed a counter to notice.
+    return subscribeRunsChanged(() => void client.invalidateQueries({ queryKey: api }), setLive);
+  }, [client]);
 
   return (
     <div className="app">
@@ -68,9 +58,9 @@ export function App(): React.ReactElement {
         </div>
       </header>
       {route.view === "runs" ? (
-        <RunsView runs={runs} selected={route.runId} revision={revision} />
+        <RunsView runs={runs} selected={route.runId} />
       ) : route.view === "test" && route.runId && route.testPath ? (
-        <TestView runs={runs} runId={route.runId} testPath={route.testPath} revision={revision} />
+        <TestView runs={runs} runId={route.runId} testPath={route.testPath} />
       ) : (
         <TestsView runs={runs} selected={route.testPath} />
       )}
