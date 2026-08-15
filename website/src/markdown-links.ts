@@ -1,6 +1,6 @@
 // The markdown files the website renders live in the repository and link
 // each other the way GitHub reads them: docs/index.md points at
-// "./getting-started", spec/README.md at "RESULTS.md" or at
+// "./getting-started", spec/TESTFILE.md at "RESULTS.md" or at
 // "../schema/testfile.schema.json". This plugin turns those relative links
 // into links that work on the published site:
 //
@@ -19,7 +19,7 @@
 // with src/spec.ts (which cannot be imported here: this runs in the Astro
 // config, before the content collections exist).
 const specPages: Record<string, string> = {
-  "spec/README.md": "testfile",
+  "spec/TESTFILE.md": "testfile",
   "spec/RESULTS.md": "test-result",
   "spec/VERSIONING.md": "versioning",
 };

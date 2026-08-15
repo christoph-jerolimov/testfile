@@ -17,13 +17,13 @@ export interface SpecPage {
 
 export const specPages: SpecPage[] = [
   {
-    id: "README",
+    id: "TESTFILE",
     slug: "testfile",
     label: "Testfile (yaml)",
     title: "Testfile specification (v0)",
     description:
       "The normative specification of the Testfile format: how a project describes its tests.",
-    source: "spec/README.md",
+    source: "spec/TESTFILE.md",
   },
   {
     id: "RESULTS",

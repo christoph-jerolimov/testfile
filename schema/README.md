@@ -3,7 +3,7 @@
 The JSON schema for the
 [Testfile](https://github.com/christoph-jerolimov/testfile) format —
 [`testfile.schema.json`](testfile.schema.json), the machine-readable
-counterpart of the normative [specification](../spec/README.md) (if the two
+counterpart of the normative [specification](../spec/TESTFILE.md) (if the two
 disagree, the spec wins and the schema has a bug).
 
 Use it in any editor with a YAML language server by adding a modeline as the

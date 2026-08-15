@@ -13,7 +13,7 @@
 // describe rather than prescribe - the glossary, the file naming - are
 // exempt here, with the reason spelled out.
 //
-// Section names are the headings of spec/README.md with backticks removed.
+// Section names are the headings of spec/TESTFILE.md with backticks removed.
 // A case may also point at the result format with a "RESULTS.md#" prefix;
 // those references are validated but not required to be covered - the
 // result format is checked by the schema and the viewer's tests.
@@ -24,7 +24,7 @@ import { parse } from "yaml";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const CASES_DIR = join(here, "cases");
-export const SPEC = join(here, "..", "spec", "README.md");
+export const SPEC = join(here, "..", "spec", "TESTFILE.md");
 export const RESULTS_SPEC = join(here, "..", "spec", "RESULTS.md");
 export const RESULTS_PREFIX = "RESULTS.md#";
 
@@ -80,7 +80,7 @@ export function checkCoverage(cases, specHeadings, resultHeadings) {
       }
       const known = coverage.get(section);
       if (!known) {
-        problems.push(`${id}: spec/README.md has no "${section}" section`);
+        problems.push(`${id}: spec/TESTFILE.md has no "${section}" section`);
         continue;
       }
       known.push(id);

@@ -2,7 +2,7 @@
 
 This document defines how the Testfile format evolves: what may change
 within a format version, what forces the next one, and what runners and
-users can rely on. The [specification](README.md) describes *what* the
+users can rely on. The [specification](TESTFILE.md) describes *what* the
 format is; this document describes *how it is allowed to change*.
 
 ## Current status: version 0, under review

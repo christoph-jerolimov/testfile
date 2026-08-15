@@ -100,7 +100,7 @@ An optional argument filters cases by substring:
 
 ## Coverage
 
-Every change to the execution semantics in [`../spec/README.md`](../spec/README.md)
+Every change to the execution semantics in [`../spec/TESTFILE.md`](../spec/TESTFILE.md)
 must add or adjust a case here — the suite is the machine-checkable half of
 the specification. [`coverage.mjs`](coverage.mjs) makes that convention
 mechanical instead of merely written down:

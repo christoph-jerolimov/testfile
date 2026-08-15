@@ -1,0 +1,662 @@
+# Testfile specification (v0)
+
+> **Status: under review.** This specification describes format version 0,
+> a draft that may still change based on feedback. Version 1 — the first
+> version with stability guarantees — is targeted for Q4 2026. Feedback on
+> any part of the format is welcome via
+> [GitHub issues](https://github.com/christoph-jerolimov/testfile/issues).
+
+This document is the normative specification of the Testfile format — the
+*input* side: how a project describes its tests. The *output* side — how a
+recorded test run looks on disk (`.testfile/runs/<id>/` with `run.yaml`,
+logs and `junit.xml`) — is specified in [RESULTS.md](RESULTS.md), so that
+different tools can generate results and different tools can consume
+them. The machine-readable counterpart of this document is the JSON schema
+in [`../schema/testfile.schema.json`](../schema/testfile.schema.json); if
+the two disagree, this document wins and the schema has a bug.
+
+The execution semantics described here are additionally pinned by the
+runner-independent [conformance suite](../conformance/README.md): every
+change to this document must add or adjust a conformance case, and a runner
+implementation claims compatibility by passing the whole suite.
+
+## File
+
+A Testfile is a YAML document. The runner looks for these file names in the
+current directory, in this order:
+
+1. `Testfile`
+2. `testfile.yaml`
+3. `testfile.yml`
+
+## Concepts
+
+A Testfile describes a **test suite**. The root of the document contains
+exactly one test. Each test either
+
+- runs a single shell **command**, or
+- runs a multi-line shell **script**, or
+- groups **nested tests** that run in **sequence** or in **parallel**.
+
+Groups nest arbitrarily deep. Throughout this document, a test's *nested
+tests* are all tests contained below it, directly or transitively.
+
+Any test can additionally be expanded by a **matrix** into one instance per
+variable combination.
+
+Tests may depend on **services** — long-running processes the tests need,
+such as the web server or app under test, or databases in specific versions.
+Services run as local processes or as containers — podman/docker locally,
+or as pods on a Kubernetes cluster; which engine is the choice of whoever
+runs the suite, never of the document. The runner starts
+them before the dependent tests, waits until they are **ready** (HTTP check,
+TCP check, or a log pattern on stdout/stderr), and **gracefully stops** them
+afterwards — including when the user aborts the run with Ctrl+C.
+
+## Top level document
+
+| Field      | Type   | Required | Description |
+| ---------- | ------ | -------- | ----------- |
+| `version`  | `0`    | yes      | Format version. Always `0` while the format is under review; see the [versioning policy](VERSIONING.md). |
+| `name`     | string | no       | Display name of the project/Testfile. |
+| `env`      | map    | no       | Environment variables for everything in this file. |
+| `envFile`  | string/array | no | Dotenv file(s), relative to the Testfile, loaded for the whole run. See [Env files](#env-files). |
+| `forwardEnv` | array | no      | Host variables (names or `*` patterns) forwarded into the isolated test environment. See [Environment](#environment-and-templates). |
+| `secrets`  | array  | no       | Host variables forwarded *and* masked in everything recorded. See [Secrets](#secrets). |
+| `ports`    | map    | no       | Named ports, see [Ports](#ports). |
+| `services` | map    | no       | Services for the whole run, see [Services](#services). |
+| `test`     | test   | yes      | The root test. |
+
+Unknown fields are an error everywhere in the document — this catches typos.
+
+## Tests
+
+A test is an object with **exactly one** of the following variant fields:
+
+| Field      | Type          | Description |
+| ---------- | ------------- | ----------- |
+| `command`  | string        | A single shell command. The test passes iff it exits with code 0. |
+| `script`   | string        | A multi-line shell script, executed with `sh -e`. The test passes iff it exits with code 0. |
+| `sequence` | array of test | Children run one after another. The first failure stops the sequence and fails it, unless the failing child sets `continueOnError`. |
+| `parallel` | array of test | Children run concurrently. The group fails if any child fails. |
+| `foreach`  | string/object | Glob (relative to this Testfile, not templated) expanded into one test per matching path, generated from `template`, see [Foreach](#foreach). |
+| `include`  | string        | Path or glob (relative to this Testfile, not templated) of another Testfile — or a directory containing one — embedded here, see [Includes](#includes). |
+
+Common fields available on every test:
+
+| Field             | Type     | Description |
+| ----------------- | -------- | ----------- |
+| `name`            | string   | Display name. Matrix instances get their combination appended, e.g. `integration (postgres=16)`. |
+| `description`     | string   | Free-form description. |
+| `tags`            | array    | Optional labels made of letters and digits only (`[A-Za-z0-9]+`), e.g. `fast`, `slow`, `flaky`, `nightly`, `aws`, `gcp`. A tag applies to the test and all its nested tests. Runners use tags to execute a subset of tests. |
+| `if`              | string   | Condition deciding whether the test (and its nested tests) runs, see [Conditions](#conditions). A false condition marks the test `skipped` without failing the parent. |
+| `env`             | map      | Environment variables, merged over the parent's environment (child wins). |
+| `envFile`         | string/array | Dotenv file(s), relative to the test's working directory, loaded for this test and its nested tests. See [Env files](#env-files). |
+| `forwardEnv`      | array    | Host variables (names or `*` patterns) forwarded into this test and its nested tests. See [Environment](#environment-and-templates). |
+| `secrets`         | array    | Host variables forwarded *and* masked for this test and its nested tests. See [Secrets](#secrets). |
+| `workdir`         | string   | Working directory for this test and its nested tests, relative to the Testfile (or absolute). |
+| `timeout`         | duration | Abort and fail this test (and its children) after this time. |
+| `continueOnError` | boolean  | The failure of this test is reported but does not fail the parent group. Default `false`. |
+| `retry`           | int/object | Only on `command`/`script` tests: retry on failure. An integer is the number of additional attempts; the object form `{count, delay}` adds a wait between attempts. The test fails when the last attempt fails. |
+| `shell`           | string   | Only on `command`/`script` tests: interpreter instead of `sh`, e.g. `bash`, `bash -e`, `python3`. Split on whitespace and invoked as `<shell...> -c <source>`, so the interpreter must accept `-c`. The default `sh -e` for scripts does not apply — pass flags like `-e` yourself. |
+| `services`        | map      | Services scoped to this test and its nested tests, see [Services](#services). |
+| `matrix`          | map      | Matrix expansion, see [Matrix](#matrix). |
+| `maxParallel`     | integer  | Only together with `parallel`: cap on concurrently running children. Default: unlimited. |
+| `needs`           | array    | Only on children of a `parallel` group: names of sibling tests that must finish first, turning the group into a DAG. The test starts once all named siblings passed, were skipped by their `if` condition, or were removed by filters. A sibling that failed — or was itself skipped because of its own `needs` — skips this test too, so skips cascade down a chain. References must name existing, unambiguous siblings and must not form cycles. |
+| `artifacts`       | array    | Glob patterns, relative to the test's working directory, of files the test produces (coverage, screenshots, reports). Runners copy matching files into the recorded run — also when the test failed. |
+| `inputs`          | array    | Only on `command`/`script` tests: glob patterns, relative to the test's working directory, of the files the test depends on. Enables [result caching](#result-caching). |
+| `setup`           | hook     | Runs after the test's services are ready and before its body. A failing setup skips the body and fails the test; teardown still runs. See [Hooks](#hooks). |
+| `teardown`        | hook     | Always runs after the test's body — on success, failure and abort — before the test's services stop. A failing teardown fails an otherwise passing test. See [Hooks](#hooks). |
+| `container`       | object   | Runs this test's body (and the bodies of nested tests) inside a container image, see [Test containers](#containers). |
+| `template`        | test     | Only together with `foreach`: the test generated per match, see [Foreach](#foreach). |
+
+### Execution semantics
+
+- A `sequence` runs children in order. When a child fails and does not have
+  `continueOnError: true`, the remaining children are **skipped** and the
+  sequence fails.
+- A `parallel` group starts all children (bounded by `maxParallel`) and waits
+  for all of them. It fails if any child failed (ignoring children with
+  `continueOnError`). A failing child does **not** cancel its siblings.
+- Children of a `parallel` group may declare `needs` on sibling names; such a
+  child waits for the named siblings and is skipped when one of them failed.
+  `maxParallel` slots are only occupied by running tests, not by waiting
+  ones. Siblings excluded by runner filters count as satisfied.
+- `command` runs via the system shell (`sh -c`); `script` is executed with
+  `sh -e`, so the first failing line fails the script.
+- The exit status of a test is one of `passed`, `failed`, `skipped` or
+  `aborted` (run cancelled, e.g. Ctrl+C or timeout).
+
+## Conditions
+
+`if` is evaluated after template resolution, with these rules:
+
+- Unknown template references resolve to `""` instead of erroring (so
+  `if: ${{ env.CI }}` works locally where `CI` is unset).
+- A bare value is a truthiness check: `""`, `"false"`, `"0"`, `"no"` and
+  `"off"` (case-insensitive) are false, everything else is true.
+- `left == right` / `left != right` compare as strings; surrounding quotes
+  are stripped from the operands.
+- A leading `!` negates the expression that follows (quote it in YAML:
+  `if: "!${{ env.CI }}"`).
+- `&&` and `||` combine expressions, `&&` binding tighter than `||`, and
+  `(...)` groups them: `if: ${{ env.TESTFILE_OS }} == linux && !${{ env.CI }}`.
+  Operands keep their spaces, so a value containing a literal `&&`, `||`
+  or parenthesis has to be quoted.
+
+The runner injects `TESTFILE_OS` (`linux`, `darwin`, `win32`) and
+`TESTFILE_ARCH` into the environment, so platform conditions are written as
+`if: ${{ env.TESTFILE_OS }} == linux`.
+
+A false condition skips the test and its nested tests (status `skipped`). This
+does not fail the surrounding sequence/parallel group; a group whose active
+children all skipped is itself `skipped`. A fully skipped run exits with
+code `0`.
+
+## Foreach
+
+`foreach` generates one test per matching path. The string form is the
+glob; the object form adds `folder` (default `true`), `file` (default
+`false`) and `ignore` (glob patterns of matches to skip).
+
+A test with `foreach` must have a `template` test and no other variant
+field. Runners expand it when loading the file:
+
+- matches are collected relative to the Testfile's directory and ordered
+  alphabetically; a glob matching nothing is an error;
+- for every match the template is cloned and `${{ each.path }}`,
+  `${{ each.name }}`, `${{ each.dir }}` and `${{ each.absolute }}` are
+  substituted in every string of the clone. Other templates (`env`,
+  `ports`, `matrix`) stay untouched and are resolved at run time;
+- a clone without a `name` is named after the match;
+- the clones become the test's `parallel` children.
+
+Generated tests are ordinary tests and may themselves contain `include`,
+`matrix` or another `foreach`.
+
+## Includes
+
+`include` embeds another Testfile as a nested suite, composing e.g. per-package
+Testfiles of a monorepo into one:
+
+```yaml
+test:
+  sequence:
+    - name: packages
+      include: packages/*/Testfile
+    - include: ./app
+```
+
+Rules:
+
+- The path is resolved relative to the including file and may point to a
+  Testfile or to a directory containing one. A glob embeds every match; two
+  or more matches form a `parallel` group. Templates are not supported in
+  the path. Nothing matching is an error.
+- The included document must be a valid Testfile itself (including
+  `version`). Includes nest; cycles are an error.
+- The included file's directory becomes the working directory of the
+  embedded tests (`workdir` cannot be set on an include test).
+- The included file's top-level `env` and `services` are scoped to the
+  embedded tests; `env` set on the include test wins over the included
+  file's values. The included file's top-level `envFile`, `forwardEnv` and
+  `secrets` are **ignored** — declare those on the include test (or in the
+  included file's tests) instead.
+- The included file's `ports` merge into the including document's `ports`.
+  Two definitions of the same port name with different values are an error,
+  and two files declaring the same `random` port name share one allocated
+  port.
+- Other fields on the include test (`name`, `tags`, `if`, `timeout`,
+  `setup`/`teardown`, `matrix`, ...) apply to the embedded tests as usual.
+
+## Hooks
+
+`setup` and `teardown` are objects with **exactly one** of `command` or
+`script` (run with `sh -c` / `sh -e`), plus optional `env`, `workdir` and
+`timeout`. They run in the test's environment (their own `env` merged on
+top) and write into the test's log.
+
+Order of one test: services start and become ready → `setup` → body
+(command/script/children) → `teardown` → services stop.
+
+- A failing `setup` (non-zero exit or timeout) fails the test; the body is
+  skipped, `teardown` still runs.
+- `teardown` always runs once the test got as far as starting — including
+  when the body failed or the run was interrupted with Ctrl+C — and cannot
+  be aborted (a second Ctrl+C force-kills). A failing `teardown` fails an
+  otherwise passing test; it never masks an earlier failure.
+- On a test with a `matrix`, hooks run per instance.
+
+## Matrix
+
+`matrix` maps variable names to lists of scalar values. The test is expanded
+into one instance per entry of the cross product:
+
+```yaml
+test:
+  name: integration
+  matrix:
+    node: ["20", "22"]
+    db: [postgres, mysql]
+  command: npm run test:integration
+```
+
+expands into 4 instances. Two reserved keys refine the set:
+
+- `exclude`: a list of partial combinations; every combination that matches
+  all values of an exclude entry is removed.
+- `include`: a list of combinations appended after the cross product and
+  `exclude` were evaluated.
+
+Matrix instances of one test run like a `parallel` group of the expanded
+instances (bounded by `maxParallel` if set together with a group variant).
+Matrix values are available to the instance as `${{ matrix.NAME }}` templates
+and as environment variables named `TESTFILE_MATRIX_<NAME>` (upper-cased).
+
+Matrix variables are also substituted inside the instance's `services`, so a
+matrix over database versions can start one container per version:
+
+```yaml
+matrix:
+  postgres: ["15", "16", "17"]
+services:
+  postgres:
+    container:
+      image: docker.io/library/postgres:${{ matrix.postgres }}
+```
+
+## Ports
+
+`ports` declares named ports for the run:
+
+```yaml
+ports:
+  web: random   # a free port, allocated when the run starts
+  db: 5432      # a fixed port
+```
+
+`random` asks the runner to allocate a currently free TCP port. The resolved
+number is available everywhere as `${{ ports.NAME }}`. Port names (like env
+variable names) match `[A-Za-z_][A-Za-z0-9_]*`; service names additionally
+allow `-`.
+
+## Services
+
+A service is an object with **exactly one** of:
+
+| Field       | Type   | Description |
+| ----------- | ------ | ----------- |
+| `command`   | string | Run a local process with this shell command. |
+| `script`    | string | Run a local process with this shell script (`sh -e`). |
+| `container` | object | Run a container, see below. |
+
+plus the common fields `description`, `shared`, `needs`, `once`,
+`timeout`, `env`, `workdir`, `ready` and `stop`. `needs` names services in
+the same map that must be **ready** before this one starts (a health-gated
+`depends_on`); unknown names, self-references and cycles are rejected when
+the document loads.
+
+Services declared at the top level start before the root test and stop after
+the whole run. Services declared on a test start before that test (after the
+parent's services) and stop when the test finishes. Services of one `services`
+map are started concurrently; tests only start after **all** of their services
+(including inherited ones) reported ready. Services are stopped in reverse
+start order. Service output is recorded next to the run (see
+[RESULTS.md](RESULTS.md)), so viewers can show each service's log by name.
+
+A service with `shared: true` is started once per **resolved
+configuration** — the name plus every configuration field after template
+resolution (command/script, env, workdir, and for containers image, ports,
+env, volumes, entrypoint, command, network, pull, context and namespace) —
+and reference-counted: matrix instances or parallel
+tests whose resolved config is identical reuse the running instance, which
+stops after the last of them finished. Configs that differ — e.g. a matrix
+variable in the image or env — still get their own instance. A shared
+service sees the environment of the test that started it; if it dies
+unexpectedly, all tests depending on it are aborted.
+
+If a service exits by itself while dependent tests are still running, the
+runner marks the service as failed and aborts the dependent tests.
+
+### Steps (`once`)
+
+`once: true` makes the entry a **step** rather than a server: it is run one
+time, and exiting with code `0` is what makes it ready. Everything that
+waits for a service waits for a step to have *finished* — services that
+`need` it, and the tests the map belongs to. A non-zero exit fails the
+service, so nothing that needed it is started and the run fails, exactly as
+a readiness timeout does.
+
+| Field     | Type     | Description |
+| --------- | -------- | ----------- |
+| `once` | boolean  | Run once and treat a zero exit as ready. Default `false`. |
+| `timeout` | duration | Only with `once`: fail the step when it has not finished by then. Unlimited by default. |
+
+A step has no `ready` (its exit code is the signal) and no `stop`
+(nothing is left running); both combinations are rejected, as is `timeout`
+on a service without `once`. Everything else is unchanged: it may be
+a `command`, a `script` or a `container`, it may `need` other services and
+be needed by them, `shared: true` runs it once for all tests that share it,
+and its output is recorded like any service's. A step that exits before the
+run ends is not the "exited by itself" failure above — finishing is the
+point.
+
+### Containers
+
+| Field     | Type            | Description |
+| --------- | --------------- | ----------- |
+| `image`   | string (req.)   | Image reference, e.g. `docker.io/library/postgres:16`. |
+| `ports`   | array of string | `"HOST:CONTAINER"` mappings; the host part may be a template like `"${{ ports.db }}:5432"`, the container part must be a literal port. |
+| `env`     | map             | Environment inside the container. |
+| `volumes` | array of string | `"HOST:CONTAINER[:OPTIONS]"` mounts. |
+| `pull`    | enum            | `always`, `missing` or `never`: when to pull the image. Unset defers to the engine's own default — effectively `missing`, except that kubernetes always pulls `:latest`/untagged images. |
+| `network` | string          | Attach to this named container network, creating it if needed (networks are left in place after the run). The service name becomes a network alias, so services on the same network reach each other by name. |
+| `entrypoint` | array of string | Override the image entrypoint. |
+| `command` | array of string | Override the image command. |
+| `context`, `namespace` | string | Only read when the run's engine is kubernetes: which kubeconfig context / namespace to run in (the namespace must exist). Defaults: kubectl's own. |
+
+A container definition never names an engine — a Testfile describes *what*
+runs, and the machine running it decides *how*.
+
+Nothing of the project is mounted into a service container: a `volumes`
+entry is the only way in. Its source is a path on the machine whose engine
+runs the container, which need not be the machine the runner is on — a
+remote daemon or a virtualised engine resolves it against *that* filesystem.
+The kubernetes engine rejects `volumes` outright rather than mounting
+nothing (see [Kubernetes](#kubernetes)).
+
+A test's own body can also run in a container (`container:` on a test,
+applying to it and everything nested below it). A test container shares
+`image`, `env`, `volumes`, `pull` and `network` with the table above, but
+differs where mounting the project matters: `workdir` is the mount point of
+the project inside the container (default `/workspace`), `network` defaults
+to `host` so services stay reachable on localhost, `options` passes extra
+engine flags (e.g. `--user 1000:1000`) — and there are no `ports`,
+`entrypoint`, `command`, `context` or `namespace`. The mount source is the
+directory of the Testfile that declares the test — the whole project, not
+only the test's `workdir`, so paths reaching outside it keep resolving —
+and the container's working directory is the test's working directory
+translated into the mount. Because that mount cannot be provided by a
+cluster, test containers always run on a local engine (see
+[Engine selection](#engine-selection)).
+
+### Engine selection
+
+Which engine runs the containers is decided per run, in this order:
+
+1. an explicit CLI choice (`testfile start --engine <name>`),
+2. the `TESTFILE_ENGINE` environment variable (read from the runner's own
+   environment, not the isolated test environment),
+3. otherwise the first of **podman, docker, kubernetes** — in this order —
+   that *responds*: podman and docker via their `info` command, kubernetes
+   only when kubectl reaches a cluster. Merely being installed is not
+   enough, and the first responding engine is cached for the rest of the
+   run.
+
+An explicit choice that is not one of the three names fails the run rather
+than falling back. When no engine responds and the suite starts containers,
+the affected services and tests fail with a message naming everything that
+was tried.
+
+Test bodies (`container:` on a test) are the exception: they mount the
+project and therefore always run on a **local** engine. A run whose engine
+is kubernetes (chosen or detected) runs test bodies on the first local
+engine that responds, and fails them with a clear message when neither
+podman nor docker does.
+
+### Kubernetes
+
+When the run's engine is `kubernetes` the service runs as a **Pod** on
+whatever cluster the kubeconfig points at (overridable per service with
+`context` and `namespace`; the namespace must exist). The pod is created with
+`restartPolicy: Never` — the runner owns the lifecycle, and a service that
+dies must be reported as failed, not restarted behind the runner's back.
+
+Two directions of reachability, provided differently:
+
+- **Between services**: every service with `ports` also gets a Kubernetes
+  **Service** carrying the service's name (sanitized to a DNS label), so
+  sibling services in the same namespace reach it by name over cluster DNS —
+  the same role the network alias plays on a container network. `needs`
+  between services works unchanged.
+- **From the tests**: the local test process is outside the cluster. Each
+  `"LOCAL:CONTAINER"` port mapping is forwarded from `127.0.0.1:LOCAL` to
+  the pod via port-forward, so readiness checks and tests connect to
+  localhost exactly as with published container ports. Both sides of a
+  mapping must be plain ports after template resolution.
+
+Requirements a runner must meet:
+
+- **Status is followed, not assumed.** While the pod starts, the runner
+  watches its state and fails with the cluster's own reason when the pod can
+  never run (invalid image name, exhausted image pull, container exited) —
+  it must not idle into the readiness timeout.
+- **Logs are streamed** into the service's log (readiness `log` patterns
+  match on them, and they land in the run folder like any service log). A
+  dropped log stream or port-forward is re-established while the pod still
+  runs — with a retry cap, so a stream that keeps dropping eventually fails
+  the service; a pod that is gone marks the service failed and aborts
+  dependents.
+- **Bounded waiting**: an image pull stuck in backoff counts as failed
+  after a short grace period (the reference runner uses 30 s), and waiting
+  for the pod to run at all has a generous fixed cap (5 min) that is
+  independent of the readiness timeout — readiness only starts once the
+  pod runs.
+- **Cleanup**: stopping deletes the pod and its Service, passing the `stop`
+  timeout as the grace period, without waiting for termination. Everything
+  created carries the label `app.kubernetes.io/managed-by: testfile`
+  (plus `testfile/…` labels identifying the run, service and pod — the pod
+  label is the Service's selector), so leftovers of a crashed runner are
+  findable.
+
+`volumes` and `network` are errors with this engine: host paths mean
+nothing on a cluster, and services in one namespace already reach each
+other by name. Test bodies (`container:` on a test) cannot use it either —
+they need the project mounted and run locally. Concurrent runs sharing a
+namespace would race on the DNS Service name; give them separate
+namespaces.
+
+### Readiness (`ready`)
+
+At least one of the checks (`http`, `tcp`, `log`, `exec`) must be set. Every
+set check is evaluated in every round, and the service is ready only when
+all of them pass in the **same** round: no check's earlier success is
+remembered, and no ordering between them can be expressed. Rounds are polled
+every `interval` (default `1s`), starting after `delay`, until they pass or
+`timeout` (default `30s`) expires — an expired timeout fails the service and
+aborts the dependent tests, naming the checks that were still failing.
+
+`delay`, `interval` and `timeout` apply to the group, not to individual
+checks, and a round lasts as long as its slowest check — the per-attempt
+caps below are what bound it.
+
+| Field  | Type             | Description |
+| ------ | ---------------- | ----------- |
+| `http` | string or object | Ready when the URL answers. String form: URL, any 2xx passes. Object form: `url` (required), `method` (default `GET`), `status` (default: any 2xx). A single attempt is capped at 5s. |
+| `tcp`  | value or object  | Ready when a TCP connect succeeds. Plain form: a port on localhost (number or template string). Object form: `host` (default `localhost`), `port`. A single connect attempt is capped at 2s. |
+| `log`  | string or object | Ready when the service output matches a regular expression. String form: pattern, matched on both streams. Object form: `pattern` (required), `stream` (`stdout`, `stderr`, `any`; default `any`). |
+| `exec` | string or object | Ready when the shell command exits with code 0 (e.g. `pg_isready`, `redis-cli ping`). String form: the command. Object form: `command` (required), `host` (default `false`). A single attempt is capped at 10s. Where it runs is defined below. |
+| `delay`    | duration | Wait before the first check. |
+| `interval` | duration | Poll interval. Default `1s`. |
+| `timeout`  | duration | Overall deadline. Default `30s`. |
+
+An `exec` check on a service with `container` runs **inside that container**
+(the engine's own `exec`), because the probe a service ships with lives in
+its image rather than on the machine running the tests. Such a command
+therefore addresses the container's ports, not the published ones. On a
+service without `container` there is no inside, and the command runs in a
+shell on the machine running the tests, in the service's environment and
+working directory.
+
+`host: true` forces the second form for a container service as well, for
+probes that belong outside — a tool installed on the machine, or a port
+reachable only through the published mapping. It has no effect on a service
+without a container.
+
+Either way the command is a shell line (`sh -c`), so an image without a
+shell can only be probed with `host: true` or a check that does not enter it.
+A non-zero exit means *not ready* and is retried; only an expired `timeout`
+fails the service. The command's own output is not part of the service's
+recorded log.
+
+### Stopping (`stop`)
+
+| Field     | Type     | Description |
+| --------- | -------- | ----------- |
+| `signal`  | string   | Signal sent to the process (group), `SIG*` names only. Default `SIGTERM`. |
+| `timeout` | duration | Grace period before escalating to `SIGKILL`. Default `10s`. Containers and pods are stopped via the engine with the same timeout, rounded up to whole seconds (minimum 1s). |
+| `command` | string   | Run this shell command to stop the service. For a local process it replaces the signal (escalation to `SIGKILL` still happens if the service outlives the grace period); a container or pod is additionally stopped through its engine afterwards. |
+
+Graceful shutdown is guaranteed on normal completion, on failure, and when
+the user interrupts the runner (first Ctrl+C: graceful stop of tests and
+services; second Ctrl+C: force kill).
+
+## Environment and templates
+
+Tests and services run in an **isolated environment**: variables of the
+host (the user's shell, the CI job) do not leak in. The base environment
+consists of
+
+- a small allowlist of essentials from the host: `PATH`, `HOME`, `USER`,
+  `LOGNAME`, `SHELL`, `TMPDIR`/`TMP`/`TEMP`, `LANG`, `LC_*`, `TZ`, `XDG_RUNTIME_DIR` (plus
+  their Windows equivalents), and
+- values the runner provides: `CI=1`, `FORCE_COLOR=1` and
+  `CLICOLOR_FORCE=1` (so tools emit color even though their output is a
+  pipe), and `TESTFILE_OS`/`TESTFILE_ARCH`.
+
+Further host variables must be **forwarded explicitly** with `forwardEnv`:
+a list of variable names or patterns where `*` matches any run of
+characters — `GITHUB_*`, `MY_TOKEN`, or just `*` for everything. It is
+available at the top level (applies to the whole run) and on any test
+(applies to its nested tests). Forwarded values override the runner-provided
+defaults, so forwarding `CI` restores the host's value.
+
+Two host prefixes need no declaration in the document at all, so a suite can
+be given a value it does not mention: a host variable named
+`TESTFILE_ENV_<NAME>` enters the base environment as `<NAME>`, and
+`TESTFILE_SECRET_<NAME>` does the same and additionally registers its value
+as a [secret](#secrets). The prefix is stripped; the bare prefix with no
+name is ignored, and an empty value is passed on but never registered for
+masking. Both are applied after `forwardEnv`, so they win over a pattern
+that also matched them, and before the document's own `env`. A name carried
+by both prefixes takes the secret's value.
+
+On top of that base, the environment of a test/service is built by
+merging, child over parent:
+
+1. the base environment described above (plus top-level forwarded vars),
+2. the top level `env`,
+3. `env` and forwarded variables of each ancestor test down to the test itself,
+4. the test's own `env`.
+
+String values anywhere in the document may contain templates of the form
+`${{ scope.name }}` with these scopes:
+
+| Scope    | Example              | Meaning |
+| -------- | -------------------- | ------- |
+| `env`    | `${{ env.HOME }}`    | Value from the merged environment at that test. |
+| `ports`  | `${{ ports.web }}`   | A resolved named port. |
+| `matrix` | `${{ matrix.node }}` | A matrix variable of the closest expanded ancestor (or the test itself). |
+
+A template may carry a default after `||`, used when the reference is
+undefined **or empty**: `${{ env.PORT || 3000 }}`. The default is plain text
+(optionally single- or double-quoted, quotes are stripped) and may not
+contain `}`. Referencing an undefined name **without** a default is an error
+at run start. `duration` values are either plain integers (seconds) or
+strings like `500ms`, `30s`, `5m`, `1h`.
+
+## Overrides from the environment
+
+A host variable named `TESTFILE_CONFIG_<path>` replaces one value in the
+document, for that run only. The path addresses the document from its root;
+`__` separates the segments, because a single `_` occurs in the keys
+themselves. A segment names a map key or, inside a sequence, a zero-based
+index that must already exist. Missing map keys along the path are created,
+so an override can add a block the document does not have.
+
+A segment matches a key exactly, else ignoring case, else with `_` in place
+of `-`: an environment variable name cannot contain `-`, and some platforms
+upper-case the name.
+
+The value is the string it is, unless it is a bare `true`, `false`, `null`
+or a number without leading zeros, or it starts with `[`, `{`, `"` or `'`,
+in which case it is parsed as YAML — which is also how a string that would
+otherwise be read as one of those is written.
+
+A runner may offer the same overriding through its own interface — the
+reference runner's `testfile start -c <path>=<value>`, where the path is
+written with `.` because a command line can hold one. Such an override
+takes precedence over a variable naming the same path, and both take
+precedence over the document.
+
+Overrides apply after `include` and `foreach` are expanded — variables in
+the order their names sort, then any the runner was given directly — and
+the resulting document must still be valid: an override that violates the
+schema or these rules fails the run. Runners must report which paths were
+overridden, because the run no longer matches the file as committed; a path
+set twice is reported once, as whichever won.
+
+## Env files
+
+`envFile` loads dotenv-format files: `KEY=VALUE` lines, blank lines and
+`#` comments, an optional `export ` prefix, single/double quoted values, and
+`${{ ... }}` templates in values. Multiple files load in order; later files
+win. A missing file is an error.
+
+Precedence, lowest to highest: inherited environment < forwarded host
+variables < env file(s) < explicit `env` of the same level. Top-level `envFile` paths resolve relative to the
+Testfile; test-level paths resolve relative to the test's working directory.
+
+### Secrets
+
+`secrets` (top level and per test) names environment variables that hold
+secrets. Runners must
+
+- take their values from the host environment even though the test
+  environment is otherwise isolated (CI secret stores hand secrets over as
+  environment variables), unless the surrounding Testfile environment
+  already defines the name, and
+- treat those values as secrets: masked in recorded logs and never written
+  verbatim into a run record. A value assigned to a secret name in `env`
+  is secret as well.
+
+Values loaded from env files are treated as **secrets**: runners must mask
+them in recorded logs (and never write them into run records). Note that the
+live terminal output is not masked.
+
+## Result caching
+
+A test that declares `inputs` states that its outcome depends only on the
+matched files and its own configuration. Runners **may** then skip the test
+and reuse its previous result, under these rules:
+
+- Only **passing** results may be reused; a failure always re-runs.
+- A result may only be reused when the content of every matched input file
+  is unchanged **and** the test's configuration (resolved command/script,
+  its own `env`, its matrix combination) is unchanged. Renaming, adding or
+  removing matched files invalidates the cache.
+- A cached test reports status `passed`, marked as cached in run records
+  and logs; its services, hooks and retries do not run.
+- Runners must offer a way to bypass reuse (the reference runner:
+  `--no-cache`, which still refreshes stored results).
+
+Cache storage is runner-specific (the reference runner uses
+`.testfile/cache.json`) and **local to one machine**: reuse only happens
+when the same suite runs again on the same working copy. Distributing or
+restoring a cache across machines (e.g. onto CI runners) is outside this
+spec; runners that support it must still apply the reuse rules above.
+Caching is optional runner behavior: a runner that never caches — like one
+executing the conformance suite — is fully conforming.
+
+Runners may additionally use the `inputs` declarations for **change-based
+test selection** — e.g. the reference runner's `--changed` runs only tests
+whose inputs match a file that differs from a git base branch. That is a
+selection feature, not result reuse: deselected tests are simply not part
+of the run, and no cached result is reported for them. Runners that record
+runs should state *why* an `inputs` test ran or was reused (the reference
+runner's `reason` field, see the [result format](./RESULTS.md)).
+
+## Exit code
+
+The runner exits with `0` when the root test passed, `1` when any test failed
+or a service could not start, and `130` when the run was interrupted.
