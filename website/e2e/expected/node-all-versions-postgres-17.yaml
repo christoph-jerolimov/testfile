@@ -4,6 +4,8 @@ version: 0
 ports:
   postgres: random
 
+# Up here, not under the test below: the instances of the matrix
+# run at once, and one database serves all of them.
 services:
   postgres:
     container:
