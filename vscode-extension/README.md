@@ -27,11 +27,11 @@ format and runner.
 ## Settings
 
 - `testfile.command` — the runner CLI to invoke (default `testfile`). Point
-  it at `node /path/to/runner-ts/dist/cli.js` when working inside this
+  it at `node /path/to/testfile-ts/cli/dist/cli.js` when working inside this
   repository.
 - `testfile.viewerCommand` — the viewer CLI the TUI/serve shortcuts invoke
   (default `testfile-viewer`). Point it at
-  `node /path/to/viewer-ts/dist/cli.js` when working inside this repository.
+  `node /path/to/testfile-ts/cli/dist/cli.js` when working inside this repository.
 
 ## Installing
 

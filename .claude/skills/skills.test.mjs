@@ -15,7 +15,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..");
 
 const BINARIES = {
-  testfile: join(root, "cli-ts", "dist", "cli.js"),
+  testfile: join(root, "testfile-ts", "cli", "dist", "cli.js"),
 };
 
 function skills() {

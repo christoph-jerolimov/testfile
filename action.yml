@@ -110,7 +110,7 @@ runs:
       run: |
         cd "${{ github.action_path }}"
         npm ci --no-audit --no-fund
-        npm run build --workspace cli-ts
+        npm run build --workspace @testfile/cli
 
     # Pre-flight: every missing tool, engine or taken port that would fail
     # the run anyway fails here instead, in one readable report.
@@ -119,7 +119,7 @@ runs:
       shell: bash
       env:
         INPUT_PATH: ${{ inputs.path }}
-      run: node "${{ github.action_path }}/cli-ts/dist/cli.js" doctor "$INPUT_PATH"
+      run: node "${{ github.action_path }}/testfile-ts/cli/dist/cli.js" doctor "$INPUT_PATH"
 
     - name: Run Testfile
       shell: bash
@@ -160,7 +160,7 @@ runs:
         done < <(node "${{ github.action_path }}/action/labels.mjs")
         [ -n "$INPUT_REPORTER" ] && ARGS+=(--reporter "$INPUT_REPORTER")
         [ -n "$INPUT_OUTPUT" ] && ARGS+=(--output "$INPUT_OUTPUT")
-        node "${{ github.action_path }}/cli-ts/dist/cli.js" "${ARGS[@]}"
+        node "${{ github.action_path }}/testfile-ts/cli/dist/cli.js" "${ARGS[@]}"
 
     - name: Annotate failed tests
       if: ${{ always() && inputs.annotations == 'true' }}

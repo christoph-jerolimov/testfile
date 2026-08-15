@@ -15,9 +15,9 @@ documented [result format](https://github.com/christoph-jerolimov/testfile/tree/
 not just this runner.
 
 Under the hood that separation is real: the reading half is a set of
-packages ([`core-ts`](https://github.com/christoph-jerolimov/testfile/tree/main/core-ts),
-`sync-ts`, `mcp-ts`, `tui-ts`, `web-ts`) that never depend on the runner,
-and [`runner-ts`](https://github.com/christoph-jerolimov/testfile/tree/main/runner-ts)
+packages ([`core`](https://github./christoph-jerolimov/testfile/tree/main/testfile-ts/core),
+`sync`, `mcp`, `tui`, `web`) that never depend on the runner,
+and [`runner`](https://github.com/christoph-jerolimov/testfile/tree/main/testfile-ts/runner)
 is the only one that starts anything.
 
 This page is the guided tour; the [CLI reference](./cli-reference) lists

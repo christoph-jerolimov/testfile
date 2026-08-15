@@ -15,7 +15,8 @@ import { parse } from "yaml";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const runner =
-  process.env.TESTFILE_RUNNER ?? `node "${join(here, "..", "cli-ts", "dist", "cli.js")}"`;
+  process.env.TESTFILE_RUNNER ??
+  `node "${join(here, "..", "testfile-ts", "cli", "dist", "cli.js")}"`;
 const filter = process.argv[2];
 
 console.log(`runner under test: ${runner}`);

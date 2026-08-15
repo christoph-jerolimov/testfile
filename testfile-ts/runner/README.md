@@ -20,7 +20,7 @@ Beyond that core, the same binary covers the special cases:
   subset of the suite,
 - **machine-readable reports** for CI (`--reporter junit|json`),
 - **run history** under `.testfile/`, browsed with the read-only
-  [`viewer-ts`](../viewer-ts/) sibling (`testfile-viewer runs`, `run`,
+  commands of the [`cli`](../cli/) sibling (`testfile runs`, `inspect run`,
   `diff`, `--flaky`, `serve`, `archive pack|import`, `s3 push|pull|list`,
   `github sync|list`),
 - **shell completions** (`testfile completion bash|zsh|fish`).

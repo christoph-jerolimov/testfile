@@ -85,13 +85,13 @@ extension with schema validation, run-from-editor and a runs view.
 | [`docs/`](docs/) | End-user documentation, published at [christoph-jerolimov.github.io/testfile](https://christoph-jerolimov.github.io/testfile/). |
 | [`schema/`](schema/) | The JSON schema, plus `tests/valid` and `tests/invalid` example files that CI validates on every change. |
 | [`website/`](website/) | Astro site that renders `docs/`, published to GitHub Pages. |
-| [`cli-ts/`](cli-ts/) | The `testfile` command line: running what a Testfile describes, and reading the runs that came out. |
-| [`core-ts/`](core-ts/) | The recorded-run domain: `run.yaml` types, the history, diffs, flaky verdicts, digests, repro bundles, merging. |
-| [`runner-ts/`](runner-ts/) | The reference runner as a library: expanding a Testfile into a suite and running it — processes, containers and clusters. |
-| [`sync-ts/`](sync-ts/) | Moving recorded runs between machines: archives, S3, GitHub and GitLab artifacts. |
-| [`tui-ts/`](tui-ts/) | The terminal UI over recorded runs (Ink) — the only package that needs a renderer. |
-| [`mcp-ts/`](mcp-ts/) | The MCP server: read-only tools over the history for an AI assistant. |
-| [`web-ts/`](web-ts/) | The localhost REST API that serves the web viewer. |
+| [`testfile-ts/cli/`](testfile-ts/cli/) | The `testfile` command line: running what a Testfile describes, and reading the runs that came out. |
+| [`testfile-ts/core/`](testfile-ts/core/) | The recorded-run domain: `run.yaml` types, the history, diffs, flaky verdicts, digests, repro bundles, merging. |
+| [`testfile-ts/runner/`](testfile-ts/runner/) | The reference runner as a library: expanding a Testfile into a suite and running it — processes, containers and clusters. |
+| [`testfile-ts/sync/`](testfile-ts/sync/) | Moving recorded runs between machines: archives, S3, GitHub and GitLab artifacts. |
+| [`testfile-ts/tui/`](testfile-ts/tui/) | The terminal UI over recorded runs (Ink) — the only package that needs a renderer. |
+| [`testfile-ts/mcp/`](testfile-ts/mcp/) | The MCP server: read-only tools over the history for an AI assistant. |
+| [`testfile-ts/web/`](testfile-ts/web/) | The localhost REST API that serves the web viewer. |
 | [`viewer-web/`](viewer-web/) | The React web viewer over recorded runs, served locally by `testfile serve`. |
 | [`vscode-extension/`](vscode-extension/) | VS Code extension: schema validation, run-from-editor code lenses and the recorded-runs view. |
 | [`conformance/`](conformance/) | Runner-independent conformance suite: cases with expected outcomes that any runner implementation must satisfy. |
@@ -110,15 +110,15 @@ npm ci
 # validate the schema against all example files
 npm test --workspace schema
 
-# build and test a package (core-ts, runner-ts, sync-ts, mcp-ts, tui-ts,
-# web-ts, cli-ts - each builds what it depends on)
-npm test --workspace cli-ts
+# build and test a package (they live in testfile-ts/: core, runner, sync,
+# mcp, tui, web, cli - each builds what it depends on)
+npm test --workspace @testfile/cli
 
 # run this repository's own Testfile
-node cli-ts/dist/cli.js start        # plain output
+node testfile-ts/cli/dist/cli.js start        # plain output
 
 # ... and browse the recorded runs
-node cli-ts/dist/cli.js tui
+node testfile-ts/cli/dist/cli.js tui
 
 # build the documentation website
 npm run build --workspace website

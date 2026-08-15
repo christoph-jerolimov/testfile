@@ -28,7 +28,7 @@ export function mergedVariantLabel(variants?: Record<string, string[]>): string 
 }
 
 // How a test's reliability is judged, the same rule
-// `testfile-viewer runs --flaky` uses (viewer-ts/src/runrecord.ts). Only the
+// `testfile-viewer runs --flaky` uses (testfile-ts/core/src/runrecord.ts). Only the
 // FLAKY_SAMPLE most recent results count, and below FLAKY_MIN_RESULTS there
 // is not enough evidence to say anything at all.
 export const FLAKY_SAMPLE = 20;

@@ -63,7 +63,7 @@
         "testfile.command": {
           "type": "string",
           "default": "testfile",
-          "description": "The testfile CLI to invoke (e.g. \"testfile\" or \"node /path/to/cli-ts/dist/cli.js\")."
+          "description": "The testfile CLI to invoke (e.g. \"testfile\" or \"node /path/to/testfile-ts/cli/dist/cli.js\")."
         }
       }
     },

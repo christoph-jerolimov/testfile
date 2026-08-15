@@ -25,6 +25,7 @@ test:
             # every workspace's own sources - a "**/*.ts" from the root would
             # walk node_modules
             - "*/src/**/*.{ts,tsx,mjs,cjs}"
+            - "testfile-ts/*/src/**/*.ts"
             - "*/scripts/**/*.{ts,mjs}"
             - "*/e2e/**/*.ts"
             - "*/*.{ts,mjs}"
@@ -126,86 +127,86 @@ test:
             - schema/testfile.schema.json
         - name: build-cli
           tags: [build]
-          command: npm run build --workspace runner-ts
+          command: npm run build --workspace @testfile/runner
         # The recorded-run domain everything else reads: built first, since
         # the viewer and its tests compile against it.
-        - name: core-ts
+        - name: core
           tags: [fast, unit]
           needs: [build-cli]
-          workdir: core-ts
+          workdir: testfile-ts/core
           command: node --test "dist/**/*.test.js"
           inputs:
-            - core-ts/src/**
-            - core-ts/package.json
-            - core-ts/tsconfig.json
+            - testfile-ts/core/src/**
+            - testfile-ts/core/package.json
+            - testfile-ts/core/tsconfig.json
         # Moving runs between machines; needs tar/unzip, so some of its
         # cases skip themselves where those are missing.
-        - name: sync-ts
+        - name: sync
           tags: [fast, unit]
           needs: [build-cli]
-          workdir: sync-ts
+          workdir: testfile-ts/sync
           command: node --test "dist/**/*.test.js"
           inputs:
-            - core-ts/src/**
-            - sync-ts/src/**
-            - sync-ts/package.json
-            - sync-ts/tsconfig.json
+            - testfile-ts/core/src/**
+            - testfile-ts/sync/src/**
+            - testfile-ts/sync/package.json
+            - testfile-ts/sync/tsconfig.json
         # An assistant's view of the history: no external dependency at
         # all, the MCP wire is written here.
-        - name: mcp-ts
+        - name: mcp
           tags: [fast, unit]
           needs: [build-cli]
-          workdir: mcp-ts
+          workdir: testfile-ts/mcp
           command: node --test "dist/**/*.test.js"
           inputs:
-            - core-ts/src/**
-            - mcp-ts/src/**
-            - mcp-ts/package.json
-            - mcp-ts/tsconfig.json
+            - testfile-ts/core/src/**
+            - testfile-ts/mcp/src/**
+            - testfile-ts/mcp/package.json
+            - testfile-ts/mcp/tsconfig.json
         # The only package that needs a renderer (Ink, React); its screen
         # tests compare against the committed .ans files.
-        - name: tui-ts
+        - name: tui
           tags: [fast, unit]
           needs: [build-cli]
-          workdir: tui-ts
+          workdir: testfile-ts/tui
           command: node --test "dist/**/*.test.js"
           inputs:
-            - core-ts/src/**
-            - tui-ts/src/**
-            - tui-ts/screens/**
-            - tui-ts/package.json
-            - tui-ts/tsconfig.json
-        - name: web-ts
+            - testfile-ts/core/src/**
+            - testfile-ts/tui/src/**
+            - testfile-ts/tui/screens/**
+            - testfile-ts/tui/package.json
+            - testfile-ts/tui/tsconfig.json
+        - name: web
           tags: [fast, unit]
           needs: [build-cli]
-          workdir: web-ts
+          workdir: testfile-ts/web
           command: node --test "dist/**/*.test.js"
           inputs:
-            - core-ts/src/**
-            - web-ts/src/**
-            - web-ts/package.json
-            - web-ts/tsconfig.json
-        - name: cli-ts
+            - testfile-ts/core/src/**
+            - testfile-ts/web/src/**
+            - testfile-ts/web/package.json
+            - testfile-ts/web/tsconfig.json
+        - name: cli
           tags: [fast, unit]
           needs: [build-cli]
-          workdir: cli-ts
+          workdir: testfile-ts/cli
           command: node --test "dist/**/*.test.js"
           inputs:
-            - core-ts/src/**
-            - sync-ts/src/**
-            - mcp-ts/src/**
-            - tui-ts/src/**
-            - web-ts/src/**
-            - runner-ts/src/**
-            - cli-ts/src/**
-            - cli-ts/package.json
-            - cli-ts/tsconfig.json
-        # npm test --workspace runner-ts would rebuild via pretest; the tests
+            - testfile-ts/core/src/**
+            - testfile-ts/sync/src/**
+            - testfile-ts/mcp/src/**
+            - testfile-ts/tui/src/**
+            - testfile-ts/web/src/**
+            - testfile-ts/runner/src/**
+            - testfile-ts/cli/src/**
+            - testfile-ts/cli/package.json
+            - testfile-ts/cli/tsconfig.json
+        # npm test --workspace @testfile/runner would rebuild via pretest; the tests
         # run against the one build above so nothing rewrites dist mid-run.
         - name: runner-tests
           tags: [fast, unit]
           needs: [build-cli]
-          workdir: runner-ts
+          workdir: testfile-ts/runner
           command: node --test "dist/**/*.test.js"
         # The cases are written for a POSIX shell and some of them need a
         # container engine, so they stay off Windows; what the runner does
@@ -243,7 +244,7 @@ test:
           command: node --test .claude/skills/skills.test.mjs
           inputs:
             - .claude/skills/**
-            - cli-ts/src/**
+            - testfile-ts/cli/src/**
         # Runs nothing: it maps the specification's sections onto the case
         # ids, so a new spec section cannot arrive without a case.
         - name: conformance-coverage
@@ -261,10 +262,10 @@ test:
           needs: [build-cli]
           script: |
             for dir in examples/*/; do
-              node cli-ts/dist/cli.js validate "$dir"
+              node testfile-ts/cli/dist/cli.js validate "$dir"
             done
         # The web viewer's Playwright suite, dogfooding the format: the
-        # viewer-ts serve command runs as a service over the committed e2e
+        # CLI's serve command runs as a service over the committed e2e
         # fixture, and the browser tests (incl. screenshot comparison) hit
         # it. Locally the pre-installed Playwright browsers are used; on CI
         # the pinned chromium build is downloaded, so rendering matches the
@@ -279,7 +280,7 @@ test:
           workdir: viewer-web
           services:
             viewer:
-              command: node ../cli-ts/dist/cli.js serve e2e/fixture --port ${{ ports.e2e }} --name "E2E Fixture"
+              command: node ../testfile-ts/cli/dist/cli.js serve e2e/fixture --port ${{ ports.e2e }} --name "E2E Fixture"
               ready:
                 tcp: ${{ ports.e2e }}
                 timeout: 30s
@@ -299,7 +300,7 @@ test:
           needs: [build-cli]
           script: |
             out=$(mktemp)
-            node cli-ts/dist/cli.js start .github/action-smoke --reporter junit --output "$out"
+            node testfile-ts/cli/dist/cli.js start .github/action-smoke --reporter junit --output "$out"
             grep -q '<testcase name="hello"' "$out"
             grep -q 'failures="0"' "$out"
             rm -f "$out"

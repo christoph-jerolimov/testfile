@@ -1,5 +1,5 @@
 // Comparing two recorded runs, with the same rules as `testfile-viewer diff`
-// (viewer-ts/src/runrecord.ts): a test counts as bad when it failed or was
+// (testfile-ts/core/src/runrecord.ts): a test counts as bad when it failed or was
 // aborted, and a duration only counts as changed when it moved by more than
 // 100ms *and* by more than a fifth.
 import type { RunRecord, RunTest } from "./types.js";
