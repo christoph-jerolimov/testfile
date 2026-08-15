@@ -74,7 +74,7 @@ interface Database {
 // the tests run, and how the language usually installs dependencies.
 const LANGUAGES: Record<string, Language> = {
   node: {
-    label: "Node.js / TypeScript",
+    label: "Node.js",
     image: (version) => `docker.io/library/node:${version}`,
     versions: ["20", "22", "24"],
     install: "npm ci",
@@ -258,6 +258,11 @@ export function buildTestfile(answers: Answers = {}): Line[] {
 
   add("version: 0");
 
+  // A database belongs to the test that needs it, and is started and
+  // stopped around it - except under the matrix below, where the instances
+  // run at once and would each start their own on the one port a run
+  // allocates. There it is declared for the run instead.
+  const perRun = answers.version === ALL;
   if (variants.length > 0) {
     // The blank lines inside this block belong to it too, so choosing a
     // database highlights one unbroken band rather than a band with holes.
@@ -265,8 +270,10 @@ export function buildTestfile(answers: Answers = {}): Line[] {
     add("# A free port is picked per run, so two runs never collide.", "database");
     add("ports:", "database");
     for (const variant of variants) add(`  ${variant.port}: random`, "database");
-    if (variants.length === 1) {
+    if (perRun) {
       add("", "database");
+      add("# Up here, not under the test below: the instances of the matrix", "database");
+      add("# run at once, and one database serves all of them.", "database");
       add("services:", "database");
       addService(add, variants[0], "");
     }
@@ -311,6 +318,12 @@ export function buildTestfile(answers: Answers = {}): Line[] {
 
   if (variants.length === 1) {
     add("    - name: integration", "database");
+    if (!perRun) {
+      // started before this test and stopped after it, and nothing else
+      // in the file can reach it
+      add("      services:", "database");
+      addService(add, variants[0], "      ");
+    }
     add("      env:", "database");
     add(`        DATABASE_URL: ${DATABASE.url(variants[0].port)}`, "database");
     add(`      command: ${language.integration}`, "database", "language");

@@ -89,7 +89,7 @@ const INVENTORY: {
   databases: string[];
 } = {
   languages: {
-    "Node.js / TypeScript": ["20", "22", "24"],
+    "Node.js": ["20", "22", "24"],
     Python: ["3.11", "3.12", "3.13"],
     Go: ["1.23", "1.24", "1.25"],
     Java: ["17", "21", "25"],
@@ -105,11 +105,11 @@ const INVENTORY: {
 const CASES = [
   {
     file: "node-22-local-no-database.yaml",
-    answers: ["Node.js / TypeScript", "22", "On this machine", "No database"],
+    answers: ["Node.js", "22", "On this machine", "No database"],
   },
   {
     file: "node-22-container-postgres-17.yaml",
-    answers: ["Node.js / TypeScript", "22", "In a container", "17"],
+    answers: ["Node.js", "22", "In a container", "17"],
   },
   // "All of them" skips the next question: only a container can give one
   // machine three toolchains, so there is nothing left to ask.
@@ -119,7 +119,7 @@ const CASES = [
     answers: ["Python", "3.12", "On this machine", ALL],
   },
   { file: "java-21-container-postgres-16.yaml", answers: ["Java", "21", "In a container", "16"] },
-  { file: "node-all-versions-postgres-17.yaml", answers: ["Node.js / TypeScript", ALL, "17"] },
+  { file: "node-all-versions-postgres-17.yaml", answers: ["Node.js", ALL, "17"] },
 ];
 
 const fieldsets = (page: Page): Locator => page.locator("#wizard-form fieldset");
@@ -307,13 +307,13 @@ test("the lines the last answer changed are the ones marked", async ({ page }) =
 
   // the version is what the project targets, and says so until the next
   // answer decides whether to pin it
-  await answer(page, ["Node.js / TypeScript", "20"]);
+  await answer(page, ["Node.js", "20"]);
   expect((await marked()).map((line) => line.trimEnd())).toEqual([
     "  # the project targets Node.js 20; this runs with whatever is installed",
   ]);
   await expect(changedLabel).toHaveText("1 line from your last answer");
 
-  await answer(page, ["Node.js / TypeScript", "20", "In a container"]);
+  await answer(page, ["Node.js", "20", "In a container"]);
   expect((await marked()).map((line) => line.trimEnd())).toEqual([
     "  # every command below runs in this image, with the project mounted",
     "  container:",
@@ -322,13 +322,15 @@ test("the lines the last answer changed are the ones marked", async ({ page }) =
   await expect(changedLabel).toHaveText("3 lines from your last answer");
 
   // a database is a whole block, marked as one band rather than in pieces
-  await answer(page, ["Node.js / TypeScript", "20", "In a container", "17"]);
+  await answer(page, ["Node.js", "20", "In a container", "17"]);
   const database = await marked();
   expect(database[0].trim()).toBe("");
   const text = database.map((line) => line.trimEnd());
   expect(text).toContain("ports:");
-  expect(text).toContain("      image: docker.io/library/postgres:17-alpine");
   expect(text).toContain("    - name: integration");
+  // the service is the test's own, not the run's
+  expect(text).toContain("      services:");
+  expect(text).toContain("            image: docker.io/library/postgres:17-alpine");
   await expect(changedLabel).toHaveText(`${database.length} lines from your last answer`);
 });
 

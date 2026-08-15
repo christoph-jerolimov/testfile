@@ -4,19 +4,6 @@ version: 0
 ports:
   postgres: random
 
-services:
-  postgres:
-    container:
-      image: docker.io/library/postgres:17-alpine
-      ports: ["${{ ports.postgres }}:5432"]
-      env:
-        POSTGRES_PASSWORD: test
-        POSTGRES_DB: app_test
-    ready:
-      # runs inside the container, so the image's own client is used
-      exec: pg_isready -h 127.0.0.1 -p 5432 -U postgres
-      timeout: 60s
-
 test:
   name: ci
   # every command below runs in this image, with the project mounted
@@ -32,6 +19,18 @@ test:
       # skipped when none of these changed since the last passing run
       inputs: ["src/**", "package-lock.json"]
     - name: integration
+      services:
+        postgres:
+          container:
+            image: docker.io/library/postgres:17-alpine
+            ports: ["${{ ports.postgres }}:5432"]
+            env:
+              POSTGRES_PASSWORD: test
+              POSTGRES_DB: app_test
+          ready:
+            # runs inside the container, so the image's own client is used
+            exec: pg_isready -h 127.0.0.1 -p 5432 -U postgres
+            timeout: 60s
       env:
         DATABASE_URL: postgres://postgres:test@127.0.0.1:${{ ports.postgres }}/app_test
       command: npm run test:integration
