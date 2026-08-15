@@ -2,7 +2,7 @@
 // frames in screens/ - the terminal counterpart of the web viewer's
 // Playwright screenshots. On an intended change, refresh them with
 //
-//   npm run screens:update --workspace tui-ts
+//   npm run screens:update --workspace @testfile/tui
 //
 // and commit the .ans/.svg pair like any other snapshot.
 import assert from "node:assert/strict";
@@ -22,13 +22,13 @@ test("every TUI page renders exactly the committed screenshot", async () => {
       committed = readFileSync(`${dir}${screen.name}.ans`, "utf8");
     } catch {
       assert.fail(
-        `no committed screenshot for "${screen.name}" - run: npm run screens:update --workspace tui-ts`,
+        `no committed screenshot for "${screen.name}" - run: npm run screens:update --workspace @testfile/tui`,
       );
     }
     assert.equal(
       screen.frame,
       committed,
-      `the "${screen.name}" screen changed - if intended, run: npm run screens:update --workspace tui-ts`,
+      `the "${screen.name}" screen changed - if intended, run: npm run screens:update --workspace @testfile/tui`,
     );
   }
 });

@@ -2,7 +2,7 @@
 
 The React web viewer over recorded Testfile runs — the browser sibling of
 the TUI's runs/results views. It is not used standalone: `testfile serve`
-(see [`runner-ts`](../runner-ts/)) serves the bundle from `dist/` on
+(see [`web`](../testfile-ts/web/)) serves the bundle from `dist/` on
 `127.0.0.1` together with the read-only REST API it talks to, and picks the
 build up automatically.
 
@@ -20,7 +20,7 @@ and pixel-compares each view against the committed screenshots in
 `e2e/__screenshots__/`:
 
 ```sh
-npm run build --workspace viewer-ts            # serve comes from viewer-ts
+npm run build --workspace @testfile/cli       # serve comes from the CLI
 npm run test:e2e --workspace viewer-web        # run (compares screenshots)
 npm run test:e2e:update --workspace viewer-web # refresh the screenshots
 ```

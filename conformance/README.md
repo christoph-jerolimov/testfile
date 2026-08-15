@@ -68,7 +68,7 @@ instances get their combination appended, e.g. `m (db=postgres)`).
 
 ## Running
 
-Against the reference runner (after `npm ci && npm run build -w runner-ts`):
+Against the reference runner (after `npm ci && npm run build -w @testfile/runner`):
 
 ```sh
 npm test --workspace conformance

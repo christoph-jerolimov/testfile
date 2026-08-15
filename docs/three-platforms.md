@@ -94,7 +94,7 @@ them into a single run folder, which it uploads like any other run:
       - uses: actions/setup-node@v7
         with: { node-version: 22 }
       - run: npm ci --no-audit --no-fund
-      - run: npm run build --workspace cli-ts
+      - run: npm run build --workspace @testfile/cli
       # every artifact unpacks into its own folder, and each of those IS a
       # run folder (run.yaml next to the logs)
       - uses: actions/download-artifact@v8
@@ -105,7 +105,7 @@ them into a single run folder, which it uploads like any other run:
         id: merge
         run: |
           runs=(downloaded/testfile-run-*)
-          if node cli-ts/dist/cli.js merge "${runs[@]}" --dir .; then
+          if node testfile-ts/cli/dist/cli.js merge "${runs[@]}" --dir .; then
             echo "passed=true" >> "$GITHUB_OUTPUT"
           else
             echo "passed=false" >> "$GITHUB_OUTPUT"

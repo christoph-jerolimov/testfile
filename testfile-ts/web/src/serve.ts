@@ -65,12 +65,12 @@ export function safeRelative(segments: readonly string[]): string | undefined {
   return parts.join("/");
 }
 
-// The built viewer app: next to this package in the monorepo, or wherever
-// TESTFILE_VIEWER points.
+// The built viewer app: a sibling of testfile-ts/ in the monorepo, or
+// wherever TESTFILE_VIEWER points.
 export function findViewerDir(): string | undefined {
   const candidates = [
     process.env.TESTFILE_VIEWER,
-    join(dirname(fileURLToPath(import.meta.url)), "..", "..", "viewer-web", "dist"),
+    join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "viewer-web", "dist"),
   ];
   for (const candidate of candidates) {
     if (candidate && existsSync(join(candidate, "index.html"))) return resolve(candidate);

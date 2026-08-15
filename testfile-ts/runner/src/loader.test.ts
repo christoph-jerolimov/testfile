@@ -9,8 +9,8 @@ import { loadTestfile, validateDoc, validateSemantics } from "./loader.js";
 import type { TestfileDoc } from "./model.js";
 import { Session } from "./session.js";
 
-// dist/loader.test.js -> runner-ts -> repo root
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
+// dist/loader.test.js -> the package -> testfile-ts -> repo root
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const schemaTests = join(repoRoot, "schema", "tests");
 
 test("all valid schema examples load", () => {

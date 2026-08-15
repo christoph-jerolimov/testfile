@@ -20,7 +20,7 @@
   ],
   "references": [
     {
-      "path": "../core-ts"
+      "path": "../core"
     }
   ]
 }

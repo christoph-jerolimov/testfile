@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 // the yaml dependency of the runner workspace, hoisted in the action checkout
-const require = createRequire(join(here, "..", "runner-ts", "package.json"));
+const require = createRequire(join(here, "..", "testfile-ts", "runner", "package.json"));
 const { parse } = require("yaml");
 
 // Returns { baseDir, runsDir, run } for the latest recorded run, or

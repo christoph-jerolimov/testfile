@@ -2,8 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 // Two modes:
 // - standalone (`npm run test:e2e`): playwright starts `testfile-viewer
-//   serve` itself over the committed fixture in e2e/fixture (viewer-ts must
-//   be built: `npm run build --workspace viewer-ts`).
+//   serve` itself over the committed fixture in e2e/fixture (the CLI must
+//   be built: `npm run build --workspace @testfile/cli`).
 // - against an already-running server: set TESTFILE_E2E_URL - this is how
 //   the root Testfile runs the suite, with serve started as a service.
 //
@@ -42,7 +42,7 @@ export default defineConfig({
   webServer: externalUrl
     ? undefined
     : {
-        command: `node ../viewer-ts/dist/cli.js serve e2e/fixture --port ${port} --name "E2E Fixture"`,
+        command: `node ../testfile-ts/cli/dist/cli.js serve e2e/fixture --port ${port} --name "E2E Fixture"`,
         url: `http://127.0.0.1:${port}/api/summary`,
         reuseExistingServer: false,
         timeout: 30_000,
