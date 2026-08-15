@@ -1,12 +1,12 @@
 # Test result format (v0)
 
-> **Status: under review**, together with the [Testfile format](README.md).
+> **Status: under review**, together with the [Testfile format](TESTFILE.md).
 > Feedback is welcome via
 > [GitHub issues](https://github.com/christoph-jerolimov/testfile/issues).
 
 The Testfile specification has two parts:
 
-1. the **Testfile format** ([README.md](README.md)) — the *input*: how a
+1. the **Testfile format** ([TESTFILE.md](TESTFILE.md)) — the *input*: how a
    project describes its tests, and
 2. this document — the *output*: how a recorded test run looks on disk.
 
@@ -280,7 +280,7 @@ is optional.
 
 Values loaded from `envFile` files, the variables a Testfile names in
 `secrets:`, and anything handed in with `TESTFILE_SECRET_` (see the
-[format specification](README.md)), are secrets:
+[format specification](TESTFILE.md)), are secrets:
 producers must mask them (`***`) in every recorded log and must not write
 them into `run.yaml`. (Values shorter than 4 characters are exempt — masking
 them would mark ubiquitous substrings as secret without hiding anything.)

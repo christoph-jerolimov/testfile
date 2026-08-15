@@ -48,7 +48,7 @@ test("a renamed section is caught on both sides", () => {
     ["Services"],
     ["Merged runs"],
   );
-  assert.ok(problems.includes('01-x: spec/README.md has no "Servcies" section'));
+  assert.ok(problems.includes('01-x: spec/TESTFILE.md has no "Servcies" section'));
   assert.ok(problems.includes('03-z: spec/RESULTS.md has no "Gone" section'));
   assert.ok(problems.includes('04-none: expected.yaml declares no "spec:" section'));
   assert.ok(

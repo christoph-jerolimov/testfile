@@ -269,7 +269,7 @@ test:
           inputs:
             - conformance/coverage*.mjs
             - conformance/cases/*/expected.yaml
-            - spec/README.md
+            - spec/TESTFILE.md
             - spec/RESULTS.md
         # The examples gallery on the website renders these files, so they
         # must stay valid.
