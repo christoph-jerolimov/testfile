@@ -1,0 +1,6 @@
+{
+  "main": "../cli/dist/testfile.bundle.mjs",
+  "mainFormat": "module",
+  "output": "dist/testfile",
+  "disableExperimentalSEAWarning": true
+}
