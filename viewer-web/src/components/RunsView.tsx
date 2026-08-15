@@ -104,13 +104,11 @@ function runColumns(showVariants: boolean): Column<RunRecord>[] {
 export function RunsView({
   runs,
   selected,
-  revision,
 }: {
   runs: RunRecord[];
   // The run id from the URL; the newest run stands in until one is picked.
   selected?: string;
   // Counts the server's change pings, so an open log is re-read.
-  revision?: number;
 }): React.ReactElement {
   const [filter, setFilter] = useState<RunFilter>(runFilterDefaults);
   const shown = useMemo(() => filterRuns(runs, filter), [runs, filter]);
@@ -165,7 +163,7 @@ export function RunsView({
         />
       </div>
       <div className="detail">
-        <RunDetail run={run} runs={runs} revision={revision} />
+        <RunDetail run={run} runs={runs} />
       </div>
     </main>
   );

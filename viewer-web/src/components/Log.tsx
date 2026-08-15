@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { logQuery } from "../api.js";
 import { ansiLines, cssOf, type AnsiSpan } from "../ansi.js";
 
 // Where every match of the search sits: which line, and where in that line's
@@ -65,48 +67,30 @@ function Span({
 
 export function Log({
   url,
-  revision = 0,
   tail,
 }: {
   url: string;
-  revision?: number;
   // Show only the last `tail` lines, without the search/wrap/follow bar -
   // the excerpt an overview embeds, not a log to work in.
   tail?: number;
 }): React.ReactElement {
-  const [text, setText] = useState<string | undefined>();
+  // A log being written is re-read when the server says the run changed:
+  // App invalidates, and this refetches itself.
+  const { data: text, isError } = useQuery(logQuery(url));
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [wrap, setWrap] = useState(true);
   const [follow, setFollow] = useState(false);
   const box = useRef<HTMLPreElement>(null);
 
-  useEffect(() => {
-    let alive = true;
-    fetch(url)
-      .then((response) => (response.ok ? response.text() : `(no log: ${response.status})`))
-      .then((body) => {
-        if (alive) setText(body);
-      })
-      .catch(() => alive && setText("(failed to load the log)"));
-    return () => {
-      alive = false;
-    };
-    // `revision` is bumped whenever the server reports a change, so a log
-    // being written is re-read rather than frozen at its first read.
-  }, [url, revision]);
-
-  // a different log starts from the top, with the search still armed
-  useEffect(() => setText(undefined), [url]);
-
   const lines = useMemo(() => {
-    const all = ansiLines(text ?? "");
+    const all = ansiLines(isError ? "(failed to load the log)" : (text ?? ""));
     if (tail === undefined) return all;
     // the trailing newline of a log is not a line worth a slot of the tail
     const last = all[all.length - 1];
     const trimmed = last && last.length === 0 ? all.slice(0, -1) : all;
     return trimmed.slice(-tail);
-  }, [text, tail]);
+  }, [text, isError, tail]);
   const matches = useMemo(() => findMatches(lines, query), [lines, query]);
   useEffect(() => setActive(0), [query, url]);
 

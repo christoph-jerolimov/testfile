@@ -34,12 +34,10 @@ function Overview({
   run,
   testPath,
   results,
-  revision,
 }: {
   run: RunRecord;
   testPath: string;
   results: RunTest[];
-  revision?: number;
 }): React.ReactElement {
   return (
     <>
@@ -95,7 +93,7 @@ function Overview({
             ))}
           </div>
           {/* the end of each leg's log, where a failure usually says why */}
-          <Log url={testUrl(run, testPath, test)} revision={revision} tail={20} />
+          <Log url={testUrl(run, testPath, test)} tail={20} />
         </React.Fragment>
       ))}
     </>
@@ -108,13 +106,11 @@ export function TestView({
   runs,
   runId,
   testPath,
-  revision,
 }: {
   runs: RunRecord[];
   runId: string;
   testPath: string;
   // Counts the server's change pings, so an open log is re-read.
-  revision?: number;
 }): React.ReactElement {
   const [tab, setTab] = useState<Tab>({ kind: "overview" });
   useEffect(() => setTab({ kind: "overview" }), [runId, testPath]);
@@ -190,10 +186,10 @@ export function TestView({
         results.length === 0 ? (
           <div className="empty">not executed in this run</div>
         ) : (
-          <Overview run={run} testPath={testPath} results={results} revision={revision} />
+          <Overview run={run} testPath={testPath} results={results} />
         )
       ) : (
-        <Log url={logUrl} revision={revision} />
+        <Log url={logUrl} />
       )}
     </main>
   );

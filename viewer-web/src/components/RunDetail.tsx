@@ -18,13 +18,11 @@ type LogChoice =
 export function RunDetail({
   run,
   runs = [],
-  revision,
 }: {
   run: RunRecord;
   // Every recorded run, so this one can be compared against another.
   runs?: RunRecord[];
   // Counts the server's change pings, so an open log is re-read.
-  revision?: number;
 }): React.ReactElement {
   const [choice, setChoice] = useState<LogChoice>({ kind: "run" });
   // A comparison belongs to the run it was opened on; picking another run
@@ -254,7 +252,7 @@ export function RunDetail({
           </>
         )}
       </h2>
-      <Log url={logUrl} revision={revision} />
+      <Log url={logUrl} />
     </>
   );
 }
