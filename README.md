@@ -93,11 +93,12 @@ extension with schema validation, run-from-editor and a runs view.
 | [`testfile-ts/mcp/`](testfile-ts/mcp/) | The MCP server: read-only tools over the history for an AI assistant. |
 | [`testfile-ts/web/`](testfile-ts/web/) | The localhost REST API that serves the web viewer. |
 | [`testfile-ts/deno-bundle/`](testfile-ts/deno-bundle/) | Experimental: the CLI as a single binary, built with `deno compile`. Not part of CI. |
+| [`testfile-ts/bun-bundle/`](testfile-ts/bun-bundle/) | Experimental: the same, built with `bun build --compile`. Not part of CI. |
 | [`viewer-web/`](viewer-web/) | The React web viewer over recorded runs, served locally by `testfile serve`. |
 | [`vscode-extension/`](vscode-extension/) | VS Code extension: schema validation, run-from-editor code lenses and the recorded-runs view. |
 | [`conformance/`](conformance/) | Runner-independent conformance suite: cases with expected outcomes that any runner implementation must satisfy. |
 | [`examples/`](examples/) | Complete example projects for common stacks, schema-validated in CI and rendered on the website. |
-| [`ci/`](ci/) | Ready-made pipeline snippets for other CI systems (Jenkins, Buildkite, GitLab, CircleCI). |
+| [`ci/`](ci/) | Ready-made pipeline snippets for other CI systems (Jenkins, Buildkite, GitLab, CircleCI — and GitHub, for pipelines that skip the action). |
 | [`action/`](action/) | Helper scripts of the GitHub Action defined in [`action.yml`](action.yml): annotations, the job summary and the run artifact. |
 | [`scripts/`](scripts/) | Checks on the repository itself, run by [`Testfile`](Testfile) like everything else. |
 
