@@ -1,14 +1,17 @@
 import { existsSync, globSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
+// A static import, deliberately: this used to be `createRequire(...)
+// ("@testfile/schema")`, which works under node and is invisible to every
+// bundler - so a single-file build of the CLI got as far as reading a
+// Testfile and then failed with "Cannot find module '@testfile/schema'".
+// An import attribute is something they can all follow and inline.
+import schema from "@testfile/schema" with { type: "json" };
 import { parse } from "yaml";
 import { applyConfigOverrides, type AppliedOverride } from "./configenv.js";
 import { expandForeach } from "./foreach.js";
 import type { ServiceDef, TestDef, TestfileDoc } from "./model.js";
 import { defaultName } from "./runsuite.js";
-
-const require = createRequire(import.meta.url);
 
 export const TESTFILE_NAMES = ["Testfile", "testfile.yaml", "testfile.yml"];
 
@@ -27,7 +30,6 @@ let compiled: ValidateFunction | undefined;
 
 function validator(): ValidateFunction {
   if (!compiled) {
-    const schema = require("@testfile/schema");
     // Same Ajv options as schema/scripts/validate.mjs.
     const ajv = new Ajv2020({ allErrors: true, allowUnionTypes: true, strictRequired: false });
     compiled = ajv.compile(schema);
