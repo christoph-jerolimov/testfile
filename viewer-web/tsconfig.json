@@ -11,6 +11,9 @@
       "ES2022",
       "DOM",
       "DOM.Iterable"
+    ],
+    "types": [
+      "vite/client"
     ]
   },
   "include": [

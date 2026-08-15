@@ -116,7 +116,8 @@ test:
             - viewer-web/src/**
             - viewer-web/package.json
             - viewer-web/tsconfig*.json
-            - viewer-web/build.mjs
+            - viewer-web/vite.config.ts
+            - viewer-web/index.html
         - name: vscode-extension
           tags: [fast, unit, editor]
           command: npm test --workspace vscode-extension
