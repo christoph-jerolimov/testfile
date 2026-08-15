@@ -22,6 +22,12 @@ the repository's
 | Jenkins | [`ci/Jenkinsfile`](https://github.com/christoph-jerolimov/testfile/blob/main/ci/Jenkinsfile) |
 | CircleCI | [`ci/.circleci-config.yml`](https://github.com/christoph-jerolimov/testfile/blob/main/ci/.circleci-config.yml) |
 | Buildkite | [`ci/buildkite-pipeline.yml`](https://github.com/christoph-jerolimov/testfile/blob/main/ci/buildkite-pipeline.yml) |
+| GitHub Actions | [`ci/github-workflow.yml`](https://github.com/christoph-jerolimov/testfile/blob/main/ci/github-workflow.yml) |
+
+The GitHub one is there for completeness — on GitHub the
+[action](./github-action) is the better choice, since annotations, the job
+summary and per-test commit statuses are things a plain `run:` step cannot
+do. Take the template when you would rather not depend on an action.
 
 They all follow the same three steps:
 
