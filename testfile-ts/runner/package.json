@@ -10,8 +10,8 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
-    "@testfile/core": "0.1.0",
-    "@testfile/schema": "0.1.0",
+    "@testfile/core": "^0.1.0",
+    "@testfile/schema": "^0.1.0",
     "ajv": "^8.20.0",
     "yaml": "^2.9.0"
   },

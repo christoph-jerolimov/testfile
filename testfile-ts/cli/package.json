@@ -16,15 +16,15 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
-    "@testfile/core": "0.1.0",
-    "@testfile/mcp": "0.1.0",
-    "@testfile/runner": "0.1.0",
-    "@testfile/sync": "0.1.0",
-    "@testfile/web": "0.1.0",
+    "@testfile/core": "^0.1.0",
+    "@testfile/mcp": "^0.1.0",
+    "@testfile/runner": "^0.1.0",
+    "@testfile/sync": "^0.1.0",
+    "@testfile/web": "^0.1.0",
     "commander": "^15.0.0"
   },
   "optionalDependencies": {
-    "@testfile/tui": "0.1.0"
+    "@testfile/tui": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

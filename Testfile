@@ -30,6 +30,7 @@ test:
             - "*/e2e/**/*.ts"
             - "*/*.{ts,mjs}"
             - action/*.mjs
+            - scripts/*.mjs
             - .oxlintrc.json
             - .oxfmtrc.json
         - name: format
@@ -47,6 +48,20 @@ test:
             # and the files the website's wizard is expected to produce
             - docs/**.md
             - website/e2e/expected/**
+        # A dependency from one workspace on another has to resolve to that
+        # workspace rather than to the registry, where none of them is
+        # published. npm has no `workspace:` protocol to say so, only ranges
+        # that happen to match - and nothing in npm keeps them matching when
+        # a version is bumped, so this does.
+        - name: workspaces
+          tags: [fast, unit]
+          command: node --test scripts/workspaces.test.mjs
+          inputs:
+            - scripts/workspaces.test.mjs
+            - package.json
+            - package-lock.json
+            - "*/package.json"
+            - testfile-ts/*/package.json
         - name: website
           tags: [docs]
           command: npm run build --workspace website
