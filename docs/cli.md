@@ -1003,8 +1003,8 @@ network. It exposes a read-only REST API for other tooling:
 `/api/summary`, `/api/runs`, `/api/runs/<id>`, `/api/runs/<id>/log`
 (`?test=<path>` for one test), `/api/runs/<id>/artifacts/<path>`,
 `/api/results` and `/api/events` (SSE).
-The UI itself lives in the `viewer-web/` workspace (React, bundled with
-esbuild); `serve` picks up its build automatically.
+The UI itself lives in the `viewer-web/` workspace (React, built with
+Vite); `serve` picks up its build automatically.
 
 ## Talking to an AI assistant
 

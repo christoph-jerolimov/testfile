@@ -7,9 +7,16 @@ the TUI's runs/results views. It is not used standalone: `testfile serve`
 build up automatically.
 
 ```sh
-npm run build --workspace viewer-web   # bundle with esbuild into dist/
+npm run dev --workspace viewer-web     # vite dev server
+npm run build --workspace viewer-web   # vite build into dist/
 npm test --workspace viewer-web        # typecheck + unit tests + build
 ```
+
+Vite emits `dist/index.html` with hashed assets beside it, and `base` is
+`/` rather than relative: `testfile serve` mounts the viewer at the root and
+falls back to the index for unknown paths, so a deep link like
+`/runs/20260101-120000-fx01` must not send the browser looking for
+`/runs/assets/...`.
 
 ## The two TanStack libraries
 
