@@ -25,10 +25,10 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
-    "yaml": "^2.8.0"
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.2.0",
     "typescript": "^7.0.2"
   }
 }
