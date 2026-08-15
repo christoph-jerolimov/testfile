@@ -2,7 +2,7 @@
   "name": "testfile-monorepo",
   "private": true,
   "version": "0.1.0",
-  "description": "Testfile — a declarative YAML format for running test suites with services, matrices and dynamic ports",
+  "description": "Testfile \u2014 a declarative YAML format for running test suites with services, matrices and dynamic ports",
   "license": "Apache-2.0",
   "workspaces": [
     "schema",
@@ -21,6 +21,8 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
+    "test:source": "node --experimental-transform-types --import ./testfile-ts/from-source.mjs --test \"testfile-ts/*/src/**/*.test.ts\" \"testfile-ts/*/src/**/*.test.tsx\"",
+    "test:source:watch": "node --experimental-transform-types --import ./testfile-ts/from-source.mjs --test --watch \"testfile-ts/*/src/**/*.test.ts\" \"testfile-ts/*/src/**/*.test.tsx\"",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
@@ -30,6 +32,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "esbuild": "^0.28.1",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.77.0"
   }

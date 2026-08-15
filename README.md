@@ -102,6 +102,23 @@ extension with schema validation, run-from-editor and a runs view.
 This repository is an npm-workspaces monorepo and eats its own dog food: its
 tests are described in [`Testfile`](Testfile).
 
+### Running the tests without building
+
+`npm run test:source` runs every test in `testfile-ts/` from `src/`, no build
+required — Node strips the types itself, and
+[`testfile-ts/from-source.mjs`](testfile-ts/from-source.mjs) fills in the
+three things it does not do: resolving a `./x.js` import to `x.ts`, pointing
+`@testfile/core` at its source rather than its `dist/`, and handing the TUI's
+`.tsx` to esbuild.
+
+It is for the edit-run loop, not for CI, and it is not a speed-up: a full
+`npm run test:source` takes about half again as long as building and running
+the compiled tests, because every process transforms its own imports. What it
+buys is not having to build first — useful on a fresh checkout, and with
+`--watch`. **It does not typecheck**: types are stripped, not checked, so
+`npm run build` and the suite in [`Testfile`](Testfile) remain the things
+that say the code compiles.
+
 ## Quick start
 
 ```sh
@@ -113,6 +130,10 @@ npm test --workspace schema
 # build and test a package (they live in testfile-ts/: core, runner, sync,
 # mcp, tui, web, cli - each builds what it depends on)
 npm test --workspace @testfile/cli
+
+# ... or run the tests straight from src/, with nothing built
+npm run test:source
+npm run test:source:watch
 
 # run this repository's own Testfile
 node testfile-ts/cli/dist/cli.js start        # plain output
