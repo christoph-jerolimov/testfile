@@ -202,6 +202,23 @@ test:
             - testfile-ts/web/src/**
             - testfile-ts/web/package.json
             - testfile-ts/web/tsconfig.json
+        # The second bundler, checked because it can be: Rslib needs nothing
+        # beyond npm, where the three packagers need deno, bun or node 25 and
+        # stay out of CI. Building it is the test - a bundler that disagrees
+        # with esbuild about our dependency graph fails here rather than in
+        # somebody's binary - and the result has to actually run.
+        - name: rslib-bundle
+          tags: [slow, build]
+          needs: [build-cli]
+          workdir: testfile-ts/rslib-bundle
+          script: |
+            npm run bundle
+            node dist/testfile.js --version
+          inputs:
+            - testfile-ts/*/src/**
+            - testfile-ts/rslib-bundle/rslib.config.ts
+            - testfile-ts/rslib-bundle/package.json
+            - testfile-ts/cli/bundle-stub.mjs
         # `eve` asks the model about recorded runs over the same tools the MCP
         # server serves. Its own tests never reach the network: the adapter is
         # checked against what `testfile mcp` answers for the same call.

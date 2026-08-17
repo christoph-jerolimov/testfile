@@ -17,6 +17,7 @@
     "testfile-ts/deno-bundle",
     "testfile-ts/bun-bundle",
     "testfile-ts/nodejs-bundle",
+    "testfile-ts/rslib-bundle",
     "viewer-web",
     "vscode-extension",
     "website",

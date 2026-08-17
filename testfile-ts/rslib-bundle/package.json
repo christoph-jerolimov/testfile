@@ -1,0 +1,17 @@
+{
+  "name": "@testfile/rslib-bundle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Experimental: the testfile CLI bundled into one file with Rslib (Rspack)",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "prebundle": "npm run build --workspace @testfile/cli --prefix ../..",
+    "bundle": "rslib build",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "@rslib/core": "^0.23.2",
+    "@rspack/core": "^2.1.10"
+  }
+}
