@@ -18,6 +18,7 @@
     "testfile-ts/bun-bundle",
     "testfile-ts/nodejs-bundle",
     "testfile-ts/rslib-bundle",
+    "testfile-ts/scriptc-native",
     "viewer-web",
     "vscode-extension",
     "website",
