@@ -73,3 +73,9 @@ Unlike its three packager neighbours, this one **is** checked by the
 repository's [`Testfile`](../../Testfile): it needs no toolchain beyond npm,
 so the `rslib-bundle` test builds the bundle and runs the result. The others
 need deno, bun or node 25 and stay out.
+
+That test runs `npx rslib build`, not `npm run bundle`. The `prebundle` script
+here rebuilds `@testfile/cli` for convenience, and that build begins by
+deleting `../cli/dist` — fine in a terminal, fatal in a suite where `skills`
+and `examples` are running `cli/dist/cli.js` in parallel. In CI the CLI is
+already built, by `needs: [build-cli]`.

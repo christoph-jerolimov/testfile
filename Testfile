@@ -207,12 +207,18 @@ test:
         # stay out of CI. Building it is the test - a bundler that disagrees
         # with esbuild about our dependency graph fails here rather than in
         # somebody's binary - and the result has to actually run.
+        #
+        # `npx rslib build`, not `npm run bundle`: that script's prebundle
+        # rebuilds @testfile/cli, and that build starts by deleting
+        # testfile-ts/cli/dist - which `skills` and `examples` are running out
+        # of at the same time. The convenience of prebundle is for a human in
+        # that folder; here `needs: [build-cli]` has already built it.
         - name: rslib-bundle
           tags: [slow, build]
           needs: [build-cli]
           workdir: testfile-ts/rslib-bundle
           script: |
-            npm run bundle
+            npx rslib build
             node dist/testfile.js --version
           inputs:
             - testfile-ts/*/src/**
