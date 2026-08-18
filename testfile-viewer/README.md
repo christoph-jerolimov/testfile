@@ -1,4 +1,4 @@
-# viewer-web
+# testfile-viewer
 
 The React web viewer over recorded Testfile runs — the browser sibling of
 the TUI's runs/results views. It is not used standalone: `testfile serve`
@@ -7,9 +7,9 @@ the TUI's runs/results views. It is not used standalone: `testfile serve`
 build up automatically.
 
 ```sh
-npm run dev --workspace viewer-web     # vite dev server
-npm run build --workspace viewer-web   # vite build into dist/
-npm test --workspace viewer-web        # typecheck + unit tests + build
+npm run dev --workspace testfile-viewer     # vite dev server
+npm run build --workspace testfile-viewer   # vite build into dist/
+npm test --workspace testfile-viewer        # typecheck + unit tests + build
 ```
 
 Vite emits `dist/index.html` with hashed assets beside it, and `base` is
@@ -44,8 +44,8 @@ and pixel-compares each view against the committed screenshots in
 
 ```sh
 npm run build --workspace @testfile.dev/cli       # serve comes from the CLI
-npm run test:e2e --workspace viewer-web        # run (compares screenshots)
-npm run test:e2e:update --workspace viewer-web # refresh the screenshots
+npm run test:e2e --workspace testfile-viewer        # run (compares screenshots)
+npm run test:e2e:update --workspace testfile-viewer # refresh the screenshots
 ```
 
 After a deliberate UI change, run `test:e2e:update` and commit the updated

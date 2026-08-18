@@ -50,7 +50,7 @@ through a `.js` specifier — and neither answer changes the binary, since
 types are gone by then.
 
 **`--node-modules-dir=none`.** Without it, deno notices it is standing in an
-npm workspace and embeds the members — `viewer-web`, `website`,
+npm workspace and embeds the members — `testfile-viewer`, `website`,
 `vscode-extension`, all of it — into a binary that imports none of them:
 
 ```

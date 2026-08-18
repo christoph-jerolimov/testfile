@@ -8,7 +8,7 @@
 "@testfile.dev/web": patch
 "@testfile.dev/cli": patch
 "@testfile.dev/eve": patch
-"@testfile.dev/viewer-web": patch
+"@testfile.dev/viewer": patch
 "@testfile.dev/conformance": patch
 ---
 
