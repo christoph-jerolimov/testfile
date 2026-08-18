@@ -1,6 +1,11 @@
 {
   "$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
-  "changelog": "@changesets/cli/changelog",
+  "changelog": [
+    "./changelog.cjs",
+    {
+      "repo": "testfile-dev/testfile"
+    }
+  ],
   "commit": false,
   "fixed": [],
   "linked": [],
