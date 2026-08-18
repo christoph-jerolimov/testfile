@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://testfile.dev/current/testfile.schema.json
+# yaml-language-server: $schema=https://testfile.dev/next/testfile.schema.json
 version: 0
 name: web
 
