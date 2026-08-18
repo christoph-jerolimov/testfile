@@ -3,7 +3,8 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "testfile-dev/testfile"
+      "repo": "testfile-dev/testfile",
+      "template": "\n\n- {pull} {commit} - {summary}"
     }
   ],
   "commit": false,
