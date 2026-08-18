@@ -29,7 +29,7 @@ export const HISTORY_DIR = ".testfile";
 // Written as the first line of every run.yaml so editors validate and
 // complete a recorded run against the result schema. Parsers ignore it.
 const RUN_SCHEMA_MODELINE =
-  "# yaml-language-server: $schema=https://testfile.dev/v0/testrun.schema.json";
+  "# yaml-language-server: $schema=https://testfile.dev/current/testrun.schema.json";
 
 export interface RunRecordTest {
   path: string;

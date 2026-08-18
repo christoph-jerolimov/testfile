@@ -1,5 +1,5 @@
 // The schema assets: every schema from src/schemas.ts, under every channel
-// prefix - /v0/testfile.schema.json, /latest/testrun.schema.json and so on.
+// prefix - /v0/testfile.schema.json, /current/testrun.schema.json and so on.
 // Static file endpoints, so the built site contains the plain .json files
 // and any host serves them with a JSON content type.
 import type { APIRoute } from "astro";

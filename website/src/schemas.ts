@@ -12,14 +12,13 @@ export interface SchemaFile {
 
 // The path prefixes each schema is published under:
 //
-//   /v0/     - the schemas for format version 0
-//   /next/   - the development head: what the next release will look like
-//   /latest/ - the newest released version
+//   /v0/      - the schemas for format version 0
+//   /current/ - the newest version of the format
 //
-// The format is at version 0 and still under review, so today the three
+// The format is at version 0 and still under review, so today the two
 // channels are aliases for the same files. They diverge once version 1
-// exists: /v0/ then stays frozen while /latest/ and /next/ move on.
-export const schemaChannels = ["v0", "next", "latest"] as const;
+// exists: /v0/ then stays frozen while /current/ moves on.
+export const schemaChannels = ["v0", "current"] as const;
 
 const files = import.meta.glob("../../schema/*.schema.json", {
   query: "?raw",

@@ -12,7 +12,7 @@ import {
 import { TESTFILE_NAMES } from "./loader.js";
 import type { TestDef } from "./model.js";
 
-const SCHEMA_URL = "https://testfile.dev/v0/testfile.schema.json";
+const SCHEMA_URL = "https://testfile.dev/current/testfile.schema.json";
 
 interface PackageJson {
   name?: string;

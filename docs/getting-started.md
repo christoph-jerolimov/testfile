@@ -98,7 +98,7 @@ the first line of your Testfile to get completion and validation while
 typing:
 
 ```yaml
-# yaml-language-server: $schema=https://testfile.dev/v0/testfile.schema.json
+# yaml-language-server: $schema=https://testfile.dev/current/testfile.schema.json
 ```
 
 ## 5. Tell us how it went
