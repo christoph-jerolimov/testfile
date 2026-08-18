@@ -3,12 +3,13 @@ import { unified } from "@astrojs/markdown-remark";
 import { defineConfig } from "astro/config";
 import { rewriteMarkdownLinks } from "./src/markdown-links";
 
-// Published on GitHub Pages under /<repo>/.
-const base = "/testfile";
+// Published on GitHub Pages at the domain root, so links carry no base
+// path. Astro's own `base` stays at its default ("/"); the empty string
+// here is what the link-rewriting plugin prefixes site paths with.
+const base = "";
 
 export default defineConfig({
   site: "https://christoph-jerolimov.github.io",
-  base,
   markdown: {
     // The remark/rehype pipeline, not Astro's newer default processor: the
     // link rewriting below is a rehype plugin, and the heading ids this

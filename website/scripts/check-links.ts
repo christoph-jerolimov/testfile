@@ -125,9 +125,10 @@ function checkLinks(dist: string, { base = "", repoRoot }: Options = {}): string
   return problems;
 }
 
-// node out/check-links.js dist /testfile ..
+// node out/check-links.js dist "" ..
 const dist = process.argv[2] ?? "dist";
-const base = process.argv[3] ?? "/testfile";
+// the site is served at the domain root, so there is no base to strip
+const base = process.argv[3] ?? "";
 let pages: number;
 try {
   pages = htmlFiles(dist).length;

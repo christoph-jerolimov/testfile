@@ -11,7 +11,7 @@ import { examples } from "../examples";
 import { specPages } from "../spec";
 import { toYaml } from "../wizard";
 
-const SITE = "https://christoph-jerolimov.github.io/testfile";
+const SITE = "https://christoph-jerolimov.github.io";
 
 // Frontmatter is metadata for the site builder, not content.
 function withoutFrontmatter(markdown: string): string {

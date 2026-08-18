@@ -2,7 +2,7 @@
 
 The Astro site that renders the end-user documentation from
 [`../docs/`](../docs/), published to GitHub Pages at
-[christoph-jerolimov.github.io/testfile](https://christoph-jerolimov.github.io/testfile/)
+[christoph-jerolimov.github.io](https://christoph-jerolimov.github.io/)
 by [`deploy-website.yaml`](../.github/workflows/deploy-website.yaml) on every
 push to `main`.
 

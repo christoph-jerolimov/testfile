@@ -35,4 +35,4 @@ wrong, a default surprises you or something is missing, please say so in a
 [GitHub issue](https://github.com/christoph-jerolimov/testfile/issues).
 
 All three documents are published on the website as verbatim copies, under
-[/spec](https://christoph-jerolimov.github.io/testfile/spec/testfile).
+[/spec](https://christoph-jerolimov.github.io/spec/testfile).

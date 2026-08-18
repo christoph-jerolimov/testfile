@@ -23,8 +23,8 @@ function site(files: Record<string, string>): string {
   return dir;
 }
 
-function check(dir: string, base = "/testfile") {
-  const result = spawnSync(process.execPath, [script, dir, base], { encoding: "utf8" });
+function check(dir: string, site = SITE) {
+  const result = spawnSync(process.execPath, [script, dir, site], { encoding: "utf8" });
   return {
     failed: result.status !== 0,
     stdout: result.stdout.trim(),
@@ -118,6 +118,21 @@ test("links to other sites are not pages of this one", () => {
     "llms-full.txt": full("/docs/cli"),
   });
   assert.deepEqual(check(dir).problems, []);
+});
+
+test("a site served at the domain root still tells its pages from other sites", () => {
+  const ROOT = "https://example.test";
+  const dir = site({
+    "docs/cli/index.html": "<html>",
+    "llms.txt": index("/docs/cli")
+      .replaceAll(SITE, ROOT)
+      .replace(
+        "## Documentation",
+        "## Documentation\n\n- [repo](https://github.com/someone/testfile): the source",
+      ),
+    "llms-full.txt": full("/docs/cli").replaceAll(SITE, ROOT),
+  });
+  assert.deepEqual(check(dir, ROOT).problems, []);
 });
 
 test("a build without the files says so instead of passing quietly", () => {

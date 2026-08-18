@@ -32,7 +32,8 @@ const validate = ajv.compile(schema);
 // dist/, so the suite needs a build and no server. The origin is a fiction
 // - nothing leaves the browser.
 const dist = join(here, "..", "dist");
-const base = "/testfile";
+// the site is served at the domain root, so pages sit directly under /
+const base = "";
 const START = `https://testfile.test${base}/start/`;
 
 const CONTENT_TYPES: Record<string, string> = {

@@ -11,9 +11,9 @@
     "build:scripts": "tsc -p tsconfig.scripts.json",
     "typecheck": "astro sync && tsc -p tsconfig.json --noEmit",
     "precheck:links": "npm run build:scripts",
-    "check:links": "node out/check-links.js dist /testfile ..",
+    "check:links": "node out/check-links.js dist",
     "precheck:llms": "npm run build:scripts",
-    "check:llms": "node out/check-llms.js dist /testfile",
+    "check:llms": "node out/check-llms.js dist",
     "pretest": "npm run build:scripts",
     "test": "node --test \"out/*.test.js\"",
     "test:e2e": "npm run build && playwright test"

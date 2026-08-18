@@ -23,20 +23,17 @@ function pagesOf(dir: string, prefix = ""): string[] {
   return pages.sort();
 }
 
-// The site's own pages among the links. The base has to sit at the start
-// of the path, not just anywhere in the URL: a repository link like
+// The site's own pages among the links. Matched against the full site URL,
+// not just a path: with the site served at the domain root, every pathname
+// would look like a page, yet a repository link like
 // github.com/someone/testfile is not a page of this site.
-function linkedPaths(llms: string, base: string): Set<string> {
+function linkedPaths(llms: string, site: string): Set<string> {
   const found = new Set<string>();
+  const basePath = new URL(site).pathname.replace(/\/$/, "");
   for (const match of llms.matchAll(/\]\((https?:\/\/[^)\s]+)\)/g)) {
-    let path: string;
-    try {
-      path = new URL(match[1]).pathname;
-    } catch {
-      continue;
-    }
-    if (path !== base && !path.startsWith(`${base}/`)) continue;
-    found.add(path.slice(base.length) || "/");
+    const url = match[1];
+    if (url !== site && !url.startsWith(`${site}/`)) continue;
+    found.add(new URL(url).pathname.slice(basePath.length) || "/");
   }
   return found;
 }
@@ -44,7 +41,7 @@ function linkedPaths(llms: string, base: string): Set<string> {
 // Pages an index may leave out, and why.
 const NOT_INDEXED = new Set(["/"]);
 
-function checkLlms(dir: string, { base = "/testfile" }: { base?: string } = {}): string[] {
+function checkLlms(dir: string, { site }: { site: string }): string[] {
   const problems: string[] = [];
   let index: string;
   try {
@@ -57,7 +54,7 @@ function checkLlms(dir: string, { base = "/testfile" }: { base?: string } = {}):
   if (!/^# \S/m.test(index)) problems.push("llms.txt: no title heading");
   if (!/^> /m.test(index)) problems.push("llms.txt: no summary blockquote");
 
-  const linked = linkedPaths(index, base);
+  const linked = linkedPaths(index, site);
   for (const page of pagesOf(dir)) {
     if (NOT_INDEXED.has(page)) continue;
     if (!linked.has(page)) problems.push(`llms.txt: ${page} is built but not indexed`);
@@ -74,16 +71,16 @@ function checkLlms(dir: string, { base = "/testfile" }: { base?: string } = {}):
   // files describe the same site.
   for (const page of linked) {
     if (page.endsWith(".txt")) continue;
-    if (!full.includes(`${base}${page}`)) {
+    if (!full.includes(`${site}${page}`)) {
       problems.push(`llms-full.txt: ${page} is indexed but its text is missing`);
     }
   }
   return problems;
 }
 
-// node out/check-llms.js dist /testfile
-const [dir = "dist", base = "/testfile"] = process.argv.slice(2);
-const problems = checkLlms(dir, { base });
+// node out/check-llms.js dist https://christoph-jerolimov.github.io
+const [dir = "dist", site = "https://christoph-jerolimov.github.io"] = process.argv.slice(2);
+const problems = checkLlms(dir, { site });
 for (const problem of problems) console.error(problem);
 if (problems.length > 0) process.exit(1);
 console.log(`llms.txt indexes every page of ${dir}`);

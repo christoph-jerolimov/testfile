@@ -26,8 +26,8 @@ Beyond that core, the same binary covers the special cases:
 - **shell completions** (`testfile completion bash|zsh|fish`).
 
 Full documentation:
-[christoph-jerolimov.github.io/testfile](https://christoph-jerolimov.github.io/testfile/) —
-in particular [Getting started](https://christoph-jerolimov.github.io/testfile/docs/getting-started)
-and [CLI & TUI](https://christoph-jerolimov.github.io/testfile/docs/cli).
+[christoph-jerolimov.github.io](https://christoph-jerolimov.github.io/) —
+in particular [Getting started](https://christoph-jerolimov.github.io/docs/getting-started)
+and [CLI & TUI](https://christoph-jerolimov.github.io/docs/cli).
 
 Requires Node.js >= 20. Apache-2.0.
