@@ -231,7 +231,10 @@ applies the bumps (including dependents — bumping `@testfile.dev/core`
 patches everything that depends on it) and writes the `CHANGELOG.md` files.
 Merging that PR makes the same workflow publish the new versions to npm with
 provenance and tag the release. Publishing requires an npm automation token
-in the `NPM_TOKEN` repository secret.
+in the `NPM_TOKEN` repository secret, and opening the Version packages PR
+requires the repository setting **Settings → Actions → General → Workflow
+permissions → "Allow GitHub Actions to create and approve pull requests"**
+to be enabled.
 
 The private workspaces (bundles, viewer, website, conformance) are versioned
 along but never published; the VS Code extension keeps its own

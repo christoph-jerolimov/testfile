@@ -14,6 +14,13 @@ name: Release
 # secret. The Version-packages PR is opened with the workflow's own
 # GITHUB_TOKEN, so its CI does not start on its own; close and reopen the
 # PR (or push to it) if you need the checks before merging.
+#
+# Opening that PR also requires the repository setting
+# Settings -> Actions -> General -> Workflow permissions ->
+# "Allow GitHub Actions to create and approve pull requests" to be
+# enabled; without it the run fails with "GitHub Actions is not
+# permitted to create or approve pull requests" even though this job
+# requests pull-requests: write below.
 
 on:
   push:
