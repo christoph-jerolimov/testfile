@@ -1,5 +1,5 @@
 {
-  "name": "@testfile/conformance",
+  "name": "@testfile.dev/conformance",
   "version": "0.1.0",
   "description": "Runner-independent conformance suite for the Testfile format",
   "license": "Apache-2.0",

@@ -6,7 +6,7 @@ import {
   type RunRecordSuiteNode,
   timelineRows,
   variantLabel,
-} from "@testfile/core";
+} from "@testfile.dev/core";
 import {
   colorStatus,
   commandFailed,

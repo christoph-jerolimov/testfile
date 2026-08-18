@@ -309,9 +309,9 @@ attached instead of the URL.
           pattern: testfile-run*
           path: runs
       # the downloaded artifacts become an ordinary local history
-      - run: npx @testfile/viewer archive import runs/*/testfile-run*.zip
+      - run: npx @testfile.dev/viewer archive import runs/*/testfile-run*.zip
       # what failed, why, and what changed - bounded, and already prose
-      - run: npx @testfile/viewer explain --max-failures 5 > digest.md
+      - run: npx @testfile.dev/viewer explain --max-failures 5 > digest.md
       - uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}

@@ -1,4 +1,4 @@
-# @testfile/runner
+# @testfile.dev/runner
 
 The reference runner for the
 [Testfile](https://github.com/christoph-jerolimov/testfile) format: a

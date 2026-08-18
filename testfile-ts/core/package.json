@@ -1,5 +1,5 @@
 {
-  "name": "@testfile/core",
+  "name": "@testfile.dev/core",
   "version": "0.1.0",
   "description": "The recorded-run domain: run.yaml types, the run history, and everything that can be computed from it (diffs, flaky verdicts, digests, repro bundles, merging)",
   "license": "Apache-2.0",

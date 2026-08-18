@@ -16,7 +16,7 @@ import {
   type RunRecord,
   stripAnsi,
   verdictOf,
-} from "@testfile/core";
+} from "@testfile.dev/core";
 import type { ToolDefinition } from "./protocol.js";
 
 // A run as a list entry: enough to choose one, not the whole record.

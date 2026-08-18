@@ -1,5 +1,5 @@
 {
-  "name": "@testfile/scriptc-native",
+  "name": "@testfile.dev/scriptc-native",
   "version": "0.1.0",
   "private": true,
   "description": "Experimental: testfile-report, a native binary with no JavaScript engine in it, compiled by scriptc",

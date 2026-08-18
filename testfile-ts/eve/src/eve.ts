@@ -7,7 +7,7 @@
 // instead - for when the question is one sentence long and opening an
 // assistant to ask it is the slow way round.
 import { Command } from "commander";
-import { RunHistory } from "@testfile/core";
+import { RunHistory } from "@testfile.dev/core";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { ask } from "./agent.js";

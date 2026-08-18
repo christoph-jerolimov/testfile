@@ -1,12 +1,12 @@
 {
-  "name": "@testfile/bun-bundle",
+  "name": "@testfile.dev/bun-bundle",
   "version": "0.1.0",
   "private": true,
   "description": "Experimental: the testfile CLI compiled into a single binary with bun build --compile",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "prebundle": "npm run bundle --workspace @testfile/cli --prefix ../..",
+    "prebundle": "npm run bundle --workspace @testfile.dev/cli --prefix ../..",
     "bundle": "bun build ../cli/dist/testfile.bundle.mjs --compile --outfile dist/testfile",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   }

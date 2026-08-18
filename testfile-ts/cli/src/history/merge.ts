@@ -11,7 +11,7 @@ import {
   RunHistory,
   variantLabel,
   writeMergedRun,
-} from "@testfile/core";
+} from "@testfile.dev/core";
 import { colorStatus, commandFailed, resolveHistoryBase } from "./shared.js";
 
 // A run to merge, named either as a folder (what a CI artifact unpacks to)

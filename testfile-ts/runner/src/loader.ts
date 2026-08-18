@@ -2,11 +2,11 @@ import { existsSync, globSync, readFileSync, realpathSync, statSync } from "node
 import { dirname, join, resolve } from "node:path";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 // A static import, deliberately: this used to be `createRequire(...)
-// ("@testfile/schema")`, which works under node and is invisible to every
+// ("@testfile.dev/schema")`, which works under node and is invisible to every
 // bundler - so a single-file build of the CLI got as far as reading a
-// Testfile and then failed with "Cannot find module '@testfile/schema'".
+// Testfile and then failed with "Cannot find module '@testfile.dev/schema'".
 // An import attribute is something they can all follow and inline.
-import schema from "@testfile/schema" with { type: "json" };
+import schema from "@testfile.dev/schema" with { type: "json" };
 import { parse } from "yaml";
 import { applyConfigOverrides, type AppliedOverride } from "./configenv.js";
 import { expandForeach } from "./foreach.js";

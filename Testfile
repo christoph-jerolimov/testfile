@@ -143,7 +143,7 @@ test:
             - schema/testfile.schema.json
         - name: build-cli
           tags: [build]
-          command: npm run build --workspace @testfile/runner
+          command: npm run build --workspace @testfile.dev/runner
         # The recorded-run domain everything else reads: built first, since
         # the viewer and its tests compile against it.
         - name: core
@@ -209,7 +209,7 @@ test:
         # somebody's binary - and the result has to actually run.
         #
         # `npx rslib build`, not `npm run bundle`: that script's prebundle
-        # rebuilds @testfile/cli, and that build starts by deleting
+        # rebuilds @testfile.dev/cli, and that build starts by deleting
         # testfile-ts/cli/dist - which `skills` and `examples` are running out
         # of at the same time. The convenience of prebundle is for a human in
         # that folder; here `needs: [build-cli]` has already built it.
@@ -235,7 +235,7 @@ test:
         # pretest builds it (and core and mcp, which it references).
         - name: eve
           tags: [fast, unit]
-          command: npm test --workspace @testfile/eve
+          command: npm test --workspace @testfile.dev/eve
           inputs:
             - testfile-ts/core/src/**
             - testfile-ts/mcp/src/**
@@ -257,7 +257,7 @@ test:
             - testfile-ts/cli/src/**
             - testfile-ts/cli/package.json
             - testfile-ts/cli/tsconfig.json
-        # npm test --workspace @testfile/runner would rebuild via pretest; the tests
+        # npm test --workspace @testfile.dev/runner would rebuild via pretest; the tests
         # run against the one build above so nothing rewrites dist mid-run.
         - name: runner-tests
           tags: [fast, unit]

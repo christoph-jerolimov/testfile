@@ -1,5 +1,5 @@
 {
-  "name": "@testfile/schema",
+  "name": "@testfile.dev/schema",
   "version": "0.1.0",
   "description": "JSON schemas for Testfile (testfile.yaml) and its run records (run.yaml)",
   "license": "Apache-2.0",

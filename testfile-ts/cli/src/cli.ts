@@ -2,7 +2,7 @@
 // One command line over two halves of the same tool.
 //
 // `suite/` asks things of the Testfile - what it describes, and running
-// it - and reaches for @testfile/runner, the only package that starts
+// it - and reaches for @testfile.dev/runner, the only package that starts
 // processes. `history/` asks things of the runs that came out, over the
 // read-only packages (core, sync, mcp, tui, web). Nothing here does any
 // work itself: a command parses flags, calls a library and prints.

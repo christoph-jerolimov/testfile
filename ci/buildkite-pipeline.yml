@@ -7,7 +7,7 @@ steps:
   - label: ":test_tube: Testfile"
     command:
       - npm ci --no-audit --no-fund
-      - npx --yes @testfile/runner start --reporter junit --output junit.xml
+      - npx --yes @testfile.dev/runner start --reporter junit --output junit.xml
     plugins:
       - docker#v5.11.0:
           image: node:22

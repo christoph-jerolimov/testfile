@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { RunHistory } from "@testfile/core";
+import { RunHistory } from "@testfile.dev/core";
 import { commandFailed, resolveHistoryBase } from "./shared.js";
 
 export function registerTui(program: Command): void {
@@ -19,7 +19,7 @@ export function registerTui(program: Command): void {
         }
         const base = resolveHistoryBase(path);
         const history = new RunHistory(base);
-        const { startTui } = await import("@testfile/tui");
+        const { startTui } = await import("@testfile.dev/tui");
         const tui = startTui(history, {
           baseDir: base,
           name: options.name,

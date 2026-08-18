@@ -1,11 +1,11 @@
-# @testfile/scriptc-native
+# @testfile.dev/scriptc-native
 
 **Experimental.** `testfile-report`: a **419 KB** binary with **no JavaScript
 engine in it**, compiled from TypeScript by
 [scriptc](https://scriptc.dev) ([vercel-labs/scriptc](https://github.com/vercel-labs/scriptc)).
 
 ```sh
-npm run build --workspace @testfile/scriptc-native
+npm run build --workspace @testfile.dev/scriptc-native
 
 testfile start --reporter json --output run.json
 ./dist/testfile-report run.json

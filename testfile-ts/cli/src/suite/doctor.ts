@@ -8,7 +8,7 @@ import {
   runChecks,
   type TestfileDoc,
   worstOf,
-} from "@testfile/runner";
+} from "@testfile.dev/runner";
 import { wantsJson, writeJson } from "./shared.js";
 
 const MARK: Record<Check["status"], string> = {

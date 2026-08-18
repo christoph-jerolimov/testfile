@@ -12,7 +12,7 @@ import {
   type TestRunRow,
   testRunsFor,
   variantLabel,
-} from "@testfile/core";
+} from "@testfile.dev/core";
 import { useEscape, useTextInput } from "../interaction.js";
 import { isMouseSequence } from "../mouse.js";
 import { useNavigation } from "../navigation.js";

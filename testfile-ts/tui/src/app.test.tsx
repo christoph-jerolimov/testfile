@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import React from "react";
-import { type RunHistory, type RunRecord } from "@testfile/core";
+import { type RunHistory, type RunRecord } from "@testfile.dev/core";
 import { App } from "./app.js";
 import { renderForTest, type TestRender } from "./test-render.js";
 

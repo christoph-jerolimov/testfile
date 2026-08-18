@@ -15,7 +15,7 @@ import {
   type ToolDefinition,
 } from "./protocol.js";
 import { testfileTools } from "./tools.js";
-import { RunHistory, type RunRecord, type RunRecordTest } from "@testfile/core";
+import { RunHistory, type RunRecord, type RunRecordTest } from "@testfile.dev/core";
 
 const server = { name: "testfile", version: "0.1.0", instructions: "read recorded runs" };
 

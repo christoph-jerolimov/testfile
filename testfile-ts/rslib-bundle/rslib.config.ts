@@ -48,7 +48,7 @@ export default defineConfig({
 
       // One file, which is the whole point. Left to itself Rspack splits this
       // into six - a runtime, two vendor chunks and a chunk per dynamic import
-      // (the CLI has one: `await import("@testfile/tui")`). A packager embeds a
+      // (the CLI has one: `await import("@testfile.dev/tui")`). A packager embeds a
       // script, not a folder, so both kinds of splitting are off.
       config.optimization = { ...config.optimization, splitChunks: false };
       config.output = { ...config.output, asyncChunks: false };

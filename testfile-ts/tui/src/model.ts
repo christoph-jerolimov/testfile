@@ -1,14 +1,14 @@
 // How the TUI's panes read a run: the text of an overview, a log split
 // into lines, a search over them. What is *asked* of a history - the
 // timeline, the suite rows, the executions of a test - is the same
-// question every viewer asks, so it lives in @testfile/core.
+// question every viewer asks, so it lives in @testfile.dev/core.
 import {
   formatMs,
   relatedServices,
   type RunRecord,
   timelineRows,
   variantLabel,
-} from "@testfile/core";
+} from "@testfile.dev/core";
 
 // A displayable log line; matches how the runner renders logs (# marks
 // runner/system messages).

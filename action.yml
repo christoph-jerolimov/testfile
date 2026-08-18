@@ -110,7 +110,7 @@ runs:
       run: |
         cd "${{ github.action_path }}"
         npm ci --no-audit --no-fund
-        npm run build --workspace @testfile/cli
+        npm run build --workspace @testfile.dev/cli
 
     # Pre-flight: every missing tool, engine or taken port that would fail
     # the run anyway fails here instead, in one readable report.

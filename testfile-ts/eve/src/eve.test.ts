@@ -1,5 +1,5 @@
 // The adapter is the only code here that could be wrong on its own: the loop
-// belongs to the SDK and the tools belong to @testfile/mcp. So it is checked
+// belongs to the SDK and the tools belong to @testfile.dev/mcp. So it is checked
 // against the thing it has to agree with - the stdio server - rather than
 // against a copy of its own expectations.
 import assert from "node:assert/strict";
@@ -8,8 +8,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { stringify } from "yaml";
-import { handleLine, type JsonRpcResponse, testfileTools } from "@testfile/mcp";
-import { RunHistory, type RunRecord } from "@testfile/core";
+import { handleLine, type JsonRpcResponse, testfileTools } from "@testfile.dev/mcp";
+import { RunHistory, type RunRecord } from "@testfile.dev/core";
 import { historyTools, inProcessClient } from "./tools.js";
 
 const SERVER = { name: "testfile", version: "0.1.0" };

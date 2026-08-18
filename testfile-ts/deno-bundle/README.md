@@ -1,11 +1,11 @@
-# @testfile/deno-bundle
+# @testfile.dev/deno-bundle
 
 **Experimental.** The `testfile` CLI as one file you can copy onto a machine
 that has no node, no npm and no `node_modules`, built with
 [`deno compile`](https://docs.deno.com/runtime/reference/cli/compile/).
 
 ```sh
-npm run bundle --workspace @testfile/deno-bundle
+npm run bundle --workspace @testfile.dev/deno-bundle
 ./dist/testfile --version
 ```
 
@@ -68,7 +68,7 @@ pointed straight at the CLI it hit the workspace problem above *and* a
 resolution it could not finish:
 
 ```
-error: Could not find constraint '@testfile/sync@^0.1.0' in the list of packages.
+error: Could not find constraint '@testfile.dev/sync@^0.1.0' in the list of packages.
 ```
 
 471 MB, and still no binary. Bundling to a single script first sidesteps the

@@ -2,7 +2,7 @@
 // history commands never pay for React/Ink.
 import { render } from "ink";
 import React from "react";
-import { type RunHistory } from "@testfile/core";
+import { type RunHistory } from "@testfile.dev/core";
 import { App, type ViewerView } from "./app.js";
 import { MOUSE_DISABLE, MOUSE_ENABLE } from "./mouse.js";
 

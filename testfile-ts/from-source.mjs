@@ -8,7 +8,7 @@
 //   - `./loader.js` is how a TypeScript file imports its neighbour, and Node
 //     looks for exactly that file. Where it does not exist and `./loader.ts`
 //     does, that is what was meant.
-//   - `@testfile/core` resolves through node_modules to the package's
+//   - `@testfile.dev/core` resolves through node_modules to the package's
 //     `exports`, which point at dist/. From source it should be src/.
 //   - `.tsx` is not a file extension Node knows. The TUI is written in it, so
 //     those go through esbuild - the only part of this that is not the
@@ -23,7 +23,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { transformSync } from "esbuild";
 
 const packages = join(dirname(fileURLToPath(import.meta.url)));
-const SCOPE = "@testfile/";
+const SCOPE = "@testfile.dev/";
 
 // The file a specifier meant, when the one it named is not there.
 function sourceFor(specifier, parentURL) {

@@ -1,4 +1,4 @@
-# @testfile/rslib-bundle
+# @testfile.dev/rslib-bundle
 
 **Experimental.** The `testfile` CLI bundled into one file by
 [Rslib](https://rslib.rs/) — [Rspack](https://rspack.rs/) underneath — as a
@@ -6,7 +6,7 @@ second opinion on [`../cli/bundle.mjs`](../cli/bundle.mjs), which does the
 same job with esbuild.
 
 ```sh
-npm run bundle --workspace @testfile/rslib-bundle
+npm run bundle --workspace @testfile.dev/rslib-bundle
 node dist/testfile.js --version
 ```
 
@@ -75,7 +75,7 @@ so the `rslib-bundle` test builds the bundle and runs the result. The others
 need deno, bun or node 25 and stay out.
 
 That test runs `npx rslib build`, not `npm run bundle`. The `prebundle` script
-here rebuilds `@testfile/cli` for convenience, and that build begins by
+here rebuilds `@testfile.dev/cli` for convenience, and that build begins by
 deleting `../cli/dist` — fine in a terminal, fatal in a suite where `skills`
 and `examples` are running `cli/dist/cli.js` in parallel. In CI the CLI is
 already built, by `needs: [build-cli]`.

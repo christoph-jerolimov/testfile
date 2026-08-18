@@ -33,7 +33,7 @@ jobs:
       # starts them itself - docker is already on the GitHub-hosted images,
       # so the job needs no `services:` block of its own.
       - name: Testfile
-        run: npx --yes @testfile/runner start --reporter junit --output junit.xml
+        run: npx --yes @testfile.dev/runner start --reporter junit --output junit.xml
       # The whole recorded run - run.yaml, per-test logs, service logs,
       # collected artifacts, and junit.xml alongside them. `testfile github
       # sync <owner/repo>` pulls it straight into a local history; a

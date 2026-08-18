@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { writeRun } from "@testfile/core/fixture";
+import { writeRun } from "@testfile.dev/core/fixture";
 import { safeRelative, ViewerServer } from "./index.js";
 
 function tempDir(): string {

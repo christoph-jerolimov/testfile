@@ -8,7 +8,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type RunHistory, type RunRecord } from "@testfile/core";
+import { type RunHistory, type RunRecord } from "@testfile.dev/core";
 
 export const SCREEN_SIZE = { columns: 100, rows: 30 };
 export const NARROW_SIZE = { columns: 72, rows: 30 };

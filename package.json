@@ -1,5 +1,5 @@
 {
-  "name": "testfile-monorepo",
+  "name": "@testfile.dev/monorepo",
   "private": true,
   "version": "0.1.0",
   "description": "Testfile — a declarative YAML format for running test suites with services, matrices and dynamic ports",
