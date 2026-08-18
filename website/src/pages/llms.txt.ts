@@ -10,7 +10,7 @@ import { getCollection } from "astro:content";
 import { examples } from "../examples";
 import { specPages } from "../spec";
 
-const SITE = "https://testfile-dev.github.io";
+const SITE = "https://testfile.dev";
 
 // A one-line entry: the link, then what the page answers.
 function entry(title: string, path: string, description: string): string {

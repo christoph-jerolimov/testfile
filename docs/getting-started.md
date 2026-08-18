@@ -9,7 +9,7 @@ description: Write your first Testfile and run it.
 ## 1. Create a Testfile
 
 Three ways in, in increasing order of typing:
-[the wizard](https://testfile-dev.github.io/start) asks
+[the wizard](https://testfile.dev/start) asks
 a handful of questions and hands you a file to copy; `testfile init` converts what
 your project already has; or create a file called `Testfile` (or
 `testfile.yaml`) in the root of your project yourself:

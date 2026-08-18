@@ -30,9 +30,9 @@ test:
 ## Features
 
 **The format** —
-[nested suites](https://testfile-dev.github.io/docs/writing-tests)
+[nested suites](https://testfile.dev/docs/writing-tests)
 of `sequence`/`parallel` groups; a
-[matrix](https://testfile-dev.github.io/docs/matrix)
+[matrix](https://testfile.dev/docs/matrix)
 expands one test into many combinations; `foreach` generates a test per
 matching folder or file; `include` composes monorepos from per-package
 Testfiles. Conditions (`if` with `&&`/`||`), tags, timeouts, retries,
@@ -43,22 +43,22 @@ pinned by a [normative spec](spec/) plus a runner-independent
 [conformance suite](conformance/), so other runners can implement it.
 
 **Services & environment** — tests declare the
-[services](https://testfile-dev.github.io/docs/services)
+[services](https://testfile.dev/docs/services)
 they need (the app under test, databases in specific versions) as local
 processes or containers; which engine runs them — podman, docker, or
 **pods on a kubernetes cluster** with ports forwarded to localhost — is
 chosen by whoever runs the tests, never by the file. Readiness by HTTP,
 TCP, log pattern or command; service-to-service `depends_on`-style
 `needs`; instances shared across a matrix; graceful stop, also on Ctrl+C.
-Test bodies can run [inside a container](https://testfile-dev.github.io/docs/writing-tests#running-a-test-in-a-container)
-too. The [environment is isolated](https://testfile-dev.github.io/docs/env-and-ports):
+Test bodies can run [inside a container](https://testfile.dev/docs/writing-tests#running-a-test-in-a-container)
+too. The [environment is isolated](https://testfile.dev/docs/env-and-ports):
 explicit `forwardEnv`, env files and first-class `secrets` with masking,
 named ports with per-run random allocation.
 
-**Running** — [filters](https://testfile-dev.github.io/docs/cli#filtering)
+**Running** — [filters](https://testfile.dev/docs/cli#filtering)
 by name, tag or matrix value; re-run `--failed`; git-aware `--changed`
 selection; `--shard i/n` across machines; watch mode and a cache-aware
-`--dry-run`. [Result caching](https://testfile-dev.github.io/docs/writing-tests#result-caching)
+`--dry-run`. [Result caching](https://testfile.dev/docs/writing-tests#result-caching)
 by declared `inputs`, collected artifacts, JUnit/JSON reports. Every run
 is recorded — `run.yaml`, per-test logs with timing for a timeline,
 service logs — and `testfile doctor` checks a machine against what the
@@ -66,12 +66,12 @@ file needs before a run finds out the hard way. `testfile init` imports
 what a project already has (package.json scripts, docker-compose, GitHub
 workflows, Makefiles). Shell completions included.
 
-**CI & viewing** — a [GitHub Action](https://testfile-dev.github.io/docs/github-action)
+**CI & viewing** — a [GitHub Action](https://testfile.dev/docs/github-action)
 with PR annotations, a job summary, an optional **commit status per
 test** and the run uploaded as an artifact; ready-made snippets for
 GitLab, Jenkins, Buildkite and CircleCI. The read-only viewer serves the
 recorded runs: a runs table, run diffs, flaky/broken verdicts, a terminal
-UI and a [local web viewer](https://testfile-dev.github.io/docs/cli#the-web-viewer)
+UI and a [local web viewer](https://testfile.dev/docs/cli#the-web-viewer)
 with label/status/variant filters and a timeline. Runs travel: pack them
 as archives, push/pull via S3, sync straight from GitHub Actions or
 GitLab CI, and merge platform legs into a single verdict. Plus a VS Code
@@ -82,7 +82,7 @@ extension with schema validation, run-from-editor and a runs view.
 | Folder | Contents |
 | ------ | -------- |
 | [`spec/`](spec/) | The normative specification, three documents: the [Testfile format](spec/TESTFILE.md), the [test result format](spec/RESULTS.md) and the [versioning policy](spec/VERSIONING.md). |
-| [`docs/`](docs/) | End-user documentation, published at [testfile-dev.github.io](https://testfile-dev.github.io/). |
+| [`docs/`](docs/) | End-user documentation, published at [testfile.dev](https://testfile.dev/). |
 | [`schema/`](schema/) | The JSON schema, plus `tests/valid` and `tests/invalid` example files that CI validates on every change. |
 | [`website/`](website/) | Astro site that renders `docs/`, published to GitHub Pages. |
 | [`testfile-ts/cli/`](testfile-ts/cli/) | The `testfile` command line: running what a Testfile describes, and reading the runs that came out. |

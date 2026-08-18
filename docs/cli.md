@@ -1074,8 +1074,8 @@ so an assistant can read the documentation without scraping HTML:
 
 | File | Contents |
 | ---- | -------- |
-| [`/llms.txt`](https://testfile-dev.github.io/llms.txt) | one line per page — title, link and what the page answers — so a model can fetch the two pages it needs |
-| [`/llms-full.txt`](https://testfile-dev.github.io/llms-full.txt) | every page's markdown, concatenated, for reading the lot at once |
+| [`/llms.txt`](https://testfile.dev/llms.txt) | one line per page — title, link and what the page answers — so a model can fetch the two pages it needs |
+| [`/llms-full.txt`](https://testfile.dev/llms-full.txt) | every page's markdown, concatenated, for reading the lot at once |
 
 Both are generated from the same content the pages are built from, and the
 build fails if a published page is missing from the index — an index that

@@ -78,8 +78,8 @@ function checkLlms(dir: string, { site }: { site: string }): string[] {
   return problems;
 }
 
-// node out/check-llms.js dist https://christoph-jerolimov.github.io
-const [dir = "dist", site = "https://christoph-jerolimov.github.io"] = process.argv.slice(2);
+// node out/check-llms.js dist https://testfile.dev
+const [dir = "dist", site = "https://testfile.dev"] = process.argv.slice(2);
 const problems = checkLlms(dir, { site });
 for (const problem of problems) console.error(problem);
 if (problems.length > 0) process.exit(1);
