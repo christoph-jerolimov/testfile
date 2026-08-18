@@ -232,6 +232,15 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
         background: none;
         padding: 0;
       }
+      /* Screenshots in the markdown: they are wider than this column, so
+         they scale down to it - framed like the one on the landing page. */
+      main img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
       /* Shiki dual themes: the light colors are inlined; switch to the
          --shiki-dark variables when the page is in dark mode. */
       @media (prefers-color-scheme: dark) {
