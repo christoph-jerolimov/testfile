@@ -84,7 +84,8 @@ extension with schema validation, run-from-editor and a runs view.
 | [`spec/`](spec/) | The normative specification, three documents: the [Testfile format](spec/TESTFILE.md), the [test result format](spec/RESULTS.md) and the [versioning policy](spec/VERSIONING.md). |
 | [`docs/`](docs/) | End-user documentation, published at [testfile.dev](https://testfile.dev/). |
 | [`schema/`](schema/) | The JSON schema, plus `tests/valid` and `tests/invalid` example files that CI validates on every change. |
-| [`website/`](website/) | Astro site that renders `docs/`, published to GitHub Pages. |
+| [`blog/`](blog/) | Blog posts, published at [testfile.dev/blog](https://testfile.dev/blog). |
+| [`website/`](website/) | Astro site that renders `docs/`, `blog/` and `spec/`, published to GitHub Pages. |
 | [`testfile-ts/cli/`](testfile-ts/cli/) | The `testfile` command line: running what a Testfile describes, and reading the runs that came out. |
 | [`testfile-ts/core/`](testfile-ts/core/) | The recorded-run domain: `run.yaml` types, the history, diffs, flaky verdicts, digests, repro bundles, merging. |
 | [`testfile-ts/runner/`](testfile-ts/runner/) | The reference runner as a library: expanding a Testfile into a suite and running it — processes, containers and clusters. |

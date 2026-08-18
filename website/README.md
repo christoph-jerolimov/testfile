@@ -13,9 +13,12 @@ Action).
 
 The three normative documents in [`../spec/`](../spec/) are published the
 same way, under `/spec/` — see [`src/spec.ts`](src/spec.ts) for their routes
-and menu labels. Both folders are read at build time, so the markdown files
-in the repository stay the single source; the relative links they use for
-GitHub are rewritten for the site by
+and menu labels. The blog posts in [`../blog/`](../blog/) too, under
+`/blog/` — listed newest first by the `date` in their frontmatter, with an
+RSS feed at `/blog/rss.xml` (the editorial plan is
+[`BLOG-PLAN.md`](BLOG-PLAN.md)). All three folders are read at build time,
+so the markdown files in the repository stay the single source; the
+relative links they use for GitHub are rewritten for the site by
 [`src/markdown-links.ts`](src/markdown-links.ts).
 
 Because the docs link each other by heading, renaming a page or a heading

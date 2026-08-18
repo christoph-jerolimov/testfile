@@ -21,6 +21,9 @@ export const GET: APIRoute = async () => {
   const docs = (await getCollection("docs")).sort(
     (a, b) => (a.data.order ?? 999) - (b.data.order ?? 999),
   );
+  const blog = (await getCollection("blog")).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+  );
 
   const lines = [
     "# Testfile",
@@ -53,6 +56,11 @@ export const GET: APIRoute = async () => {
     ...examples.map((example) =>
       entry(example.meta.title, `/examples/${example.id}`, example.meta.summary),
     ),
+    "",
+    "## Blog",
+    "",
+    entry("Blog", "/blog", "the index of blog posts, newest first, with an RSS feed"),
+    ...blog.map((post) => entry(post.data.title, `/blog/${post.id}`, post.data.description)),
     "",
     "## Optional",
     "",

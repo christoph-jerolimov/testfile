@@ -4,8 +4,8 @@
 // "../schema/testfile.schema.json". This plugin turns those relative links
 // into links that work on the published site:
 //
-//   docs/*.md and the three spec documents -> the page here
-//   anything else in the repository        -> the file on GitHub
+//   docs/*.md, blog/*.md and the three spec documents -> the page here
+//   anything else in the repository                   -> the file on GitHub
 //
 // The result is always an absolute path, so it survives the trailing slash
 // GitHub Pages adds to directory URLs - a relative "./cli" would otherwise
@@ -46,10 +46,10 @@ function resolve(dir: string, href: string): string {
   return segments.join("/");
 }
 
-// The repository folder a rendered markdown file came from ("docs" or
-// "spec"), or undefined for anything else.
+// The repository folder a rendered markdown file came from ("docs",
+// "blog" or "spec"), or undefined for anything else.
 function sourceDir(path: string | undefined): string | undefined {
-  return /[/\\](docs|spec)[/\\][^/\\]+\.md$/.exec(path ?? "")?.[1];
+  return /[/\\](docs|blog|spec)[/\\][^/\\]+\.md$/.exec(path ?? "")?.[1];
 }
 
 function walk(node: Node, visit: (node: Node) => void): void {
@@ -74,8 +74,8 @@ export function rewriteMarkdownLinks({ base }: { base: string }) {
       const target = resolve(dir, path);
       if (specPages[target]) {
         properties.href = `${base}/spec/${specPages[target]}${suffix}`;
-      } else if (target.startsWith("docs/")) {
-        // docs pages are addressed without the .md extension
+      } else if (target.startsWith("docs/") || target.startsWith("blog/")) {
+        // docs and blog pages are addressed without the .md extension
         properties.href = `${base}/${target.replace(/\.md$/, "")}${suffix}`;
       } else {
         properties.href = `${repoBlobUrl}/${target}${suffix}`;

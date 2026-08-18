@@ -1,0 +1,48 @@
+---
+import { getCollection, render } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// UTC so the date shown is the date in the frontmatter, whatever timezone
+// the build ran in.
+const formatDate = (date: Date) =>
+  date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+---
+
+<Layout title={post.data.title} description={post.data.description} sidebar={false}>
+  <p class="post-meta">
+    <a href={`${base}/blog`}>← Blog</a> ·
+    <time datetime={post.data.date.toISOString().slice(0, 10)}>
+      {formatDate(post.data.date)}
+    </time>
+  </p>
+  <Content />
+</Layout>
+
+<style>
+  .post-meta {
+    margin: 1.5rem 0 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .post-meta a {
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .post-meta a:hover {
+    color: var(--accent);
+  }
+</style>

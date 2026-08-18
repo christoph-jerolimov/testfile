@@ -40,6 +40,9 @@ export const GET: APIRoute = async () => {
   const docs = (await getCollection("docs")).sort(
     (a, b) => (a.data.order ?? 999) - (b.data.order ?? 999),
   );
+  const blog = (await getCollection("blog")).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+  );
   const spec = await getCollection("spec");
 
   const parts = [
@@ -81,6 +84,8 @@ export const GET: APIRoute = async () => {
         spec.find((entry) => entry.id === page.id)?.body ?? "",
       ),
     ),
+    // The blog posts, newest first, like the /blog index lists them.
+    ...blog.map((post) => section(post.data.title, `${SITE}/blog/${post.id}`, post.body ?? "")),
     // The examples are the Testfiles themselves; their prose lives in the
     // metadata, so the file is quoted rather than described.
     ...examples.map((example) =>

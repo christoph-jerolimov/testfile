@@ -12,6 +12,17 @@ const docs = defineCollection({
   }),
 });
 
+// ... the blog posts from blog/, addressed by file name and listed
+// newest first ...
+const blog = defineCollection({
+  loader: glob({ pattern: "**/*.md", base: "../blog" }),
+  schema: z.object({
+    title: z.string(),
+    date: z.coerce.date(),
+    description: z.string(),
+  }),
+});
+
 // ... and the normative documents from spec/, published verbatim. They have
 // no frontmatter, so the id stays the file name (README, RESULTS,
 // VERSIONING) and the titles live in src/spec.ts.
@@ -23,4 +34,4 @@ const spec = defineCollection({
   }),
 });
 
-export const collections = { docs, spec };
+export const collections = { docs, blog, spec };
