@@ -9,7 +9,6 @@
 "@testfile.dev/cli": patch
 "@testfile.dev/eve": patch
 "@testfile.dev/viewer": patch
-"@testfile.dev/conformance": patch
 ---
 
 First release managed by changesets: every package starts over at 0.0.0 and
