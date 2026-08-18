@@ -8,14 +8,7 @@
 "@testfile.dev/web": patch
 "@testfile.dev/cli": patch
 "@testfile.dev/eve": patch
-"@testfile.dev/deno-bundle": patch
-"@testfile.dev/bun-bundle": patch
-"@testfile.dev/nodejs-bundle": patch
-"@testfile.dev/rslib-bundle": patch
-"@testfile.dev/scriptc-native": patch
 "@testfile.dev/viewer-web": patch
-"testfile-vscode": patch
-"@testfile.dev/website": patch
 "@testfile.dev/conformance": patch
 ---
 
