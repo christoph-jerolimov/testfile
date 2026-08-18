@@ -141,9 +141,12 @@ test:
             - vscode-extension/package.json
             - vscode-extension/build.mjs
             - schema/testfile.schema.json
+        # Builds the runner and the read-only packages too: the CLI's
+        # project references reach all of them, and the steps below run out
+        # of both dists.
         - name: build-cli
           tags: [build]
-          command: npm run build --workspace @testfile.dev/runner
+          command: npm run build --workspace @testfile.dev/cli
         # The recorded-run domain everything else reads: built first, since
         # the viewer and its tests compile against it.
         - name: core
@@ -301,6 +304,8 @@ test:
           inputs:
             - .claude/skills/**
             - testfile-ts/cli/src/**
+            # the suite commands the CLI registers are defined here
+            - testfile-ts/runner/src/cli/**
         # Runs nothing: it maps the specification's sections onto the case
         # ids, so a new spec section cannot arrive without a case.
         - name: conformance-coverage
@@ -350,13 +355,14 @@ test:
           artifacts:
             - test-results/**
         # What the dedicated action self-test job used to check: running the
-        # smoke Testfile produces a passing JUnit report.
+        # smoke Testfile produces a passing JUnit report. Through the runner's
+        # own binary, which is the one the action invokes.
         - name: action-smoke
           tags: [action]
           needs: [build-cli]
           script: |
             out=$(mktemp)
-            node testfile-ts/cli/dist/cli.js start .github/action-smoke --reporter junit --output "$out"
+            node testfile-ts/runner/dist/cli/main.js start .github/action-smoke --reporter junit --output "$out"
             grep -q '<testcase name="hello"' "$out"
             grep -q 'failures="0"' "$out"
             rm -f "$out"

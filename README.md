@@ -87,7 +87,7 @@ extension with schema validation, run-from-editor and a runs view.
 | [`website/`](website/) | Astro site that renders `docs/`, published to GitHub Pages. |
 | [`testfile-ts/cli/`](testfile-ts/cli/) | The `testfile` command line: running what a Testfile describes, and reading the runs that came out. |
 | [`testfile-ts/core/`](testfile-ts/core/) | The recorded-run domain: `run.yaml` types, the history, diffs, flaky verdicts, digests, repro bundles, merging. |
-| [`testfile-ts/runner/`](testfile-ts/runner/) | The reference runner as a library: expanding a Testfile into a suite and running it — processes, containers and clusters. |
+| [`testfile-ts/runner/`](testfile-ts/runner/) | The reference runner: expanding a Testfile into a suite and running it — processes, containers and clusters. A library, plus the commands over it (`start`, `doctor`, `validate`, …) as the `testfile-runner` binary. |
 | [`testfile-ts/sync/`](testfile-ts/sync/) | Moving recorded runs between machines: archives, S3, GitHub and GitLab artifacts. |
 | [`testfile-ts/tui/`](testfile-ts/tui/) | The terminal UI over recorded runs (Ink) — the only package that needs a renderer. |
 | [`testfile-ts/mcp/`](testfile-ts/mcp/) | The MCP server: read-only tools over the history for an AI assistant. |

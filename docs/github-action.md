@@ -18,8 +18,13 @@ jobs:
       - uses: testfile-dev/testfile@main
 ```
 
-The action installs Node, builds the runner, and executes `testfile start`
+The action installs Node, builds the runner, and executes `start`
 against your repository's Testfile. The job fails when tests fail.
+
+What it builds is the `@testfile.dev/runner` package alone — the half of
+the [command line](./cli) that runs a suite. The reading half (the terminal
+UI, the web viewer, the MCP server) is not installed, so the setup step
+pulls about fifteen packages rather than the whole toolchain.
 
 ## Inputs
 

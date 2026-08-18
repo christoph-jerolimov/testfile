@@ -1,5 +1,5 @@
 import { type Command } from "commander";
-import { color, type CompletionModel, generateCompletion } from "@testfile.dev/runner";
+import { color, type CompletionModel, generateCompletion } from "../index.js";
 
 export function registerCompletion(program: Command): void {
   program
@@ -9,7 +9,9 @@ export function registerCompletion(program: Command): void {
     .action((shell: string) => {
       try {
         const model: CompletionModel = {
-          program: "testfile",
+          // whichever binary registered these commands: `testfile` when the
+          // full CLI did, `testfile-runner` on its own
+          program: program.name(),
           commands: program.commands
             .filter((command) => command.name() !== "completion")
             .map((command) => ({

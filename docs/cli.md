@@ -20,6 +20,13 @@ packages ([`core`](https://github.com/testfile-dev/testfile/tree/main/testfile-t
 and [`runner`](https://github.com/testfile-dev/testfile/tree/main/testfile-ts/runner)
 is the only one that starts anything.
 
+The runner owns the commands that drive it, and ships them as a second,
+smaller binary — `testfile-runner`, with `start`, `doctor`, `validate`,
+`inspect`, `tags`, `changes` and `init` and nothing else. That is what
+`npx @testfile.dev/runner start` runs, and what a CI job wants: none of the
+reading half's dependencies get installed to run a suite. `testfile`
+registers exactly the same commands, so the two cannot drift apart.
+
 This page is the guided tour; the [CLI reference](./cli-reference) lists
 every command with all of its arguments and options.
 
