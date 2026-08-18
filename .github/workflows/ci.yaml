@@ -89,6 +89,10 @@ jobs:
       - name: Merge the runs into one
         id: merge
         run: |
+          # On a re-run the pattern above also downloads the previous
+          # attempt's merged artifact; merging that in again would fail
+          # (its tests collide with the legs'), so it is dropped.
+          rm -rf downloaded/testfile-run-merged
           runs=(downloaded/testfile-run-*)
           echo "merging ${#runs[@]} runs: ${runs[*]}"
           if node testfile-ts/cli/dist/cli.js merge "${runs[@]}" --dir .; then
