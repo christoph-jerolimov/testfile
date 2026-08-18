@@ -2,7 +2,9 @@
   "$schema": "https://unpkg.com/@changesets/config@4.0.0/schema.json",
   "changelog": [
     "@changesets/changelog-github",
-    { "repo": "testfile-dev/testfile" }
+    {
+      "repo": "testfile-dev/testfile"
+    }
   ],
   "commit": false,
   "fixed": [],
@@ -10,5 +12,9 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [],
+  "privatePackages": {
+    "version": true,
+    "tag": false
+  }
 }
