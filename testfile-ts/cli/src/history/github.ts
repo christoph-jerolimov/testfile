@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import { githubRunArchives, lineProgress, syncFromGithub } from "@testfile/sync";
-import { color, pad } from "@testfile/core";
+import { githubRunArchives, lineProgress, syncFromGithub } from "@testfile.dev/sync";
+import { color, pad } from "@testfile.dev/core";
 import { commandFailed, reportImport, resolveHistoryBase, wantsJson, writeJson } from "./shared.js";
 
 interface GithubCliOptions {

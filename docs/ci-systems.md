@@ -33,7 +33,7 @@ They all follow the same three steps:
 
 ```sh
 npm ci --no-audit --no-fund
-npx --yes @testfile/runner start --reporter junit --output junit.xml
+npx --yes @testfile.dev/runner start --reporter junit --output junit.xml
 # then: publish junit.xml, archive .testfile/runs/
 ```
 

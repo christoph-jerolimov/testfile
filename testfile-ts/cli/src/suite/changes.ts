@@ -1,7 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { type Command } from "commander";
-import { collectGitChanges, color } from "@testfile/runner";
+import { collectGitChanges, color } from "@testfile.dev/runner";
 import { wantsJson, writeJson } from "./shared.js";
 
 export function registerChanges(program: Command): void {

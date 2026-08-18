@@ -111,8 +111,8 @@ tests are described in [`Testfile`](Testfile).
 
 ### Dependencies between the workspaces
 
-The packages depend on each other by name and version — `@testfile/cli`
-declares `"@testfile/core": "^0.1.0"` — and npm links those to the folders in
+The packages depend on each other by name and version — `@testfile.dev/cli`
+declares `"@testfile.dev/core": "^0.1.0"` — and npm links those to the folders in
 this repository instead of downloading them. There is no `workspace:*` to
 write: that protocol is a pnpm/yarn/bun feature, and npm rejects it outright
 with `EUNSUPPORTEDPROTOCOL`. A plain range is npm's way of saying it, and it
@@ -124,11 +124,11 @@ The catch is that nothing in npm keeps the two in step — `npm version
 registry, where none of these names is published:
 
 ```
-npm error 404  '@testfile/core@0.2.0' is not in this registry
+npm error 404  '@testfile.dev/core@0.2.0' is not in this registry
 ```
 
 So [`scripts/workspaces.test.mjs`](scripts/workspaces.test.mjs) checks it: every
-`@testfile/*` dependency names a real workspace, its range is satisfied by that
+`@testfile.dev/*` dependency names a real workspace, its range is satisfied by that
 workspace's version, and the lockfile links all of them. Bump a version without
 updating its dependents and that test says so, instead of the next `npm ci`
 failing with a 404 that looks like a network problem.
@@ -139,7 +139,7 @@ failing with a 404 that looks like a network problem.
 required — Node strips the types itself, and
 [`testfile-ts/from-source.mjs`](testfile-ts/from-source.mjs) fills in the
 three things it does not do: resolving a `./x.js` import to `x.ts`, pointing
-`@testfile/core` at its source rather than its `dist/`, and handing the TUI's
+`@testfile.dev/core` at its source rather than its `dist/`, and handing the TUI's
 `.tsx` to esbuild.
 
 It is for the edit-run loop, not for CI, and it is not a speed-up: a full
@@ -160,7 +160,7 @@ npm test --workspace schema
 
 # build and test a package (they live in testfile-ts/: core, runner, sync,
 # mcp, tui, web, cli - each builds what it depends on)
-npm test --workspace @testfile/cli
+npm test --workspace @testfile.dev/cli
 
 # ... or run the tests straight from src/, with nothing built
 npm run test:source

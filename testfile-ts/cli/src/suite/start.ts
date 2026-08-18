@@ -13,7 +13,7 @@ import {
   watchDirectory,
   WatchScheduler,
   writeReport,
-} from "@testfile/runner";
+} from "@testfile.dev/runner";
 import {
   addFilterOptions,
   applyChanged,

@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 // Two modes:
 // - standalone (`npm run test:e2e`): playwright starts `testfile-viewer
 //   serve` itself over the committed fixture in e2e/fixture (the CLI must
-//   be built: `npm run build --workspace @testfile/cli`).
+//   be built: `npm run build --workspace @testfile.dev/cli`).
 // - against an already-running server: set TESTFILE_E2E_URL - this is how
 //   the root Testfile runs the suite, with serve started as a service.
 //

@@ -1,11 +1,11 @@
-# @testfile/bun-bundle
+# @testfile.dev/bun-bundle
 
 **Experimental.** The `testfile` CLI as one file you can copy onto a machine
 that has no node, no npm and no `node_modules`, built with
 [`bun build --compile`](https://bun.com/docs/bundler/executables).
 
 ```sh
-npm run bundle --workspace @testfile/bun-bundle
+npm run bundle --workspace @testfile.dev/bun-bundle
 ./dist/testfile --version
 ```
 

@@ -43,7 +43,7 @@ and pixel-compares each view against the committed screenshots in
 `e2e/__screenshots__/`:
 
 ```sh
-npm run build --workspace @testfile/cli       # serve comes from the CLI
+npm run build --workspace @testfile.dev/cli       # serve comes from the CLI
 npm run test:e2e --workspace viewer-web        # run (compares screenshots)
 npm run test:e2e:update --workspace viewer-web # refresh the screenshots
 ```

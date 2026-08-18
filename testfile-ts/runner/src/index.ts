@@ -2,7 +2,7 @@
 // and running it - processes, containers and clusters included.
 //
 // This is the only package here that starts anything. The command line
-// that drives it lives in @testfile/cli; keeping the two apart means the
+// that drives it lives in @testfile.dev/cli; keeping the two apart means the
 // VS Code extension, a CI wrapper or a test of our own can run a suite
 // without going through a shell.
 export * from "./cache-predict.js";

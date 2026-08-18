@@ -1,12 +1,12 @@
 {
-  "name": "@testfile/nodejs-bundle",
+  "name": "@testfile.dev/nodejs-bundle",
   "version": "0.1.0",
   "private": true,
   "description": "Experimental: the testfile CLI compiled into a single binary with node --build-sea (node 25+)",
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "prebundle": "npm run bundle --workspace @testfile/cli --prefix ../..",
+    "prebundle": "npm run bundle --workspace @testfile.dev/cli --prefix ../..",
     "bundle": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\" && node --build-sea=sea-config.json",
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
   },

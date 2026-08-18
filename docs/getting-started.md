@@ -52,7 +52,7 @@ so you know where to look. Read the result before trusting it.
 ## 2. Run it
 
 ```sh
-npx @testfile/runner start
+npx @testfile.dev/runner start
 ```
 
 The runner finds the Testfile in the current directory, runs the suite and

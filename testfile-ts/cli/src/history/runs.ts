@@ -12,7 +12,7 @@ import {
   type RunFilter,
   variantLabel,
   variantOptions,
-} from "@testfile/core";
+} from "@testfile.dev/core";
 import {
   collect,
   colorStatus,

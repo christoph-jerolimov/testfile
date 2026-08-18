@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
 import { type Command } from "commander";
-import { collectTags, color, loadTestfile, Session, sortTags } from "@testfile/runner";
+import { collectTags, color, loadTestfile, Session, sortTags } from "@testfile.dev/runner";
 import { wantsJson, writeJson } from "./shared.js";
 
 export function registerTags(program: Command): void {

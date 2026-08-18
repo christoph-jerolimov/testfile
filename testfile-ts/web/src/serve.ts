@@ -6,7 +6,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { recordedTests, RunHistory, type RunRecord, watchRuns } from "@testfile/core";
+import { recordedTests, RunHistory, type RunRecord, watchRuns } from "@testfile.dev/core";
 
 export interface ServeOptions {
   baseDir: string;

@@ -3,7 +3,7 @@
 // plus a rasterized screens/<name>-<theme>.png - the images are for humans.
 // Run via:
 //
-//   npm run screens:update --workspace @testfile/tui
+//   npm run screens:update --workspace @testfile.dev/tui
 //
 // The PNGs render through the same pinned Playwright Chromium the web
 // viewer's screenshots use; TESTFILE_SCREENS_CHROMIUM points at an existing

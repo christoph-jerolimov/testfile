@@ -1,11 +1,11 @@
-# @testfile/nodejs-bundle
+# @testfile.dev/nodejs-bundle
 
 **Experimental.** The `testfile` CLI as one file you can copy onto a machine
 that has no node, no npm and no `node_modules` — built by node itself, with
 [single executable applications](https://nodejs.org/api/single-executable-applications.html).
 
 ```sh
-npm run bundle --workspace @testfile/nodejs-bundle   # needs node >= 25.5
+npm run bundle --workspace @testfile.dev/nodejs-bundle   # needs node >= 25.5
 ./dist/testfile --version
 ```
 

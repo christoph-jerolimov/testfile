@@ -4,7 +4,7 @@
 // starts tests; that is the runner's job (`testfile start`).
 import React, { useEffect, useState } from "react";
 import { useApp, useInput } from "ink";
-import { type RunHistory, watchRuns } from "@testfile/core";
+import { type RunHistory, watchRuns } from "@testfile.dev/core";
 import { useInteraction, InteractionProvider } from "./interaction.js";
 import { isMouseSequence } from "./mouse.js";
 import { NavigationProvider, useNavigation } from "./navigation.js";

@@ -3,7 +3,7 @@
 // push the detail as its own page.
 import React, { useState } from "react";
 import { Box, Text, useInput } from "ink";
-import { formatMs, type RunHistory, type SuiteRow, suiteRows } from "@testfile/core";
+import { formatMs, type RunHistory, type SuiteRow, suiteRows } from "@testfile.dev/core";
 import { DetailTabs } from "../detail-tabs.js";
 import { useEscape } from "../interaction.js";
 import { isMouseSequence } from "../mouse.js";

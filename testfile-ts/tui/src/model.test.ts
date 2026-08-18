@@ -7,7 +7,7 @@ import {
   suiteRows,
   testRunsFor,
   timelineRows,
-} from "@testfile/core";
+} from "@testfile.dev/core";
 import { describeRun, testOverview } from "./model.js";
 
 function run(overrides: Partial<RunRecord> = {}): RunRecord {

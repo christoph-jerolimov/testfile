@@ -1,5 +1,5 @@
 import { type Command } from "commander";
-import { color, type CompletionModel, generateCompletion } from "@testfile/runner";
+import { color, type CompletionModel, generateCompletion } from "@testfile.dev/runner";
 
 export function registerCompletion(program: Command): void {
   program

@@ -5,7 +5,7 @@
 // when there is nothing left to look up. Writing that loop here would only
 // be a worse copy of it.
 import Anthropic from "@anthropic-ai/sdk";
-import type { RunHistory } from "@testfile/core";
+import type { RunHistory } from "@testfile.dev/core";
 import { historyTools } from "./tools.js";
 
 // Claude Opus 5, with adaptive thinking: reading a failed run is exactly the

@@ -1,5 +1,5 @@
 {
-  "name": "@testfile/cli",
+  "name": "@testfile.dev/cli",
   "version": "0.1.0",
   "description": "The testfile command line: run the tests a Testfile describes, and read the runs that came out",
   "license": "Apache-2.0",
@@ -17,15 +17,15 @@
     "bundle": "node bundle.mjs"
   },
   "dependencies": {
-    "@testfile/core": "^0.1.0",
-    "@testfile/mcp": "^0.1.0",
-    "@testfile/runner": "^0.1.0",
-    "@testfile/sync": "^0.1.0",
-    "@testfile/web": "^0.1.0",
+    "@testfile.dev/core": "^0.1.0",
+    "@testfile.dev/mcp": "^0.1.0",
+    "@testfile.dev/runner": "^0.1.0",
+    "@testfile.dev/sync": "^0.1.0",
+    "@testfile.dev/web": "^0.1.0",
     "commander": "^15.0.0"
   },
   "optionalDependencies": {
-    "@testfile/tui": "^0.1.0"
+    "@testfile.dev/tui": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

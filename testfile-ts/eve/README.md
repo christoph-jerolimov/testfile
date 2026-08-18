@@ -1,4 +1,4 @@
-# @testfile/eve
+# @testfile.dev/eve
 
 Ask about the runs you already recorded, from a terminal.
 
@@ -21,7 +21,7 @@ Almost nothing, deliberately — the three pieces already existed:
 
 | | |
 | --- | --- |
-| The tools | [`@testfile/mcp`](../mcp/)'s, unchanged — `list_runs`, `get_run`, `explain_run`, `repro_test`, `get_test_log`, `diff_runs`, `list_tests`, `list_flaky` |
+| The tools | [`@testfile.dev/mcp`](../mcp/)'s, unchanged — `list_runs`, `get_run`, `explain_run`, `repro_test`, `get_test_log`, `diff_runs`, `list_tests`, `list_flaky` |
 | The conversion | the Anthropic SDK's `mcpTools()` — `ToolDefinition` already has the shape it expects, so no schema is restated in a second dialect where it could drift |
 | The loop | the SDK's tool runner — asking, running the tools the model reaches for, feeding results back |
 

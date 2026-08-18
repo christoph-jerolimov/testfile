@@ -1,4 +1,4 @@
-# @testfile/schema
+# @testfile.dev/schema
 
 The JSON schema for the
 [Testfile](https://github.com/christoph-jerolimov/testfile) format —
@@ -16,7 +16,7 @@ first line of your Testfile:
 Or programmatically — the package's only export is the schema itself:
 
 ```js
-import schema from "@testfile/schema" with { type: "json" };
+import schema from "@testfile.dev/schema" with { type: "json" };
 ```
 
 `tests/valid/` and `tests/invalid/` hold the example corpus: every valid file

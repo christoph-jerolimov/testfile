@@ -4,14 +4,14 @@
 // same tools in the same process, so there is no server and no transport
 // here - just the one method the adapter needs.
 //
-// The conversion itself is the SDK's (`mcpTools`), not ours: @testfile/mcp's
+// The conversion itself is the SDK's (`mcpTools`), not ours: @testfile.dev/mcp's
 // ToolDefinition already has the shape it expects - a name, a description,
 // and an `inputSchema` that is a JSON Schema object - so nothing has to
 // restate eight schemas in a second dialect where they could drift.
 import { mcpTools } from "@anthropic-ai/sdk/helpers/beta/mcp";
 import type { BetaRunnableTool } from "@anthropic-ai/sdk/lib/tools/BetaRunnableTool";
-import type { RunHistory } from "@testfile/core";
-import { testfileTools, type ToolDefinition } from "@testfile/mcp";
+import type { RunHistory } from "@testfile.dev/core";
+import { testfileTools, type ToolDefinition } from "@testfile.dev/mcp";
 
 // What the SDK adapter calls. `@modelcontextprotocol/sdk`'s Client is one
 // implementation; this is the other, and the only one eve needs.

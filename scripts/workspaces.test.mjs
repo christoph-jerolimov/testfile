@@ -3,13 +3,13 @@
 //
 // npm has no `workspace:` protocol - that is a pnpm/yarn/bun feature, and npm
 // refuses to install it at all (EUNSUPPORTEDPROTOCOL). What npm does instead
-// is match an ordinary range against the local packages first: `@testfile/core`
+// is match an ordinary range against the local packages first: `@testfile.dev/core`
 // at `^0.1.0` links to testfile-ts/core, because the version there satisfies
 // the range. The moment it does not - a version bumped in one place and not in
 // the other - npm stops linking and goes looking on the registry, where these
 // names are not published, and the install fails with
 //
-//     npm error 404  '@testfile/core@0.2.0' is not in this registry
+//     npm error 404  '@testfile.dev/core@0.2.0' is not in this registry
 //
 // which reads like a network problem rather than a forgotten edit. Nothing in
 // npm keeps the ranges in step (`npm version --workspaces` bumps the versions
@@ -30,7 +30,7 @@ const DEPENDENCIES = [
   "peerDependencies",
   "optionalDependencies",
 ];
-const SCOPE = "@testfile/";
+const SCOPE = "@testfile.dev/";
 
 // Every workspace, by the name it publishes under.
 const workspaces = new Map(

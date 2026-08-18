@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import { defaultExec, lineProgress, s3List, s3Pull, s3Push } from "@testfile/sync";
-import { color } from "@testfile/core";
+import { defaultExec, lineProgress, s3List, s3Pull, s3Push } from "@testfile.dev/sync";
+import { color } from "@testfile.dev/core";
 import {
   commandFailed,
   pickRun,

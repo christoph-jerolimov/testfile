@@ -94,7 +94,7 @@ them into a single run folder, which it uploads like any other run:
       - uses: actions/setup-node@v7
         with: { node-version: 22 }
       - run: npm ci --no-audit --no-fund
-      - run: npm run build --workspace @testfile/cli
+      - run: npm run build --workspace @testfile.dev/cli
       # every artifact unpacks into its own folder, and each of those IS a
       # run folder (run.yaml next to the logs)
       - uses: actions/download-artifact@v8
