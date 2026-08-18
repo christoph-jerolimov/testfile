@@ -15,7 +15,7 @@ const script = fileURLToPath(new URL("./check-links.js", import.meta.url));
 // The links the markdown plugin writes for files that are not pages of the
 // site. Spelled out rather than imported: if the plugin starts writing a
 // different prefix, these tests should notice.
-const REPO_BLOB_URL = "https://github.com/christoph-jerolimov/testfile/blob/main/";
+const REPO_BLOB_URL = "https://github.com/testfile-dev/testfile/blob/main/";
 
 // Builds a dist/-like tree: { "docs/cli/index.html": "<html>" }.
 function site(pages: Record<string, string>): string {

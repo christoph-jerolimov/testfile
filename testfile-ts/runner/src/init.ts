@@ -13,7 +13,7 @@ import { TESTFILE_NAMES } from "./loader.js";
 import type { TestDef } from "./model.js";
 
 const SCHEMA_URL =
-  "https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json";
+  "https://raw.githubusercontent.com/testfile-dev/testfile/main/schema/testfile.schema.json";
 
 interface PackageJson {
   name?: string;

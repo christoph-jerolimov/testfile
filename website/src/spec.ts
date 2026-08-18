@@ -44,4 +44,4 @@ export const specPages: SpecPage[] = [
   },
 ];
 
-export const repoBlobUrl = "https://github.com/christoph-jerolimov/testfile/blob/main";
+export const repoBlobUrl = "https://github.com/testfile-dev/testfile/blob/main";

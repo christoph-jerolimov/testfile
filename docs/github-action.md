@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: christoph-jerolimov/testfile@main
+      - uses: testfile-dev/testfile@main
 ```
 
 The action installs Node, builds the runner, and executes `testfile start`
@@ -76,13 +76,13 @@ with it. Set `auto-labels: false` to record only your own.
 Only the fast tests on pull requests, everything nightly:
 
 ```yaml
-- uses: christoph-jerolimov/testfile@main
+- uses: testfile-dev/testfile@main
   if: github.event_name == 'pull_request'
   with:
     filter-tags: fast
     fail-fast: true
 
-- uses: christoph-jerolimov/testfile@main
+- uses: testfile-dev/testfile@main
   if: github.event_name == 'schedule'
   with:
     filter-tags: nightly
@@ -96,7 +96,7 @@ branch in the checkout, which a shallow single-commit clone doesn't have):
 - uses: actions/checkout@v7
   with:
     fetch-depth: 0
-- uses: christoph-jerolimov/testfile@main
+- uses: testfile-dev/testfile@main
   with:
     changed: true
 ```
@@ -109,7 +109,7 @@ input pattern matched how many changed files.
 JUnit results for your test-report tooling:
 
 ```yaml
-- uses: christoph-jerolimov/testfile@main
+- uses: testfile-dev/testfile@main
   with:
     reporter: junit
     output: results.xml
@@ -143,7 +143,7 @@ jobs:
       statuses: write
     steps:
       - uses: actions/checkout@v7
-      - uses: christoph-jerolimov/testfile@main
+      - uses: testfile-dev/testfile@main
         with:
           statuses: true
 ```
@@ -224,7 +224,7 @@ engine explicitly (or to run services on a cluster the job can reach), set
 the environment variable the runner reads:
 
 ```yaml
-- uses: christoph-jerolimov/testfile@main
+- uses: testfile-dev/testfile@main
   env:
     TESTFILE_ENGINE: kubernetes
 ```
@@ -245,7 +245,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: christoph-jerolimov/testfile@main
+      - uses: testfile-dev/testfile@main
         with:
           # what tells the legs apart when their runs are merged
           variants: platform=${{ matrix.os }}
@@ -282,7 +282,7 @@ Two things to know before you do:
   same `command:` works everywhere — but a test that shells out to
   platform-specific tooling needs the same `if` treatment.
 
-This repository's own [CI](https://github.com/christoph-jerolimov/testfile/blob/main/.github/workflows/ci.yaml)
+This repository's own [CI](https://github.com/testfile-dev/testfile/blob/main/.github/workflows/ci.yaml)
 is that job — one Testfile, three platforms — plus a merge job combining
 the three runs and a kind cluster on the Linux leg for the kubernetes
 conformance case.
@@ -335,7 +335,7 @@ specific log or reproduce one test on its own.
 
 An analysis that lives only in a job log is lost by the next run. The
 result format has a place for it: an optional
-[`analysis`](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md#analysis)
+[`analysis`](https://github.com/testfile-dev/testfile/blob/main/spec/RESULTS.md#analysis)
 field on `run.yaml`, which every viewer shows next to the run — marked as
 somebody's reading of it, never as a result.
 

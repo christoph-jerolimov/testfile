@@ -1,7 +1,7 @@
 # @testfile.dev/runner
 
 The reference runner for the
-[Testfile](https://github.com/christoph-jerolimov/testfile) format: a
+[Testfile](https://github.com/testfile-dev/testfile) format: a
 `testfile` CLI that runs the test suite described in your `Testfile` /
 `testfile.yaml` — starting the services tests depend on, waiting for their
 readiness checks and stopping them gracefully — plus an interactive TUI.
@@ -26,8 +26,8 @@ Beyond that core, the same binary covers the special cases:
 - **shell completions** (`testfile completion bash|zsh|fish`).
 
 Full documentation:
-[christoph-jerolimov.github.io](https://christoph-jerolimov.github.io/) —
-in particular [Getting started](https://christoph-jerolimov.github.io/docs/getting-started)
-and [CLI & TUI](https://christoph-jerolimov.github.io/docs/cli).
+[testfile.dev](https://testfile.dev/) —
+in particular [Getting started](https://testfile.dev/docs/getting-started)
+and [CLI & TUI](https://testfile.dev/docs/cli).
 
 Requires Node.js >= 20. Apache-2.0.

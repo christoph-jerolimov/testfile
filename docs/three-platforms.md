@@ -12,7 +12,7 @@ Actions, and ends with a **single run** you can open in the viewer — one
 verdict, one duration, every test tagged with the platform it ran on.
 
 It is the setup this repository uses for itself; the finished workflow is
-[`.github/workflows/ci.yaml`](https://github.com/christoph-jerolimov/testfile/blob/main/.github/workflows/ci.yaml)
+[`.github/workflows/ci.yaml`](https://github.com/testfile-dev/testfile/blob/main/.github/workflows/ci.yaml)
 (which adds two extras this tour skips: [per-test commit
 statuses](./github-action#a-status-per-test) and a kind cluster for the
 kubernetes conformance case).
@@ -70,7 +70,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
-      - uses: christoph-jerolimov/testfile@main
+      - uses: testfile-dev/testfile@main
         with:
           variants: platform=${{ matrix.os }}
           artifact-name: testfile-run-${{ matrix.os }}

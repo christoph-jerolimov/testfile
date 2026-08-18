@@ -1,7 +1,7 @@
 # @testfile.dev/schema
 
 The JSON schema for the
-[Testfile](https://github.com/christoph-jerolimov/testfile) format —
+[Testfile](https://github.com/testfile-dev/testfile) format —
 [`testfile.schema.json`](testfile.schema.json), the machine-readable
 counterpart of the normative [specification](../spec/TESTFILE.md) (if the two
 disagree, the spec wins and the schema has a bug).
@@ -10,7 +10,7 @@ Use it in any editor with a YAML language server by adding a modeline as the
 first line of your Testfile:
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/testfile-dev/testfile/main/schema/testfile.schema.json
 ```
 
 Or programmatically — the package's only export is the schema itself:

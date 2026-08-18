@@ -20,7 +20,7 @@ there is no migration tooling and no deprecation window.
 That freedom is the point of the review phase — it is the last chance to fix
 mistakes cheaply. If a field name feels wrong, a default surprises you, or a
 concept is missing, please say so now in a
-[GitHub issue](https://github.com/christoph-jerolimov/testfile/issues).
+[GitHub issue](https://github.com/testfile-dev/testfile/issues).
 Trying the format on a real project and reporting back is the most valuable
 contribution you can make before version 1 freezes it.
 

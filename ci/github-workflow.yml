@@ -4,7 +4,7 @@
 # steps cannot: an annotation on the line of the failing test, a job summary,
 # and one commit status per test.
 #
-#   - uses: christoph-jerolimov/testfile@main
+#   - uses: testfile-dev/testfile@main
 #
 # See docs/github-action.md for its inputs. This template is for a pipeline
 # that would rather not depend on an action: the same three commands as the

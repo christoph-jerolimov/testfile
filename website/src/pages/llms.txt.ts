@@ -10,7 +10,7 @@ import { getCollection } from "astro:content";
 import { examples } from "../examples";
 import { specPages } from "../spec";
 
-const SITE = "https://christoph-jerolimov.github.io";
+const SITE = "https://testfile.dev";
 
 // A one-line entry: the link, then what the page answers.
 function entry(title: string, path: string, description: string): string {
@@ -61,7 +61,7 @@ export const GET: APIRoute = async () => {
       "/llms-full.txt",
       "the full text of every page above, for when the whole documentation should be read at once",
     ),
-    "- [Source repository](https://github.com/christoph-jerolimov/testfile): the runner, the viewer, the JSON schemas and the conformance suite",
+    "- [Source repository](https://github.com/testfile-dev/testfile): the runner, the viewer, the JSON schemas and the conformance suite",
     "",
   ];
   return new Response(lines.join("\n"), {

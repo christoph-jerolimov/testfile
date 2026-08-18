@@ -9,7 +9,7 @@ description: Write your first Testfile and run it.
 ## 1. Create a Testfile
 
 Three ways in, in increasing order of typing:
-[the wizard](https://christoph-jerolimov.github.io/start) asks
+[the wizard](https://testfile.dev/start) asks
 a handful of questions and hands you a file to copy; `testfile init` converts what
 your project already has; or create a file called `Testfile` (or
 `testfile.yaml`) in the root of your project yourself:
@@ -98,7 +98,7 @@ the first line of your Testfile to get completion and validation while
 typing:
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/testfile-dev/testfile/main/schema/testfile.schema.json
 ```
 
 ## 5. Tell us how it went
@@ -106,5 +106,5 @@ typing:
 Testfile is under review on the way to version 1 (targeted for Q4 2026), and
 feedback from real projects is what shapes it. If something was confusing,
 missing or surprising while you followed this guide, please open a
-[GitHub issue](https://github.com/christoph-jerolimov/testfile/issues) —
+[GitHub issue](https://github.com/testfile-dev/testfile/issues) —
 it genuinely helps.

@@ -11,13 +11,13 @@ Testfile, run the processes it describes and record what happened;
 `testfile runs`, `explain`, `repro`, `tui`, `serve` and the rest are
 strictly read-only over those recorded runs — they never touch the
 Testfile and never start a test, so they work with any tool producing the
-documented [result format](https://github.com/christoph-jerolimov/testfile/tree/main/spec),
+documented [result format](https://github.com/testfile-dev/testfile/tree/main/spec),
 not just this runner.
 
 Under the hood that separation is real: the reading half is a set of
-packages ([`core`](https://github./christoph-jerolimov/testfile/tree/main/testfile-ts/core),
+packages ([`core`](https://github.com/testfile-dev/testfile/tree/main/testfile-ts/core),
 `sync`, `mcp`, `tui`, `web`) that never depend on the runner,
-and [`runner`](https://github.com/christoph-jerolimov/testfile/tree/main/testfile-ts/runner)
+and [`runner`](https://github.com/testfile-dev/testfile/tree/main/testfile-ts/runner)
 is the only one that starts anything.
 
 This page is the guided tour; the [CLI reference](./cli-reference) lists
@@ -934,7 +934,7 @@ narrows anything is the time window:
 | **Status** | runs / tests, multi-select (several values are an OR) | everything |
 | **Labels** | runs, multi-select over the recorded [labels](#labelling-runs) (`branch=main`-style); a key with more than 3 values becomes a dropdown instead of a chip per value | everything |
 | **Variants** | runs, multi-select over `platform=linux`-style labels; a merged run matches when *any* of its legs does | everything |
-| **Tags** | tests, multi-select over the tags of the recorded [suite tree](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md) — nested tests inherit the tags of their groups | everything |
+| **Tags** | tests, multi-select over the tags of the recorded [suite tree](https://github.com/testfile-dev/testfile/blob/main/spec/RESULTS.md) — nested tests inherit the tags of their groups | everything |
 | **flaky only** | tests, an on/off chip: keeps only tests the [flaky rule](#run-history) calls flaky — 25% to 75% of their last 20 results failed. Broken tests are badged but not matched by this chip | off |
 | **Search** | free text over run ids, test paths, statuses and variant labels | empty |
 
@@ -1074,8 +1074,8 @@ so an assistant can read the documentation without scraping HTML:
 
 | File | Contents |
 | ---- | -------- |
-| [`/llms.txt`](https://christoph-jerolimov.github.io/llms.txt) | one line per page — title, link and what the page answers — so a model can fetch the two pages it needs |
-| [`/llms-full.txt`](https://christoph-jerolimov.github.io/llms-full.txt) | every page's markdown, concatenated, for reading the lot at once |
+| [`/llms.txt`](https://testfile.dev/llms.txt) | one line per page — title, link and what the page answers — so a model can fetch the two pages it needs |
+| [`/llms-full.txt`](https://testfile.dev/llms-full.txt) | every page's markdown, concatenated, for reading the lot at once |
 
 Both are generated from the same content the pages are built from, and the
 build fails if a published page is missing from the index — an index that
@@ -1088,7 +1088,7 @@ A run says what happened. It cannot say what it *meant* — that three
 failures share one cause, that the flake was a port collision, that the
 red was infrastructure and not the change. Whoever works that out can
 write it into the record, as an optional
-[`analysis`](https://github.com/christoph-jerolimov/testfile/blob/main/spec/RESULTS.md#analysis)
+[`analysis`](https://github.com/testfile-dev/testfile/blob/main/spec/RESULTS.md#analysis)
 field on `run.yaml`:
 
 ```yaml

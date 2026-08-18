@@ -4,7 +4,7 @@
 > a draft that may still change based on feedback. Version 1 — the first
 > version with stability guarantees — is targeted for Q4 2026. Feedback on
 > any part of the format is welcome via
-> [GitHub issues](https://github.com/christoph-jerolimov/testfile/issues).
+> [GitHub issues](https://github.com/testfile-dev/testfile/issues).
 
 This document is the normative specification of the Testfile format — the
 *input* side: how a project describes its tests. The *output* side — how a
