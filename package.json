@@ -41,7 +41,6 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@changesets/changelog-github": "^1.0.0",
     "@changesets/cli": "^3.0.0",
     "esbuild": "^0.28.2",
     "oxfmt": "^0.63.0",
