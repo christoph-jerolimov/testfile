@@ -1,7 +1,7 @@
 {
   "name": "@testfile.dev/monorepo",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Testfile — a declarative YAML format for running test suites with services, matrices and dynamic ports",
   "license": "Apache-2.0",
   "workspaces": [
@@ -29,6 +29,9 @@
     "test": "npm test --workspaces --if-present",
     "test:source": "node --experimental-transform-types --import ./testfile-ts/from-source.mjs --test \"testfile-ts/*/src/**/*.test.ts\" \"testfile-ts/*/src/**/*.test.tsx\"",
     "test:source:watch": "node --experimental-transform-types --import ./testfile-ts/from-source.mjs --test --watch \"testfile-ts/*/src/**/*.test.ts\" \"testfile-ts/*/src/**/*.test.tsx\"",
+    "changeset": "changeset",
+    "version-packages": "changeset version && npm install --package-lock-only --no-audit --no-fund",
+    "release": "npm run build --workspace @testfile.dev/schema --workspace @testfile.dev/core --workspace @testfile.dev/runner --workspace @testfile.dev/sync --workspace @testfile.dev/mcp --workspace @testfile.dev/tui --workspace @testfile.dev/web --workspace @testfile.dev/cli --workspace @testfile.dev/eve --if-present && changeset publish",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "format": "oxfmt",
@@ -38,6 +41,8 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.0",
+    "@changesets/cli": "^3.0.0",
     "esbuild": "^0.28.2",
     "oxfmt": "^0.63.0",
     "oxlint": "^1.78.0",

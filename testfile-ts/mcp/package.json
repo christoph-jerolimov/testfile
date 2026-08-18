@@ -1,6 +1,6 @@
 {
   "name": "@testfile.dev/mcp",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Model Context Protocol server over recorded Testfile runs: read-only tools for an AI assistant",
   "license": "Apache-2.0",
   "type": "module",
@@ -21,7 +21,7 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
-    "@testfile.dev/core": "^0.1.0"
+    "@testfile.dev/core": "^0.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",

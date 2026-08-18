@@ -1,6 +1,6 @@
 {
   "name": "@testfile.dev/nodejs-bundle",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": true,
   "description": "Experimental: the testfile CLI compiled into a single binary with node --build-sea (node 25+)",
   "license": "Apache-2.0",

@@ -1,6 +1,6 @@
 {
   "name": "@testfile.dev/conformance",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Runner-independent conformance suite for the Testfile format",
   "license": "Apache-2.0",
   "type": "module",

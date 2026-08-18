@@ -207,6 +207,35 @@ See [docs/github-action.md](docs/github-action.md) for all inputs.
   and publishes the VS Code extension on `vscode-v*` tags.
 - [`deploy-website.yaml`](.github/workflows/deploy-website.yaml) publishes
   the website to GitHub Pages on every push to `main`.
+- [`release.yaml`](.github/workflows/release.yaml) drives npm releases with
+  [changesets](https://github.com/changesets/changesets) — see below.
+
+## Releases
+
+npm releases are managed with
+[changesets](https://github.com/changesets/changesets). A pull request that
+changes one of the published packages (`@testfile.dev/schema` and the
+`testfile-ts/` libraries and CLI — everything without `"private": true`)
+should carry a changeset describing the change and the semver bump it needs:
+
+```sh
+npm run changeset
+```
+
+This writes a small markdown file into [`.changeset/`](.changeset/) that is
+committed with the change and becomes the package's changelog entry.
+
+On every push to `main`, [`release.yaml`](.github/workflows/release.yaml)
+collects the pending changesets into a **Version packages** pull request that
+applies the bumps (including dependents — bumping `@testfile.dev/core`
+patches everything that depends on it) and writes the `CHANGELOG.md` files.
+Merging that PR makes the same workflow publish the new versions to npm with
+provenance and tag the release. Publishing requires an npm automation token
+in the `NPM_TOKEN` repository secret.
+
+The private workspaces (bundles, viewer, website, conformance) are versioned
+along but never published; the VS Code extension keeps its own
+tag-driven release via `release-vscode.yaml`.
 
 ## Feedback and contributing
 
