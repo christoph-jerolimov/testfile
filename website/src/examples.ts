@@ -55,4 +55,4 @@ export const examples: Example[] = Object.entries(metaFiles)
 // same way there is no documentation index.
 export const firstExample = examples[0];
 
-export const examplesRepoUrl = "https://github.com/christoph-jerolimov/testfile/blob/main/examples";
+export const examplesRepoUrl = "https://github.com/testfile-dev/testfile/blob/main/examples";

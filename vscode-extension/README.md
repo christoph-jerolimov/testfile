@@ -1,6 +1,6 @@
 # Testfile for VS Code
 
-The editor companion of the [Testfile](https://github.com/christoph-jerolimov/testfile)
+The editor companion of the [Testfile](https://github.com/testfile-dev/testfile)
 format and runner.
 
 ## Features

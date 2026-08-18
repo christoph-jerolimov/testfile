@@ -12,7 +12,7 @@ adjust the commands, run `testfile start`.
 | [`monorepo`](./monorepo/) | Any | Glob `include` of per-package Testfiles |
 
 They are rendered on the
-[examples page](https://christoph-jerolimov.github.io/examples) of
+[examples page](https://testfile-dev.github.io/examples) of
 the website and validated against the schema by the repository's own CI, so
 they never drift from the current format.
 

@@ -14,15 +14,15 @@ translation of your test setup into that system's YAML dialect.
 The [GitHub Action](./github-action) adds annotations, a job summary and
 artifact upload on top. For everything else, copy one of the templates in
 the repository's
-[`ci/` folder](https://github.com/christoph-jerolimov/testfile/tree/main/ci):
+[`ci/` folder](https://github.com/testfile-dev/testfile/tree/main/ci):
 
 | System | Template |
 | ------ | -------- |
-| GitLab CI | [`ci/.gitlab-ci.yml`](https://github.com/christoph-jerolimov/testfile/blob/main/ci/.gitlab-ci.yml) |
-| Jenkins | [`ci/Jenkinsfile`](https://github.com/christoph-jerolimov/testfile/blob/main/ci/Jenkinsfile) |
-| CircleCI | [`ci/.circleci-config.yml`](https://github.com/christoph-jerolimov/testfile/blob/main/ci/.circleci-config.yml) |
-| Buildkite | [`ci/buildkite-pipeline.yml`](https://github.com/christoph-jerolimov/testfile/blob/main/ci/buildkite-pipeline.yml) |
-| GitHub Actions | [`ci/github-workflow.yml`](https://github.com/christoph-jerolimov/testfile/blob/main/ci/github-workflow.yml) |
+| GitLab CI | [`ci/.gitlab-ci.yml`](https://github.com/testfile-dev/testfile/blob/main/ci/.gitlab-ci.yml) |
+| Jenkins | [`ci/Jenkinsfile`](https://github.com/testfile-dev/testfile/blob/main/ci/Jenkinsfile) |
+| CircleCI | [`ci/.circleci-config.yml`](https://github.com/testfile-dev/testfile/blob/main/ci/.circleci-config.yml) |
+| Buildkite | [`ci/buildkite-pipeline.yml`](https://github.com/testfile-dev/testfile/blob/main/ci/buildkite-pipeline.yml) |
+| GitHub Actions | [`ci/github-workflow.yml`](https://github.com/testfile-dev/testfile/blob/main/ci/github-workflow.yml) |
 
 The GitHub one is there for completeness — on GitHub the
 [action](./github-action) is the better choice, since annotations, the job

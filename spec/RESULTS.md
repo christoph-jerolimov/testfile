@@ -2,7 +2,7 @@
 
 > **Status: under review**, together with the [Testfile format](TESTFILE.md).
 > Feedback is welcome via
-> [GitHub issues](https://github.com/christoph-jerolimov/testfile/issues).
+> [GitHub issues](https://github.com/testfile-dev/testfile/issues).
 
 The Testfile specification has two parts:
 

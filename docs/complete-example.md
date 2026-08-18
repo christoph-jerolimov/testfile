@@ -15,7 +15,7 @@ Testfile is usually thirty lines. Copy the two or three parts you recognise,
 not the whole thing.
 
 The file below is validated against the
-[JSON schema](https://github.com/christoph-jerolimov/testfile/blob/main/schema/testfile.schema.json)
+[JSON schema](https://github.com/testfile-dev/testfile/blob/main/schema/testfile.schema.json)
 on every commit, so it cannot drift away from what the runner accepts.
 
 ```yaml

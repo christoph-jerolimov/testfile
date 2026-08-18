@@ -24,7 +24,7 @@ const specPages: Record<string, string> = {
   "spec/VERSIONING.md": "versioning",
 };
 
-const repoBlobUrl = "https://github.com/christoph-jerolimov/testfile/blob/main";
+const repoBlobUrl = "https://github.com/testfile-dev/testfile/blob/main";
 
 // A node of the rendered document; only elements and their children are
 // looked at, so this is all the shape that matters here.

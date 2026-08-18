@@ -9,7 +9,7 @@ import { rewriteMarkdownLinks } from "./src/markdown-links";
 const base = "";
 
 export default defineConfig({
-  site: "https://christoph-jerolimov.github.io",
+  site: "https://testfile-dev.github.io",
   markdown: {
     // The remark/rehype pipeline, not Astro's newer default processor: the
     // link rewriting below is a rehype plugin, and the heading ids this

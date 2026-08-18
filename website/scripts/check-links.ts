@@ -22,7 +22,7 @@ const ID_ATTRIBUTES = /(?:id|name)="([^"]*)"/g;
 // Links the markdown plugin points at the repository instead of the site.
 // They are not fetched either - the file they name is looked up in the
 // working copy, which catches a renamed or deleted repository file.
-const REPO_BLOB_URL = "https://github.com/christoph-jerolimov/testfile/blob/main/";
+const REPO_BLOB_URL = "https://github.com/testfile-dev/testfile/blob/main/";
 
 interface Options {
   base?: string;

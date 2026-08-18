@@ -32,7 +32,7 @@ reads the second and never learns which runner produced it.
 version 1 — the first with stability guarantees — is targeted for Q4 2026.
 That makes this the cheap moment to fix mistakes: if a field name feels
 wrong, a default surprises you or something is missing, please say so in a
-[GitHub issue](https://github.com/christoph-jerolimov/testfile/issues).
+[GitHub issue](https://github.com/testfile-dev/testfile/issues).
 
 All three documents are published on the website as verbatim copies, under
-[/spec](https://christoph-jerolimov.github.io/spec/testfile).
+[/spec](https://testfile-dev.github.io/spec/testfile).

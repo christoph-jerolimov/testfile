@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testrun.schema.json",
+  "$id": "https://raw.githubusercontent.com/testfile-dev/testfile/main/schema/testrun.schema.json",
   "title": "Testfile run record",
   "description": "The run.yaml a Testfile runner writes into .testfile/runs/<id>/. Describes one recorded test run: its outcome, the tests that executed, the services that were started, and the shape of the Testfile it came from. See spec/RESULTS.md for the normative description.",
   "type": "object",

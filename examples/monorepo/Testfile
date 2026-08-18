@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/christoph-jerolimov/testfile/main/schema/testfile.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/testfile-dev/testfile/main/schema/testfile.schema.json
 version: 0
 name: monorepo
 
