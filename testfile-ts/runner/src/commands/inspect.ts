@@ -1,6 +1,6 @@
 import { dirname } from "node:path";
 import { type Command } from "commander";
-import { color, loadTestfile, Session } from "@testfile.dev/runner";
+import { color, loadTestfile, Session } from "../index.js";
 import {
   addFilterOptions,
   applyChanged,

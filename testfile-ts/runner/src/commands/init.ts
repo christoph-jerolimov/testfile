@@ -1,5 +1,5 @@
 import { type Command } from "commander";
-import { color, initTestfile } from "@testfile.dev/runner";
+import { color, initTestfile } from "../index.js";
 import { collect } from "./shared.js";
 import { resolve } from "node:path";
 

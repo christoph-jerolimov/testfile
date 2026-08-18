@@ -141,9 +141,14 @@ test:
             - vscode-extension/package.json
             - vscode-extension/build.mjs
             - schema/testfile.schema.json
+        # One build for all TypeScript packages: building the CLI builds
+        # everything it references (core, runner, sync, mcp, tui, web), so
+        # every step below runs against this one dist. The action only
+        # builds @testfile.dev/runner for itself - the full command line is
+        # built here, where its tests and the steps that drive it need it.
         - name: build-cli
           tags: [build]
-          command: npm run build --workspace @testfile.dev/runner
+          command: npm run build --workspace @testfile.dev/cli
         # The recorded-run domain everything else reads: built first, since
         # the viewer and its tests compile against it.
         - name: core

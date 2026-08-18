@@ -1,5 +1,5 @@
 import { type Command } from "commander";
-import { color, type CompletionModel, generateCompletion } from "@testfile.dev/runner";
+import { color, type CompletionModel, generateCompletion } from "../index.js";
 
 export function registerCompletion(program: Command): void {
   program
@@ -9,7 +9,7 @@ export function registerCompletion(program: Command): void {
     .action((shell: string) => {
       try {
         const model: CompletionModel = {
-          program: "testfile",
+          program: program.name(),
           commands: program.commands
             .filter((command) => command.name() !== "completion")
             .map((command) => ({

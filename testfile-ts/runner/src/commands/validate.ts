@@ -1,5 +1,5 @@
 import { type Command } from "commander";
-import { color, loadTestfile } from "@testfile.dev/runner";
+import { color, loadTestfile } from "../index.js";
 import { wantsJson, writeJson } from "./shared.js";
 
 export function registerValidate(program: Command): void {

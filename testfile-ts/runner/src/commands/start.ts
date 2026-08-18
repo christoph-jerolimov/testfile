@@ -13,7 +13,7 @@ import {
   watchDirectory,
   WatchScheduler,
   writeReport,
-} from "@testfile.dev/runner";
+} from "../index.js";
 import {
   addFilterOptions,
   applyChanged,

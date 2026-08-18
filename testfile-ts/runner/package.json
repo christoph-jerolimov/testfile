@@ -4,6 +4,9 @@
   "description": "Runs the tests a Testfile describes: the suite, its services, containers and clusters",
   "license": "Apache-2.0",
   "type": "module",
+  "bin": {
+    "testfile-runner": "./dist/cli.js"
+  },
   "scripts": {
     "build": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc -b tsconfig.json",
     "pretest": "npm run build",
@@ -13,6 +16,7 @@
     "@testfile.dev/core": "^0.0.0",
     "@testfile.dev/schema": "^0.0.0",
     "ajv": "^8.20.0",
+    "commander": "^15.0.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
@@ -25,6 +29,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "default": "./dist/commands/index.js"
     }
   },
   "files": [

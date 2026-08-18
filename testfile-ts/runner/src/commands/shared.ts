@@ -21,7 +21,7 @@ import {
   splitGenericFilters,
   type TestFilters,
   walk,
-} from "@testfile.dev/runner";
+} from "../index.js";
 
 export { predictCacheHits };
 
