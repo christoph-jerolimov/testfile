@@ -19,7 +19,7 @@
     "testfile-ts/nodejs-bundle",
     "testfile-ts/rslib-bundle",
     "testfile-ts/scriptc-native",
-    "viewer-web",
+    "testfile-viewer",
     "vscode-extension",
     "website",
     "conformance"

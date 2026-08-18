@@ -124,15 +124,15 @@ test:
             npx playwright test
           artifacts:
             - test-results/**
-        - name: viewer-web
+        - name: testfile-viewer
           tags: [fast, unit]
-          command: npm test --workspace viewer-web
+          command: npm test --workspace testfile-viewer
           inputs:
-            - viewer-web/src/**
-            - viewer-web/package.json
-            - viewer-web/tsconfig*.json
-            - viewer-web/vite.config.ts
-            - viewer-web/index.html
+            - testfile-viewer/src/**
+            - testfile-viewer/package.json
+            - testfile-viewer/tsconfig*.json
+            - testfile-viewer/vite.config.ts
+            - testfile-viewer/index.html
         - name: vscode-extension
           tags: [fast, unit, editor]
           command: npm test --workspace vscode-extension
@@ -332,8 +332,8 @@ test:
         - name: viewer-e2e
           tags: [slow, e2e, browser]
           if: ${{ env.TESTFILE_OS }} == linux
-          needs: [build-cli, viewer-web, browsers]
-          workdir: viewer-web
+          needs: [build-cli, testfile-viewer, browsers]
+          workdir: testfile-viewer
           services:
             viewer:
               command: node ../testfile-ts/cli/dist/cli.js serve e2e/fixture --port ${{ ports.e2e }} --name "E2E Fixture"

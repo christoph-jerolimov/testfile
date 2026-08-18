@@ -6,6 +6,6 @@
     "**/dist/**",
     "**/.astro/**",
     "conformance/cases/**",
-    "viewer-web/e2e/fixture/**"
+    "testfile-viewer/e2e/fixture/**"
   ]
 }

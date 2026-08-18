@@ -34,7 +34,7 @@ export function registerServe(program: Command): void {
           console.log(
             color(
               90,
-              "web viewer not built — REST API only (npm run build --workspace viewer-web)",
+              "web viewer not built — REST API only (npm run build --workspace testfile-viewer)",
             ),
           );
         }
