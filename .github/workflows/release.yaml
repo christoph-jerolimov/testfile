@@ -1,0 +1,58 @@
+name: Release
+
+# Releases are driven by changesets (see .changeset/README.md and the
+# Releases section of the README). On every push to main this workflow
+# looks at the pending changeset files:
+#
+#  - if there are any, it opens (or refreshes) a "Version packages" pull
+#    request that applies the version bumps and writes the changelogs;
+#  - if there are none - which is the state right after that PR merges -
+#    it publishes every package whose version is not on npm yet, and tags
+#    the release (one @testfile.dev/<name>@<version> tag per package).
+#
+# Publishing needs an npm automation token in the NPM_TOKEN repository
+# secret. The Version-packages PR is opened with the workflow's own
+# GITHUB_TOKEN, so its CI does not start on its own; close and reopen the
+# PR (or push to it) if you need the checks before merging.
+
+on:
+  push:
+    branches: [main]
+
+# never let two release runs race each other over the PR and the tags
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  release:
+    name: Version PR or npm publish
+    # forks have no NPM_TOKEN and should not open version PRs
+    if: github.repository == 'testfile-dev/testfile'
+    runs-on: ubuntu-latest
+    permissions:
+      # push the version-bump branch and the release tags
+      contents: write
+      # open and update the "Version packages" pull request
+      pull-requests: write
+      # let npm attach provenance to the published packages
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # the changelog generator walks git history to find the PR that
+          # added each changeset; a shallow clone would come up empty
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm ci --no-audit --no-fund
+      - name: Open the version PR, or publish what it merged
+        uses: changesets/action@v1
+        with:
+          version: npm run version-packages
+          publish: npm run release
+          commit: "Version packages"
+          title: "Version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: true
