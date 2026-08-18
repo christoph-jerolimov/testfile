@@ -10,7 +10,7 @@ Use it in any editor with a YAML language server by adding a modeline as the
 first line of your Testfile:
 
 ```yaml
-# yaml-language-server: $schema=https://raw.githubusercontent.com/testfile-dev/testfile/main/schema/testfile.schema.json
+# yaml-language-server: $schema=https://testfile.dev/next/testfile.schema.json
 ```
 
 Or programmatically — the package's only export is the schema itself:

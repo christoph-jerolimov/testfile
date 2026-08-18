@@ -27,7 +27,7 @@ import {
 
 // Written as the first line of a merged run.yaml, like the runner does.
 const RUN_SCHEMA_MODELINE =
-  "# yaml-language-server: $schema=https://raw.githubusercontent.com/testfile-dev/testfile/main/schema/testrun.schema.json";
+  "# yaml-language-server: $schema=https://testfile.dev/next/testrun.schema.json";
 
 export interface MergeSource {
   // The run folder holding run.yaml and the logs.
