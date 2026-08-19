@@ -564,7 +564,8 @@ A nested summary with per-test durations is printed at the end.
 (it never starts tests — that is `testfile start`'s job). It is a
 multi-page interface, mirroring the [web viewer](#the-web-viewer): pages
 navigate forward, `esc` walks back, and a breadcrumb on top says where you
-are.
+are. The [screenshots](./screenshots#the-terminal-ui) page shows every one
+of its pages.
 
 The **index page** has two tabs, switched with `tab` (or `1`/`2`):
 
@@ -872,7 +873,8 @@ imported and skipped runs is unchanged.
 ## The web viewer
 
 `testfile serve` starts a small web UI over the recorded runs — the
-browser sibling of the TUI:
+browser sibling of the TUI, view by view on the
+[screenshots](./screenshots#the-web-viewer) page:
 
 ```sh
 testfile serve          # http://127.0.0.1:7357

@@ -1,6 +1,6 @@
 ---
 title: GitHub Action
-order: 8
+order: 9
 description: Run your Testfile in GitHub Actions with one step.
 ---
 
