@@ -1,6 +1,6 @@
 {
   "name": "@testfile.dev/runner",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Runs the tests a Testfile describes: the suite, its services, containers and clusters",
   "license": "Apache-2.0",
   "type": "module",
@@ -13,8 +13,8 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
-    "@testfile.dev/core": "^0.0.0",
-    "@testfile.dev/schema": "^0.0.0",
+    "@testfile.dev/core": "^0.0.1",
+    "@testfile.dev/schema": "^0.0.1",
     "ajv": "^8.20.0",
     "commander": "^15.0.0",
     "yaml": "^2.9.0"

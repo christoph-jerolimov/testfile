@@ -1,6 +1,6 @@
 {
   "name": "@testfile.dev/tui",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "The terminal UI over recorded Testfile runs (Ink); the only package that needs a renderer",
   "license": "Apache-2.0",
   "type": "module",
@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@tanstack/react-table": "^9.1.2",
-    "@testfile.dev/core": "^0.0.0",
+    "@testfile.dev/core": "^0.0.1",
     "ink": "^7.1.1",
     "react": "^19.2.8"
   },

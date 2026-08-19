@@ -1,6 +1,6 @@
 {
   "name": "@testfile.dev/web",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Localhost REST API over recorded Testfile runs, serving the web viewer",
   "license": "Apache-2.0",
   "type": "module",
@@ -21,7 +21,7 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
-    "@testfile.dev/core": "^0.0.0"
+    "@testfile.dev/core": "^0.0.1"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
