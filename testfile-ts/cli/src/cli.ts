@@ -4,9 +4,11 @@
 // The suite commands - what the Testfile describes, and running it - live
 // in @testfile.dev/runner, the only package that starts processes, and are
 // registered from there (so `npx @testfile.dev/runner start` is the same
-// code). `history/` asks things of the runs that came out, over the
-// read-only packages (core, sync, mcp, tui, web). Nothing here does any
-// work itself: a command parses flags, calls a library and prints.
+// code). The history commands ask things of the runs that came out, over
+// the read-only packages: the sharing commands live in @testfile.dev/sync
+// and the MCP server's in @testfile.dev/mcp, next to the code they drive;
+// history/ holds the rest (core, tui, web). Nothing anywhere does the work
+// itself: a command parses flags, calls a library and prints.
 //
 // Keeping them in one binary means `testfile start` and `testfile explain`
 // are the same tool, and the heavy parts stay behind an import that only
@@ -22,17 +24,19 @@ import {
   registerTags,
   registerValidate,
 } from "@testfile.dev/runner/commands";
-import { registerArchive } from "./history/archive.js";
+import { registerMcp } from "@testfile.dev/mcp/commands";
+import {
+  registerArchive,
+  registerGithub,
+  registerGitlab,
+  registerS3,
+} from "@testfile.dev/sync/commands";
 import { registerDiff } from "./history/diff.js";
 import { registerExplain } from "./history/explain.js";
-import { registerGithub } from "./history/github.js";
-import { registerGitlab } from "./history/gitlab.js";
 import { registerInspectRun } from "./history/inspect.js";
-import { registerMcp } from "./history/mcp.js";
 import { registerMerge } from "./history/merge.js";
 import { registerRepro } from "./history/repro.js";
 import { registerRuns } from "./history/runs.js";
-import { registerS3 } from "./history/s3.js";
 import { registerServe } from "./history/serve.js";
 import { registerTui } from "./history/tui.js";
 

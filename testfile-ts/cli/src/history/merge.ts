@@ -3,16 +3,18 @@ import { join, resolve } from "node:path";
 import type { Command } from "commander";
 import {
   color,
+  commandFailed,
   formatMs,
   HISTORY_DIR,
   mergedRunId,
   type MergeSource,
   readRunFolder,
+  resolveHistoryBase,
   RunHistory,
   variantLabel,
   writeMergedRun,
 } from "@testfile.dev/core";
-import { colorStatus, commandFailed, resolveHistoryBase } from "./shared.js";
+import { colorStatus } from "./shared.js";
 
 // A run to merge, named either as a folder (what a CI artifact unpacks to)
 // or as an id (or id prefix) in the history the merge writes to.

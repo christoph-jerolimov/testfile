@@ -1,7 +1,14 @@
 import type { Command } from "commander";
-import { gitlabRunArchives, lineProgress, syncFromGitlab } from "@testfile.dev/sync";
-import { color, pad } from "@testfile.dev/core";
-import { commandFailed, reportImport, resolveHistoryBase, wantsJson, writeJson } from "./shared.js";
+import { gitlabRunArchives, lineProgress, syncFromGitlab } from "../index.js";
+import {
+  color,
+  commandFailed,
+  pad,
+  resolveHistoryBase,
+  wantsJson,
+  writeJson,
+} from "@testfile.dev/core";
+import { reportImport } from "./shared.js";
 
 export function registerGitlab(program: Command): void {
   const gitlabCommand = program

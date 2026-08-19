@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import { formatRepro, reproOf } from "@testfile.dev/core";
-import { commandFailed, findRun, loadedHistory, wantsJson, writeJson } from "./shared.js";
+import { commandFailed, formatRepro, reproOf, wantsJson, writeJson } from "@testfile.dev/core";
+import { findRun, loadedHistory } from "./shared.js";
 
 // "platform=linux" pairs into a map, to pick one leg of a merged run.
 function parseVariants(pairs: string[]): Record<string, string> {

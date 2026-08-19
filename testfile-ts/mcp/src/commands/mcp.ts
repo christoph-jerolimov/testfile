@@ -1,7 +1,7 @@
 import type { Command } from "commander";
-import { serveStdio, testfileTools } from "@testfile.dev/mcp";
+import { serveStdio, testfileTools } from "../index.js";
 import { RunHistory } from "@testfile.dev/core";
-import { commandFailed, resolveHistoryBase } from "./shared.js";
+import { commandFailed, resolveHistoryBase } from "@testfile.dev/core";
 
 const INSTRUCTIONS = [
   "Recorded Testfile runs: what ran, what failed, and why.",

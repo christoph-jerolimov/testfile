@@ -1,6 +1,6 @@
 import type { Command } from "commander";
-import { explainOf, formatExplain } from "@testfile.dev/core";
-import { commandFailed, findRun, loadedHistory, wantsJson, writeJson } from "./shared.js";
+import { commandFailed, explainOf, formatExplain, wantsJson, writeJson } from "@testfile.dev/core";
+import { findRun, loadedHistory } from "./shared.js";
 
 export function registerExplain(program: Command): void {
   program

@@ -1,14 +1,7 @@
 import type { Command } from "commander";
-import { defaultExec, lineProgress, s3List, s3Pull, s3Push } from "@testfile.dev/sync";
-import { color } from "@testfile.dev/core";
-import {
-  commandFailed,
-  pickRun,
-  reportImport,
-  resolveHistoryBase,
-  wantsJson,
-  writeJson,
-} from "./shared.js";
+import { defaultExec, lineProgress, s3List, s3Pull, s3Push } from "../index.js";
+import { color, commandFailed, resolveHistoryBase, wantsJson, writeJson } from "@testfile.dev/core";
+import { pickRun, reportImport } from "./shared.js";
 
 export function registerS3(program: Command): void {
   const s3Command = program
