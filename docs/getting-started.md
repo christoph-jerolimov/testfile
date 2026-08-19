@@ -108,11 +108,3 @@ typing:
 ```yaml
 # yaml-language-server: $schema=https://testfile.dev/next/testfile.schema.json
 ```
-
-## 5. Tell us how it went
-
-Testfile is under review on the way to version 1 (targeted for Q4 2026), and
-feedback from real projects is what shapes it. If something was confusing,
-missing or surprising while you followed this guide, please open a
-[GitHub issue](https://github.com/testfile-dev/testfile/issues) —
-it genuinely helps.
