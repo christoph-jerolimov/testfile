@@ -4,6 +4,9 @@
   "description": "Model Context Protocol server over recorded Testfile runs: read-only tools for an AI assistant",
   "license": "Apache-2.0",
   "type": "module",
+  "bin": {
+    "testfile-mcp": "./dist/cli.js"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

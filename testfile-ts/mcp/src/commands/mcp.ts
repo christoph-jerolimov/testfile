@@ -1,7 +1,6 @@
 import type { Command } from "commander";
 import { serveStdio, testfileTools } from "../index.js";
-import { RunHistory } from "@testfile.dev/core";
-import { commandFailed, resolveHistoryBase } from "@testfile.dev/core";
+import { commandFailed, resolveHistoryBase, RunHistory } from "@testfile.dev/core";
 
 const INSTRUCTIONS = [
   "Recorded Testfile runs: what ran, what failed, and why.",
@@ -14,9 +13,12 @@ const INSTRUCTIONS = [
   "`testfile start -n <test>`, or `testfile start --json-stream` to follow a run live.",
 ].join("\n");
 
-export function registerMcp(program: Command): void {
+// In the full `testfile` command line this is one command of many; the
+// package's own bin registers it as the default, so `npx @testfile.dev/mcp
+// [path]` serves without naming a command.
+export function registerMcp(program: Command, opts: { isDefault?: boolean } = {}): void {
   program
-    .command("mcp")
+    .command("mcp", { isDefault: opts.isDefault ?? false })
     .argument("[path]", "directory containing a .testfile folder", ".")
     .description("Serve the recorded runs to an AI assistant over MCP (stdio)")
     .action((path: string) => {
