@@ -1,6 +1,7 @@
 ---
 title: CLI & TUI
-order: 7
+order: 3
+category: Quick start
 description: The testfile command line runner and its interactive terminal UI.
 ---
 

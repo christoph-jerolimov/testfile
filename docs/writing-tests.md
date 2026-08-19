@@ -1,6 +1,7 @@
 ---
 title: Writing tests
-order: 3
+order: 1
+category: Test definition
 description: Commands, scripts, sequences, parallel groups and failure handling.
 ---
 

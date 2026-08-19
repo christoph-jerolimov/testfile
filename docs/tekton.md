@@ -1,6 +1,7 @@
 ---
 title: Tekton
-order: 11
+order: 3
+category: Run tests
 description: Run your Testfile as a Tekton Task — with the services as pods on the same cluster.
 ---
 

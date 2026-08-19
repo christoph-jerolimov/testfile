@@ -1,6 +1,7 @@
 ---
 title: Other CI systems
-order: 13
+order: 4
+category: Run tests
 description: Run a Testfile on GitLab CI, Jenkins, CircleCI or Buildkite — and bring those runs home.
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: Matrix builds
-order: 4
+order: 2
+category: Test definition
 description: Run one test across many combinations of versions and variants.
 ---
 

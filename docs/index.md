@@ -1,6 +1,7 @@
 ---
 title: What is a Testfile?
 order: 1
+category: Quick start
 description: A declarative YAML format that describes how your project runs its tests.
 ---
 

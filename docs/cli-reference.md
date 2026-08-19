@@ -1,6 +1,7 @@
 ---
 title: CLI reference
-order: 14
+order: 5
+category: Quick start
 description: Every command and argument of the testfile command line.
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: Environment & ports
-order: 6
+order: 4
+category: Test definition
 description: Environment variables, random ports and template expressions.
 ---
 

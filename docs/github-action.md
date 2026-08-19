@@ -1,6 +1,7 @@
 ---
 title: GitHub Action
-order: 9
+order: 1
+category: Run tests
 description: Run your Testfile in GitHub Actions with one step.
 ---
 

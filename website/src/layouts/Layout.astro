@@ -1,5 +1,6 @@
 ---
 import { getCollection } from "astro:content";
+import { categoryOf, compareDocs, docsCategories, fallbackCategory } from "../docs";
 import { guideSlug, isGuide } from "../guides";
 import { specPages } from "../spec";
 
@@ -12,9 +13,14 @@ interface Props {
 }
 
 const { title, description, nav = "docs" } = Astro.props;
-const all = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.order);
-const docs = all.filter((doc) => !isGuide(doc));
-const guides = all.filter(isGuide);
+const all = await getCollection("docs");
+const docs = all.filter((doc) => !isGuide(doc)).sort(compareDocs);
+const guides = all.filter(isGuide).sort((a, b) => a.data.order - b.data.order);
+// The menu groups, in their fixed order - plus the fallback group when a
+// page names no (or an unknown) category.
+const categories = [...docsCategories, fallbackCategory].filter((category) =>
+  docs.some((doc) => categoryOf(doc) === category),
+);
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const currentPath = Astro.url.pathname.replace(/\/$/, "");
 
@@ -60,19 +66,25 @@ const tagline =
         nav === "docs" && (
           <aside>
             <nav>
-              <p class="nav-title">Documentation</p>
-              <ul>
-                {docs.map((doc) => {
-                  const href = `${base}/docs/${doc.id}`;
-                  return (
-                    <li>
-                      <a href={href} aria-current={currentPath === href ? "page" : undefined}>
-                        {doc.data.title}
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
+              {categories.map((category) => (
+                <>
+                  <p class="nav-title">{category}</p>
+                  <ul>
+                    {docs
+                      .filter((doc) => categoryOf(doc) === category)
+                      .map((doc) => {
+                        const href = `${base}/docs/${doc.id}`;
+                        return (
+                          <li>
+                            <a href={href} aria-current={currentPath === href ? "page" : undefined}>
+                              {doc.data.title}
+                            </a>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </>
+              ))}
               <p class="nav-title">Specification</p>
               <ul>
                 {specPages.map((page) => {

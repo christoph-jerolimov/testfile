@@ -17,6 +17,9 @@ const docs = defineCollection({
     title: z.string(),
     order: z.number().default(999),
     description: z.string().optional(),
+    // Docs only: the menu group the page belongs to - see src/docs.ts for
+    // the groups and their order. `order` sorts within the group.
+    category: z.string().optional(),
     // Guides only: the language or ecosystem the example is written for.
     stack: z.string().optional(),
   }),

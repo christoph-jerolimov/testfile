@@ -1,6 +1,7 @@
 ---
 title: Screenshots
-order: 8
+order: 4
+category: Quick start
 description: What the web viewer and the terminal UI look like, view by view.
 ---
 

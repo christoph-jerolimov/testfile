@@ -1,6 +1,7 @@
 ---
 title: A complete Testfile
-order: 15
+order: 5
+category: Test definition
 description: One file using nearly every feature at once, annotated — a map of the format rather than a template to copy.
 ---
 

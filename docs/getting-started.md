@@ -1,6 +1,7 @@
 ---
 title: Getting started
 order: 2
+category: Quick start
 description: Write your first Testfile and run it.
 ---
 
