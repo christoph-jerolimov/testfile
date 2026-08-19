@@ -1,6 +1,6 @@
 ---
 title: "Guided tour: three platforms"
-order: 10
+order: 12
 description: Run one Testfile on Linux, macOS and Windows in GitHub Actions and merge the three runs into a single result.
 ---
 

@@ -30,6 +30,7 @@ test:
             - "*/e2e/**/*.ts"
             - "*/*.{ts,mjs}"
             - action/*.mjs
+            - gitlab/*.mjs
             - scripts/*.mjs
             - .oxlintrc.json
             - .oxfmtrc.json
@@ -295,6 +296,18 @@ test:
             - action/statuses.mjs
             - action/statuses.test.mjs
             - action/record.mjs
+        # The GitLab template derives the same kind of labels from its own
+        # context, in bash inside the template - the script is driven
+        # against a fake GitLab context with npx and git stubbed out, so
+        # the derivation is pinned like the action's. Not on Windows: the
+        # test needs a bash.
+        - name: gitlab-template
+          tags: [fast, action]
+          if: ${{ env.TESTFILE_OS }} != win32
+          command: node --test gitlab/template.test.mjs
+          inputs:
+            - gitlab/testfile.gitlab-ci.yml
+            - gitlab/template.test.mjs
         # No CI can apply the Tekton manifests to a cluster, so their shape
         # is pinned instead: every $(params.x) the steps use is declared
         # (and vice versa), the example pipeline passes only parameters the
