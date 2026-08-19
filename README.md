@@ -68,7 +68,9 @@ workflows, Makefiles). Shell completions included.
 
 **CI & viewing** — a [GitHub Action](https://testfile.dev/docs/github-action)
 with PR annotations, a job summary, an optional **commit status per
-test** and the run uploaded as an artifact; ready-made snippets for
+test** and the run uploaded as an artifact; a [Tekton
+Task](https://testfile.dev/docs/tekton) that runs the declared services as
+pods on the pipeline's own cluster; ready-made snippets for
 GitLab, Jenkins, Buildkite and CircleCI. The read-only viewer serves the
 recorded runs: a runs table, run diffs, flaky/broken verdicts, a terminal
 UI and a [local web viewer](https://testfile.dev/docs/cli#the-web-viewer)
@@ -104,6 +106,7 @@ extension with schema validation, run-from-editor and a runs view.
 | [`examples/`](examples/) | Complete example projects for common stacks, schema-validated in CI and rendered on the website. |
 | [`ci/`](ci/) | Ready-made pipeline snippets for other CI systems (Jenkins, Buildkite, GitLab, CircleCI — and GitHub, for pipelines that skip the action). |
 | [`action/`](action/) | Helper scripts of the GitHub Action defined in [`action.yml`](action.yml): annotations, the job summary and the run artifact. |
+| [`tekton/`](tekton/) | The [Tekton Task](https://testfile.dev/docs/tekton) — the action's sibling for Kubernetes-native CI — with an example pipeline and the RBAC the kubernetes engine needs. |
 | [`scripts/`](scripts/) | Checks on the repository itself, run by [`Testfile`](Testfile) like everything else. |
 
 This repository is an npm-workspaces monorepo and eats its own dog food: its

@@ -1,0 +1,77 @@
+# A complete pipeline around the testfile Task: clone, then run the suite.
+# The runner owns services, parallelism and matrices, so the pipeline stays
+# two tasks - there is nothing of the test setup to translate into Tekton.
+#
+# Prerequisites, applied once per namespace:
+#
+#   kubectl apply -f https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.9/git-clone.yaml
+#   kubectl apply -f testfile-task.yaml
+#   kubectl apply -f testfile-rbac.yaml    # only for Testfiles with container services
+#
+# Then start it, with a fresh PVC per run for the workspace:
+#
+#   tkn pipeline start testfile-ci \
+#     --serviceaccount testfile \
+#     --param repo-url=https://github.com/you/your-repo.git \
+#     --param revision=main \
+#     --workspace name=source,volumeClaimTemplateFile=workspace-template.yaml \
+#     --showlog
+#
+# where workspace-template.yaml is an ordinary PVC spec:
+#
+#   spec:
+#     accessModes: [ReadWriteOnce]
+#     resources:
+#       requests:
+#         storage: 1Gi
+#
+# The recorded run (.testfile/runs/<id>/ - run.yaml, per-test logs, service
+# logs, collected artifacts) stays on that PVC. To bring it home, add a
+# task behind `test` that packs and uploads it - see the Tekton page of the
+# documentation for an S3 example - and import it locally with
+# `testfile archive import` or pull it with `testfile s3 pull`.
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: testfile-ci
+spec:
+  description: Clone a repository and run the tests its Testfile describes.
+  params:
+    - name: repo-url
+      description: Repository to clone
+    - name: revision
+      description: Branch, tag or commit to test
+      default: ""
+  workspaces:
+    - name: source
+      description: Shared by the clone and the test run; a PVC, so the recorded run survives
+  tasks:
+    - name: fetch
+      taskRef:
+        name: git-clone
+      params:
+        - name: url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.revision)
+      workspaces:
+        - name: output
+          workspace: source
+    - name: test
+      runAfter: [fetch]
+      taskRef:
+        name: testfile
+      params:
+        # Where the run came from, on top of the automatic ci/ci-run/
+        # namespace labels - git context only the clone knows. Add
+        # branch=$(params.revision) when your runs always name one.
+        - name: labels
+          value:
+            - sha=$(tasks.fetch.results.commit)
+        - name: reporter
+          value: junit
+        - name: output
+          value: junit.xml
+      workspaces:
+        - name: source
+          workspace: source

@@ -1,0 +1,345 @@
+# Testfile as a Tekton Task - the GitHub Action's sibling for Kubernetes-
+# native CI. Install it once, then run any project's Testfile as one
+# pipeline task:
+#
+#   kubectl apply -f https://raw.githubusercontent.com/testfile-dev/testfile/main/tekton/testfile-task.yaml
+#
+# The parameters mirror the action's inputs (path, the filters, fail-fast,
+# variants, labels, reporter), and like the action it runs `testfile doctor`
+# first so a machine that cannot run the suite fails with one readable
+# report instead of halfway through.
+#
+# Container services are the Tekton-native part: a step pod has no docker,
+# so the engine defaults to `kubernetes` and the services a Testfile
+# declares run as pods on the same cluster, in the TaskRun's own namespace,
+# with their ports forwarded to localhost. That needs kubectl (downloaded
+# on the fly when the image has none) and a ServiceAccount that may create
+# pods and services - testfile-rbac.yaml in this folder grants exactly
+# that. A Testfile without services needs neither.
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: testfile
+  labels:
+    app.kubernetes.io/version: "0.1"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.56.0"
+    tekton.dev/categories: Testing
+    tekton.dev/tags: test, testfile
+    tekton.dev/displayName: Testfile
+    tekton.dev/platforms: linux/amd64,linux/arm64
+spec:
+  description: >-
+    Run the tests described in a Testfile / testfile.yaml, with services,
+    matrices and filters. The runner owns services, parallelism and
+    matrices, so the pipeline stays a single task; container services run
+    as pods on the cluster the task already runs on.
+  workspaces:
+    - name: source
+      description: >-
+        The checked-out project - a directory containing the Testfile, or
+        one named by the `path` parameter. The recorded run is written to
+        `.testfile/runs/` inside this workspace, so on a PVC it survives
+        the pod and a later task can archive or upload it.
+  params:
+    - name: path
+      description: Testfile or directory containing one, relative to the workspace
+      default: "."
+    - name: filter
+      description: "Generic filter (-f): name/path, tag, or key:value matrix"
+      default: ""
+    - name: filter-name
+      description: Only tests whose path contains this (-n)
+      default: ""
+    - name: filter-tags
+      description: Comma-separated tags to run (-t)
+      default: ""
+    - name: filter-matrix
+      description: key:value matrix filter (-m)
+      default: ""
+    - name: changed
+      description: >-
+        Run only tests whose `inputs` match files changed against the base
+        branch (testfile start --changed). Needs the base branch in the
+        checkout - a depth-1 clone has nothing to diff against
+      default: "false"
+    - name: changed-since
+      description: Base branch/ref for `changed`, e.g. origin/main
+      default: ""
+    - name: fail-fast
+      description: Abort the whole run at the first failure
+      default: "false"
+    - name: max-parallel
+      description: Global cap on concurrently running tests
+      default: ""
+    - name: shard
+      description: >-
+        Run only this shard of the selected tests, e.g. 2/4 - for splitting
+        one suite across parallel TaskRuns
+      default: ""
+    - name: variants
+      type: array
+      description: >-
+        What distinguishes this run from the other legs of a matrix, as
+        key=value pairs (for example cluster=staging). Recorded with the
+        run; `testfile merge` needs it to combine the legs.
+      default: []
+    - name: labels
+      type: array
+      description: >-
+        Extra labels to record with the run, as key=value pairs (for
+        example tier=nightly; entries without a "=" are skipped). Recorded
+        alongside the automatic ones, and a key you set yourself wins;
+        viewers filter runs by them.
+      default: []
+    - name: auto-labels
+      description: >-
+        Label the run with the Tekton context - ci=tekton, the TaskRun name
+        as ci-run and the namespace - so a history that collects runs from
+        many pipelines can be narrowed down later
+      default: "true"
+    - name: reporter
+      description: "Write machine-readable results: junit or json"
+      default: ""
+    - name: output
+      description: Report target file (used with reporter), relative to the workspace
+      default: ""
+    - name: doctor
+      description: >-
+        Run `testfile doctor` before the tests: check the pod against what
+        this Testfile needs (tools, engines, ports) and fail early with a
+        readable report instead of halfway through the run
+      default: "true"
+    - name: engine
+      description: >-
+        Container engine for the services the Testfile declares: kubernetes
+        runs them as pods on this cluster; empty auto-detects (which inside
+        a step pod still means kubernetes - there is no docker to find)
+      default: "kubernetes"
+    - name: kubectl-version
+      description: >-
+        kubectl version to download when the image has none, e.g. v1.31.0;
+        "stable" resolves the latest stable release
+      default: "stable"
+    - name: image
+      description: Image the steps run in - needs node and npm (and curl to fetch kubectl)
+      default: "docker.io/library/node:22"
+  results:
+    - name: outcome
+      description: '"passed" or "failed" - the verdict of the run'
+    - name: run-id
+      description: >-
+        Id of the recorded run under .testfile/runs/ in the workspace, so a
+        later task can pack or upload exactly this run; empty when nothing
+        was recorded
+  volumes:
+    # Shared by the steps: the npm cache (so the runner is fetched once,
+    # not once per step) and the kubectl binary when one is downloaded.
+    - name: testfile-tools
+      emptyDir: {}
+  stepTemplate:
+    image: $(params.image)
+    workingDir: $(workspaces.source.path)
+    env:
+      - name: CI
+        value: "true"
+      - name: npm_config_cache
+        value: /testfile-tools/npm-cache
+      - name: npm_config_update_notifier
+        value: "false"
+      # An empty value means "unset" to the runner, so auto-detection is
+      # simply the empty `engine` parameter.
+      - name: TESTFILE_ENGINE
+        value: $(params.engine)
+    volumeMounts:
+      - name: testfile-tools
+        mountPath: /testfile-tools
+  steps:
+    # The kubernetes engine drives everything through kubectl, which the
+    # node image does not ship. A download failure is a warning, not a
+    # failure: a Testfile without container services never needs kubectl,
+    # and one with them fails in doctor with a readable report.
+    - name: kubectl
+      env:
+        - name: PARAM_KUBECTL_VERSION
+          value: $(params.kubectl-version)
+      script: |
+        #!/usr/bin/env bash
+        set -eu
+        if [ "$TESTFILE_ENGINE" != "kubernetes" ]; then
+          echo "engine is '${TESTFILE_ENGINE:-auto}', not fetching kubectl"
+          exit 0
+        fi
+        if command -v kubectl >/dev/null 2>&1; then
+          echo "kubectl already in the image: $(command -v kubectl)"
+          exit 0
+        fi
+        case "$(uname -m)" in
+          x86_64) arch=amd64 ;;
+          aarch64 | arm64) arch=arm64 ;;
+          *)
+            echo "unsupported architecture $(uname -m)" >&2
+            exit 1
+            ;;
+        esac
+        version="$PARAM_KUBECTL_VERSION"
+        if [ "$version" = "stable" ]; then
+          version="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
+        fi
+        echo "downloading kubectl $version ($arch)"
+        mkdir -p /testfile-tools/bin
+        if ! curl -fsSL -o /testfile-tools/bin/kubectl \
+          "https://dl.k8s.io/release/$version/bin/linux/$arch/kubectl"; then
+          echo "WARNING: could not download kubectl; container services will not start." >&2
+          echo "         On an air-gapped cluster, use an image with kubectl baked in." >&2
+          rm -f /testfile-tools/bin/kubectl
+          exit 0
+        fi
+        chmod +x /testfile-tools/bin/kubectl
+        /testfile-tools/bin/kubectl version --client
+    # Pre-flight: every missing tool, engine or taken port that would fail
+    # the run anyway fails here instead, in one readable report.
+    - name: doctor
+      env:
+        - name: PARAM_PATH
+          value: $(params.path)
+        - name: PARAM_DOCTOR
+          value: $(params.doctor)
+      script: |
+        #!/usr/bin/env bash
+        set -eu
+        if [ "$PARAM_DOCTOR" != "true" ]; then
+          echo "doctor disabled"
+          exit 0
+        fi
+        export PATH="/testfile-tools/bin:$PATH"
+        npx --yes @testfile.dev/runner doctor "$PARAM_PATH"
+    # The parameters travel as env vars, not by splicing them into the
+    # script - a value with quotes or spaces stays a value. The two array
+    # parameters cannot go through env; they arrive as positional
+    # arguments behind their sentinels.
+    - name: run
+      env:
+        - name: PARAM_PATH
+          value: $(params.path)
+        - name: PARAM_FILTER
+          value: $(params.filter)
+        - name: PARAM_FILTER_NAME
+          value: $(params.filter-name)
+        - name: PARAM_FILTER_TAGS
+          value: $(params.filter-tags)
+        - name: PARAM_FILTER_MATRIX
+          value: $(params.filter-matrix)
+        - name: PARAM_CHANGED
+          value: $(params.changed)
+        - name: PARAM_CHANGED_SINCE
+          value: $(params.changed-since)
+        - name: PARAM_FAIL_FAST
+          value: $(params.fail-fast)
+        - name: PARAM_MAX_PARALLEL
+          value: $(params.max-parallel)
+        - name: PARAM_SHARD
+          value: $(params.shard)
+        - name: PARAM_AUTO_LABELS
+          value: $(params.auto-labels)
+        - name: PARAM_REPORTER
+          value: $(params.reporter)
+        - name: PARAM_OUTPUT
+          value: $(params.output)
+        - name: TEKTON_TASKRUN
+          value: $(context.taskRun.name)
+        - name: TEKTON_NAMESPACE
+          value: $(context.taskRun.namespace)
+      args:
+        - --labels--
+        - $(params.labels[*])
+        - --variants--
+        - $(params.variants[*])
+      script: |
+        #!/usr/bin/env bash
+        set -u
+        export PATH="/testfile-tools/bin:$PATH"
+
+        ARGS=(start "$PARAM_PATH")
+        [ -n "$PARAM_FILTER" ] && ARGS+=(-f "$PARAM_FILTER")
+        [ -n "$PARAM_FILTER_NAME" ] && ARGS+=(-n "$PARAM_FILTER_NAME")
+        [ -n "$PARAM_FILTER_TAGS" ] && ARGS+=(-t "$PARAM_FILTER_TAGS")
+        [ -n "$PARAM_FILTER_MATRIX" ] && ARGS+=(-m "$PARAM_FILTER_MATRIX")
+        if [ "$PARAM_CHANGED" = "true" ]; then
+          ARGS+=(--changed)
+          [ -n "$PARAM_CHANGED_SINCE" ] && ARGS+=(--changed-since "$PARAM_CHANGED_SINCE")
+        fi
+        [ "$PARAM_FAIL_FAST" = "true" ] && ARGS+=(--fail-fast)
+        [ -n "$PARAM_MAX_PARALLEL" ] && ARGS+=(--max-parallel "$PARAM_MAX_PARALLEL")
+        [ -n "$PARAM_SHARD" ] && ARGS+=(--shard "$PARAM_SHARD")
+        [ -n "$PARAM_REPORTER" ] && ARGS+=(--reporter "$PARAM_REPORTER")
+        [ -n "$PARAM_OUTPUT" ] && ARGS+=(--output "$PARAM_OUTPUT")
+
+        declare -A label_keys=() variant_keys=()
+        mode=""
+        for arg in "$@"; do
+          case "$arg" in
+            --labels--)
+              mode=label
+              continue
+              ;;
+            --variants--)
+              mode=variant
+              continue
+              ;;
+          esac
+          [ -n "$arg" ] || continue
+          if [ "$mode" = "label" ]; then
+            case "$arg" in
+              *=*)
+                label_keys["${arg%%=*}"]=1
+                ARGS+=(--label "$arg")
+                ;;
+              *) echo "skipping label '$arg' (no '=')" >&2 ;;
+            esac
+          else
+            variant_keys["${arg%%=*}"]=1
+            ARGS+=(--variant "$arg")
+          fi
+        done
+
+        # A shard is what tells its leg apart from the others, and inside a
+        # Tekton matrix no other parameter can say so - record it as the
+        # variant `testfile merge` needs, unless one was given explicitly.
+        if [ -n "$PARAM_SHARD" ] && [ -z "${variant_keys[shard]:-}" ]; then
+          ARGS+=(--variant "shard=$PARAM_SHARD")
+        fi
+
+        # Where the run came from, so a history that collects runs from
+        # many pipelines can be narrowed down later. A label given
+        # explicitly wins over the derived one (the runner rejects
+        # duplicate keys, so the derived one must yield).
+        if [ "$PARAM_AUTO_LABELS" = "true" ]; then
+          auto() {
+            [ -n "$2" ] || return 0
+            [ -n "${label_keys[$1]:-}" ] || ARGS+=(--label "$1=$2")
+          }
+          auto ci tekton
+          auto ci-run "$TEKTON_TASKRUN"
+          auto namespace "$TEKTON_NAMESPACE"
+        fi
+
+        code=0
+        npx --yes @testfile.dev/runner "${ARGS[@]}" || code=$?
+
+        outcome=failed
+        [ "$code" -eq 0 ] && outcome=passed
+        printf '%s' "$outcome" > "$(results.outcome.path)"
+
+        # The newest recorded run - self-contained in .testfile/runs/<id>/
+        # on the workspace - named as a result, so a later task can pack or
+        # upload exactly this run.
+        base="$PARAM_PATH"
+        [ -f "$base" ] && base="$(dirname "$base")"
+        run_id=""
+        if [ -d "$base/.testfile/runs" ]; then
+          run_id="$(ls -t "$base/.testfile/runs" | head -n 1)"
+        fi
+        printf '%s' "$run_id" > "$(results.run-id.path)"
+
+        exit "$code"

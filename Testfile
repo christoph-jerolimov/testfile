@@ -290,6 +290,17 @@ test:
             - action/statuses.mjs
             - action/statuses.test.mjs
             - action/record.mjs
+        # No CI can apply the Tekton manifests to a cluster, so their shape
+        # is pinned instead: every $(params.x) the steps use is declared
+        # (and vice versa), the example pipeline passes only parameters the
+        # task has, and the docs name every parameter.
+        - name: tekton
+          tags: [fast, tekton]
+          command: node --test scripts/tekton.test.mjs
+          inputs:
+            - tekton/**
+            - scripts/tekton.test.mjs
+            - docs/tekton.md
         # The skills tell an assistant which commands to run; this checks
         # every command and flag they name against the CLIs' own --help,
         # so a renamed flag cannot turn the advice into nonsense.
