@@ -16,7 +16,7 @@ services:
     ready:
       http: http://localhost:\${{ ports.web }}/healthz
 test:
-  sequence:
+  parallel:
     - name: lint
       command: npm run lint
     - name: e2e
