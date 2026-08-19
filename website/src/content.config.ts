@@ -4,9 +4,15 @@ import { glob } from "astro/loaders";
 // The website has almost no content of its own: it renders the markdown
 // files from the repository's docs/ folder. That includes docs/guides/,
 // whose pages are published under /guides/ with their own menu - see
-// src/guides.ts for the split.
+// src/guides.ts for the split. Each guide is a folder: an index.mdx next to
+// the example files it embeds, so the folder's README and the ids drop the
+// "/index" suffix.
 const docs = defineCollection({
-  loader: glob({ pattern: "**/*.md", base: "../docs" }),
+  loader: glob({
+    pattern: ["**/*.md", "**/*.mdx", "!**/README.md"],
+    base: "../docs",
+    generateId: ({ entry }) => entry.replace(/\.mdx?$/, "").replace(/\/index$/, ""),
+  }),
   schema: z.object({
     title: z.string(),
     order: z.number().default(999),

@@ -12,9 +12,11 @@ special-purpose guides after (matrix, services, environment, CLI/TUI, GitHub
 Action).
 
 The guides in [`../docs/guides/`](../docs/guides/) are published under
-`/guides/` with their own menu; each page embeds the real Testfile from the
-matching folder in [`../examples/`](../examples/) at build time — see
-[`src/guides.ts`](src/guides.ts). The blog is the one thing written for the
+`/guides/` with their own menu. Each guide is a folder: an `index.mdx` next
+to the example files it shows, embedded at build time through the React
+[`<Snippet>`](src/components/Snippet.tsx) component — so a guide can quote
+several of its files without pasting copies that would drift (see
+[`src/guides.ts`](src/guides.ts) for the routing). The blog is the one thing written for the
 website itself: its posts live in
 [`src/content/blog/`](src/content/blog/) and are published under `/blog/`.
 

@@ -17,8 +17,8 @@ the CLI and the CI recipes, next to the normative
 the **guides** section: complete, working Testfiles for common stacks, each
 on its own page with the highlights that make it worth reading. They render
 the real files from the repository's
-[`examples/`](https://github.com/testfile-dev/testfile/tree/main/examples)
-folder, validated against the schema in CI, so a guide can never drift from
+[`docs/guides/`](https://github.com/testfile-dev/testfile/tree/main/docs/guides)
+folders, validated against the schema in CI, so a guide can never drift from
 the file it shows.
 
 And this is the first post of the blog, where releases and notable changes

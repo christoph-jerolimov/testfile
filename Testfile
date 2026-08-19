@@ -44,7 +44,7 @@ test:
           inputs:
             - schema/**
             - Testfile
-            - examples/**/Testfile
+            - docs/guides/**/Testfile
             # the complete Testfiles printed in the docs are validated too,
             # and the files the website's wizard is expected to produce
             - docs/**.md
@@ -71,7 +71,6 @@ test:
             - docs/**
             # the specification pages are rendered from these files
             - spec/**
-            - examples/**
             - package-lock.json
         # Everything in this workspace is TypeScript; the two checkers are
         # typechecked by being compiled, this covers the site's own sources
@@ -346,7 +345,7 @@ test:
           tags: [fast, docs]
           needs: [build-cli]
           script: |
-            for dir in examples/*/; do
+            for dir in docs/guides/*/; do
               node testfile-ts/cli/dist/cli.js validate "$dir"
             done
         # The Jenkins shared library's fast layer: its suite and the

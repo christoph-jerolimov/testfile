@@ -67,10 +67,10 @@ if (existsSync(rootTestfile)) {
   check(rootTestfile, true);
 }
 
-// The examples gallery on the website renders these files; they must stay
-// valid against the current schema, including the ones nested in the
-// monorepo example.
-const examplesDir = join(schemaDir, "..", "examples");
+// The guides on the website render these files; they must stay valid
+// against the current schema, including the ones nested in the monorepo
+// example.
+const examplesDir = join(schemaDir, "..", "docs", "guides");
 if (existsSync(examplesDir)) {
   console.log("Examples:");
   const found = [];

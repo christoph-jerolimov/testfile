@@ -46,10 +46,11 @@ function resolve(dir: string, href: string): string {
   return segments.join("/");
 }
 
-// The repository folder a rendered markdown file came from ("docs",
-// "docs/guides" or "spec"), or undefined for anything else.
+// The repository folder a rendered markdown (or MDX) file came from -
+// "docs", "spec", or a guide's folder like "docs/guides/monorepo" - or
+// undefined for anything else.
 function sourceDir(path: string | undefined): string | undefined {
-  return /[/\\](docs(?:[/\\]guides)?|spec)[/\\][^/\\]+\.md$/
+  return /[/\\]((?:docs|spec)(?:[/\\][^/\\]+)*)[/\\][^/\\]+\.mdx?$/
     .exec(path ?? "")?.[1]
     ?.replace(/\\/g, "/");
 }
@@ -76,10 +77,13 @@ export function rewriteMarkdownLinks({ base }: { base: string }) {
       const target = resolve(dir, path);
       if (specPages[target]) {
         properties.href = `${base}/spec/${specPages[target]}${suffix}`;
-      } else if (target.startsWith("docs/guides/")) {
-        // the guides live in docs/guides/ but are published under /guides/
-        const name = target.slice("docs/guides/".length).replace(/\.md$/, "");
+      } else if (/^docs\/guides\/[^/]+(\/(index\.mdx?)?)?$/.test(target)) {
+        // a guide's folder or its index.mdx: published under /guides/<name>
+        const name = target.slice("docs/guides/".length).split("/")[0];
         properties.href = `${base}/guides/${name}${suffix}`;
+      } else if (target.startsWith("docs/guides/")) {
+        // any other file inside a guide's folder is not a page of its own
+        properties.href = `${repoBlobUrl}/${target}${suffix}`;
       } else if (target.startsWith("docs/")) {
         // docs pages are addressed without the .md extension
         properties.href = `${base}/${target.replace(/\.md$/, "")}${suffix}`;

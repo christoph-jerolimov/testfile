@@ -105,7 +105,7 @@ extension with schema validation, run-from-editor and a runs view.
 | [`testfile-viewer/`](testfile-viewer/) | The React web viewer over recorded runs, served locally by `testfile serve`. |
 | [`vscode-extension/`](vscode-extension/) | VS Code extension: schema validation, run-from-editor code lenses and the recorded-runs view. |
 | [`conformance/`](conformance/) | Runner-independent conformance suite: cases with expected outcomes that any runner implementation must satisfy. |
-| [`examples/`](examples/) | Complete example projects for common stacks, schema-validated in CI and rendered on the website. |
+| [`docs/guides/`](docs/guides/) | Guides with complete example projects for common stacks, schema-validated in CI and rendered on the website. |
 | [`ci/`](ci/) | Ready-made pipeline snippets for other CI systems (Jenkins, Buildkite, GitLab, CircleCI — and GitHub, for pipelines that skip the action). |
 | [`action/`](action/) | Helper scripts of the GitHub Action defined in [`action.yml`](action.yml): annotations, the job summary and the run artifact. |
 | [`gitlab/`](gitlab/) | The include-able GitLab CI template — the action's GitLab counterpart: filters, context labels, JUnit into GitLab's test report, the run as a job artifact. |

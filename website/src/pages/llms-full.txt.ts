@@ -86,11 +86,19 @@ export const GET: APIRoute = async () => {
         spec.find((entry) => entry.id === page.id)?.body ?? "",
       ),
     ),
-    // Each guide is its markdown page plus the Testfile it renders - the
-    // page embeds the file at build time, so the file is quoted here too.
+    // Each guide is its MDX page plus the Testfile it renders through the
+    // <Snippet> component. The component markup says nothing in plain text,
+    // so it is dropped and the file itself is quoted instead.
     ...guides.map((guide) =>
       [
-        section(guide.data.title, `${SITE}/guides/${guideSlug(guide)}`, guide.body ?? "").trimEnd(),
+        section(
+          guide.data.title,
+          `${SITE}/guides/${guideSlug(guide)}`,
+          (guide.body ?? "")
+            .split("\n")
+            .filter((line) => !/^import\s/.test(line) && !/^<Snippet[\s/>]/.test(line))
+            .join("\n"),
+        ).trimEnd(),
         "",
         "```yaml",
         (guideTestfiles[guideSlug(guide)] ?? "").trimEnd(),

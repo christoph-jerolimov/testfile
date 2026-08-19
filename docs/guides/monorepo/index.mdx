@@ -7,6 +7,8 @@ description: >-
   with glob includes, so teams stay independent.
 ---
 
+import Snippet from "../../../website/src/components/Snippet.tsx";
+
 # Monorepo
 
 Each package owns its Testfile; the root file only wires them together
@@ -18,3 +20,5 @@ This guide shows:
 - Included files run in their own directory; their named ports merge into the root's
 - `inputs` per package: untouched packages come from the cache
 - Filter to one package with `-n api`
+
+<Snippet file="monorepo/Testfile" />

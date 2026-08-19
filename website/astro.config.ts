@@ -1,5 +1,7 @@
 // @ts-check
 import { unified } from "@astrojs/markdown-remark";
+import mdx from "@astrojs/mdx";
+import react from "@astrojs/react";
 import { defineConfig } from "astro/config";
 import { rewriteMarkdownLinks } from "./src/markdown-links";
 
@@ -13,6 +15,11 @@ export default defineConfig({
   // The default compression drops the line break between text and an inline
   // element, gluing words together ("a<a>self-documenting…"), so it stays off.
   compressHTML: false,
+  // MDX for the guides (they embed their Testfiles through the React
+  // <Snippet> component), React to render that component. The custom
+  // markdown processor below is not inherited by MDX, so the link-rewriting
+  // plugin is passed to it explicitly.
+  integrations: [mdx({ rehypePlugins: [[rewriteMarkdownLinks, { base }]] }), react()],
   markdown: {
     // The remark/rehype pipeline, not Astro's newer default processor: the
     // link rewriting below is a rehype plugin, and the heading ids this

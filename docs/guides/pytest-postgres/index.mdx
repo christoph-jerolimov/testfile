@@ -7,6 +7,8 @@ description: >-
   container — migrations applied in a setup hook, on a random port.
 ---
 
+import Snippet from "../../../website/src/components/Snippet.tsx";
+
 # pytest + PostgreSQL
 
 Unit tests without a database, integration tests against a real PostgreSQL
@@ -18,3 +20,5 @@ This guide shows:
 - Random port wired into `DATABASE_URL`, so parallel runs never collide
 - Only the integration test requests the service; unit tests stay fast
 - `setup` runs the migrations before the tests
+
+<Snippet file="pytest-postgres/Testfile" />
