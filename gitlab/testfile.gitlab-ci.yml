@@ -1,0 +1,161 @@
+# Testfile on GitLab CI — the GitLab counterpart of the GitHub Action.
+#
+# Include it and the pipeline gets a `testfile` job that runs the tests
+# your Testfile describes, with the JUnit report wired into GitLab's own
+# test reporting (the pipeline's Tests tab and the merge request widget)
+# and the recorded run kept as a job artifact:
+#
+#   include:
+#     - remote: https://raw.githubusercontent.com/testfile-dev/testfile/main/gitlab/testfile.gitlab-ci.yml
+#
+# Configure it with TESTFILE_* variables, on the job or on the pipeline:
+#
+#   testfile:
+#     variables:
+#       TESTFILE_FILTER_TAGS: fast
+#       TESTFILE_FAIL_FAST: "true"
+#
+# See docs/gitlab-ci.md (https://testfile.dev/docs/gitlab-ci) for every
+# variable, the labels a run is recorded with, and examples. The job is
+# named `testfile` because that is the job `testfile gitlab sync` looks
+# for when it brings recorded CI runs into a local history.
+#
+# The image needs bash, git and npm — any node:* image has all three.
+
+.testfile:
+  image: $TESTFILE_NODE_IMAGE
+  # a newer pipeline on the same branch may cancel this one
+  interruptible: true
+  variables:
+    # Image the job runs in (bash, git and npm required).
+    TESTFILE_NODE_IMAGE: "node:22"
+    # Testfile or directory containing one.
+    TESTFILE_PATH: "."
+    # Generic filter (-f): name/path, tag, or key:value matrix.
+    TESTFILE_FILTER: ""
+    # Only tests whose path contains this (-n).
+    TESTFILE_FILTER_NAME: ""
+    # Comma-separated tags to run (-t).
+    TESTFILE_FILTER_TAGS: ""
+    # key:value matrix filter (-m).
+    TESTFILE_FILTER_MATRIX: ""
+    # "true": run only tests whose `inputs` match files changed against
+    # TESTFILE_CHANGED_SINCE (testfile start --changed). Change detection
+    # diffs against the base branch, so the checkout needs history —
+    # set GIT_DEPTH: "0" on the job.
+    TESTFILE_CHANGED: "false"
+    # Base branch for `changed`; on a merge request pipeline it defaults
+    # to the merge request's target branch.
+    TESTFILE_CHANGED_SINCE: "$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    # "true": abort the whole run at the first failure.
+    TESTFILE_FAIL_FAST: "false"
+    # Global cap on concurrently running tests.
+    TESTFILE_MAX_PARALLEL: ""
+    # What distinguishes this run from the other legs of a matrix, as
+    # key=value pairs separated by commas or newlines (for example
+    # platform=linux). Recorded with the run; `testfile merge` needs it
+    # to combine the legs.
+    TESTFILE_VARIANTS: ""
+    # Extra labels to record with the run, as key=value pairs separated
+    # by commas or newlines ("tier=nightly, owner=infra"; entries
+    # without a "=" are skipped). Merged with the automatic ones; a key
+    # you set yourself wins.
+    TESTFILE_LABELS: ""
+    # Label the run with the GitLab context: how the pipeline started,
+    # the branch (or tag), the merge request and its target branch, who
+    # started it, the project, the job, the short commit sha and the
+    # pipeline id.
+    TESTFILE_AUTO_LABELS: "true"
+    # Run `testfile doctor` before the tests: check the machine against
+    # what this Testfile needs (tools, container engines, ports) and
+    # fail early with a readable report instead of halfway through.
+    TESTFILE_DOCTOR: "true"
+    # Machine-readable results; junit feeds GitLab's own test report.
+    # Changing these means adjusting `artifacts` to match.
+    TESTFILE_REPORTER: "junit"
+    TESTFILE_OUTPUT: "junit.xml"
+  script:
+    # Pre-flight: every missing tool, engine or taken port that would fail
+    # the run anyway fails here instead, in one readable report.
+    - if [ "$TESTFILE_DOCTOR" = "true" ]; then npx --yes @testfile.dev/runner doctor "$TESTFILE_PATH"; fi
+    - |
+      ARGS=(start "$TESTFILE_PATH")
+      [ -n "$TESTFILE_FILTER" ] && ARGS+=(-f "$TESTFILE_FILTER")
+      [ -n "$TESTFILE_FILTER_NAME" ] && ARGS+=(-n "$TESTFILE_FILTER_NAME")
+      [ -n "$TESTFILE_FILTER_TAGS" ] && ARGS+=(-t "$TESTFILE_FILTER_TAGS")
+      [ -n "$TESTFILE_FILTER_MATRIX" ] && ARGS+=(-m "$TESTFILE_FILTER_MATRIX")
+      if [ "$TESTFILE_CHANGED" = "true" ]; then
+        ARGS+=(--changed)
+        if [ -n "$TESTFILE_CHANGED_SINCE" ]; then
+          # The base branch has to exist in the checkout, and GitLab
+          # fetches only the pipeline's own ref - so bring it in under
+          # its remote-tracking name, where --changed-since finds it.
+          git fetch origin "+refs/heads/$TESTFILE_CHANGED_SINCE:refs/remotes/origin/$TESTFILE_CHANGED_SINCE"
+          ARGS+=(--changed-since "$TESTFILE_CHANGED_SINCE")
+        fi
+      fi
+      [ "$TESTFILE_FAIL_FAST" = "true" ] && ARGS+=(--fail-fast)
+      [ -n "$TESTFILE_MAX_PARALLEL" ] && ARGS+=(--max-parallel "$TESTFILE_MAX_PARALLEL")
+      while IFS= read -r variant; do
+        variant=$(printf '%s' "$variant" | tr -d '[:space:]')
+        if [ -n "$variant" ]; then ARGS+=(--variant "$variant"); fi
+      done <<< "$(printf '%s' "$TESTFILE_VARIANTS" | tr ',' '\n')"
+      # The labels the run is recorded with: the automatic ones from the
+      # GitLab context first, then TESTFILE_LABELS - a key given twice
+      # stays a single --label, and the explicit value is the one that
+      # counts. A label whose value the context does not supply is left
+      # out rather than recorded as empty.
+      declare -A LABELS=()
+      label() { if [ -n "${2-}" ]; then LABELS[$1]=$2; fi; }
+      if [ "$TESTFILE_AUTO_LABELS" != "false" ]; then
+        case "${CI_PIPELINE_SOURCE-}" in
+          web | api | trigger) label trigger manual ;;
+          merge_request_event) label trigger merge_request ;;
+          *) label trigger "${CI_PIPELINE_SOURCE-}" ;;
+        esac
+        if [ -n "${CI_MERGE_REQUEST_IID-}" ]; then
+          label branch "${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME-}"
+          label base "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME-}"
+          label mr "${CI_MERGE_REQUEST_IID-}"
+        elif [ -n "${CI_COMMIT_TAG-}" ]; then
+          label tag "${CI_COMMIT_TAG-}"
+        else
+          label branch "${CI_COMMIT_BRANCH-}"
+        fi
+        label actor "${GITLAB_USER_LOGIN-}"
+        label repo "${CI_PROJECT_PATH-}"
+        label job "${CI_JOB_NAME-}"
+        label sha "${CI_COMMIT_SHORT_SHA-}"
+        label ci-run "${CI_PIPELINE_ID-}"
+      fi
+      while IFS= read -r pair; do
+        case "$pair" in *=*) ;; *) continue ;; esac
+        key=$(printf '%s' "${pair%%=*}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+        value=$(printf '%s' "${pair#*=}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+        if [ -n "$key" ]; then LABELS[$key]=$value; fi
+      done <<< "$(printf '%s' "$TESTFILE_LABELS" | tr ',' '\n')"
+      while IFS= read -r key; do
+        if [ -n "$key" ]; then ARGS+=(--label "$key=${LABELS[$key]}"); fi
+      done < <(printf '%s\n' "${!LABELS[@]}" | sort)
+      [ -n "$TESTFILE_REPORTER" ] && ARGS+=(--reporter "$TESTFILE_REPORTER")
+      [ -n "$TESTFILE_OUTPUT" ] && ARGS+=(--output "$TESTFILE_OUTPUT")
+      npx --yes @testfile.dev/runner "${ARGS[@]}"
+  artifacts:
+    # the interesting run is the one that failed
+    when: always
+    paths:
+      # The whole recorded run - run.yaml, per-test logs, service logs,
+      # collected artifacts. `testfile gitlab sync <group/project>` pulls
+      # it straight into a local history; a downloaded one goes in with
+      # `testfile archive import <artifacts.zip>`.
+      - .testfile/runs/
+      - junit.xml
+    reports:
+      # what makes failed tests show up in the merge request widget and
+      # the pipeline's Tests tab
+      junit: junit.xml
+    # bounded storage; `testfile gitlab sync` reaches unexpired runs only
+    expire_in: 2 weeks
+
+testfile:
+  extends: .testfile

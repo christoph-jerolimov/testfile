@@ -1,21 +1,37 @@
-# Testfile on GitLab CI.
+# Testfile on GitLab CI, without the include-able template.
 #
-# Copy this into your project as .gitlab-ci.yml (or merge the job into an
-# existing pipeline). The job archives the recorded run, so
-# `testfile-viewer gitlab sync <group/project>` can pull it into a local
-# history afterwards.
+# On GitLab, prefer the template - it runs the same suite and adds what
+# these lines leave out: filters and change-based selection as variables,
+# a doctor pre-flight, and the run labelled with the GitLab context:
+#
+#   include:
+#     - remote: https://raw.githubusercontent.com/testfile-dev/testfile/main/gitlab/testfile.gitlab-ci.yml
+#
+# See docs/gitlab-ci.md for its variables. This file is for a pipeline
+# that would rather not include a remote template: the same three
+# commands as the other files in this folder, spelled out.
+#
+# Copy it into your project's .gitlab-ci.yml.
 testfile:
   image: node:22
-  # Container services the tests need can be declared in the Testfile
-  # itself; GitLab's own `services:` are not required.
   script:
     - npm ci --no-audit --no-fund
+    # Services the tests need are declared in the Testfile, and the runner
+    # starts them itself. Container services need a docker client and
+    # daemon in the job - see docs/gitlab-ci.md#container-services.
     - npx --yes @testfile.dev/runner start --reporter junit --output junit.xml
   artifacts:
+    # `when: always` because the interesting run is the one that failed.
     when: always
     paths:
-      # the whole recorded run: run.yaml, per-test logs, artifacts, junit
+      # The whole recorded run - run.yaml, per-test logs, service logs,
+      # collected artifacts, and junit.xml alongside them. `testfile
+      # gitlab sync <group/project>` pulls it straight into a local
+      # history; a downloaded one goes in with `testfile archive import`.
       - .testfile/runs/
+      - junit.xml
     reports:
+      # what makes failed tests show up in the merge request widget and
+      # the pipeline's Tests tab
       junit: junit.xml
     expire_in: 2 weeks

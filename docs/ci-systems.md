@@ -1,6 +1,6 @@
 ---
 title: Other CI systems
-order: 11
+order: 13
 description: Run a Testfile on GitLab CI, Jenkins, CircleCI or Buildkite — and bring those runs home.
 ---
 
@@ -11,8 +11,9 @@ shell command can run your suite, and because the runner owns services,
 parallelism and matrices, the pipeline stays a single job instead of a
 translation of your test setup into that system's YAML dialect.
 
-Two systems get more than a template: the [GitHub Action](./github-action)
-adds annotations, a job summary and artifact upload on top, and the
+Three systems get more than a template: the [GitHub Action](./github-action)
+adds annotations, a job summary and artifact upload on top, the
+[GitLab CI template](./gitlab-ci) is its include-able counterpart, and the
 [Tekton Task](./tekton) runs the declared services as pods on the cluster
 the pipeline already runs on. For everything else, copy one of the
 templates in the repository's
@@ -26,10 +27,13 @@ templates in the repository's
 | Buildkite | [`ci/buildkite-pipeline.yml`](https://github.com/testfile-dev/testfile/blob/main/ci/buildkite-pipeline.yml) |
 | GitHub Actions | [`ci/github-workflow.yml`](https://github.com/testfile-dev/testfile/blob/main/ci/github-workflow.yml) |
 
-The GitHub one is there for completeness — on GitHub the
+The GitHub and GitLab ones are there for completeness — on GitHub the
 [action](./github-action) is the better choice, since annotations, the job
 summary and per-test commit statuses are things a plain `run:` step cannot
-do. Take the template when you would rather not depend on an action.
+do, and on GitLab the [include-able template](./gitlab-ci) adds filters,
+change-based selection, a doctor pre-flight and the labels that make a
+recorded run findable. Take a plain template when you would rather not
+depend on either.
 
 They all follow the same three steps:
 

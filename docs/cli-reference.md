@@ -1,6 +1,6 @@
 ---
 title: CLI reference
-order: 12
+order: 14
 description: Every command and argument of the testfile command line.
 ---
 
