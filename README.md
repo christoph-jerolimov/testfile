@@ -8,13 +8,13 @@ works the same on every laptop and in every CI.
 
 ```yaml
 version: 0
-ports:
-  web: random
 test:
   parallel:
     - name: lint
       command: npm run lint
     - name: e2e
+      ports:
+        web: random
       services:
         web:
           command: npm start
