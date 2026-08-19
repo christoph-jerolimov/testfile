@@ -1021,8 +1021,25 @@ Vite); `serve` picks up its build automatically.
 that speaks MCP — Claude Code, Claude Desktop, an agent of your own — can
 read the history as data instead of parsing terminal output.
 
+The server also ships on its own as
+[`@testfile.dev/mcp`](https://www.npmjs.com/package/@testfile.dev/mcp), so
+a config can point at `npx` and install nothing but the server and the
+core reader — no `testfile` on the `PATH` needed:
+
 ```jsonc
 // .mcp.json, or Claude Desktop's config
+{
+  "mcpServers": {
+    "testfile": {
+      "command": "npx",
+      "args": ["-y", "@testfile.dev/mcp", "/path/to/your/project"]
+    }
+  }
+}
+```
+
+```jsonc
+// ... or through an installed testfile CLI
 {
   "mcpServers": {
     "testfile": {
