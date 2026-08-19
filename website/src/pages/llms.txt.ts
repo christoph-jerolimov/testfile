@@ -7,7 +7,8 @@
 // cannot drift from what is published.
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
-import { examples } from "../examples";
+import { compareDocs } from "../docs";
+import { guideSlug, isGuide } from "../guides";
 import { specPages } from "../spec";
 
 const SITE = "https://testfile.dev";
@@ -18,8 +19,11 @@ function entry(title: string, path: string, description: string): string {
 }
 
 export const GET: APIRoute = async () => {
-  const docs = (await getCollection("docs")).sort(
-    (a, b) => (a.data.order ?? 999) - (b.data.order ?? 999),
+  const all = await getCollection("docs");
+  const docs = all.filter((doc) => !isGuide(doc)).sort(compareDocs);
+  const guides = all.filter(isGuide).sort((a, b) => a.data.order - b.data.order);
+  const posts = (await getCollection("blog")).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime(),
   );
 
   const lines = [
@@ -48,11 +52,20 @@ export const GET: APIRoute = async () => {
     "",
     ...specPages.map((page) => entry(page.title, `/spec/${page.slug}`, page.description)),
     "",
-    "## Examples",
+    "## Guides",
     "",
-    ...examples.map((example) =>
-      entry(example.meta.title, `/examples/${example.id}`, example.meta.summary),
+    ...guides.map((guide) =>
+      entry(
+        guide.data.title,
+        `/guides/${guideSlug(guide)}`,
+        guide.data.description ?? guide.data.title,
+      ),
     ),
+    "",
+    "## Blog",
+    "",
+    entry("Blog", "/blog", "news about the Testfile format and its tooling, newest first"),
+    ...posts.map((post) => entry(post.data.title, `/blog/${post.id}`, post.data.description)),
     "",
     "## Optional",
     "",

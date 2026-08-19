@@ -44,10 +44,11 @@ test:
           inputs:
             - schema/**
             - Testfile
-            - examples/**/Testfile
+            - docs/guides/**/Testfile
             # the complete Testfiles printed in the docs are validated too,
             # and the files the website's wizard is expected to produce
             - docs/**.md
+            - docs/**.mdx
             - website/e2e/expected/**
         # A dependency from one workspace on another has to resolve to that
         # workspace rather than to the registry, where none of them is
@@ -71,7 +72,6 @@ test:
             - docs/**
             # the specification pages are rendered from these files
             - spec/**
-            - examples/**
             - package-lock.json
         # Everything in this workspace is TypeScript; the two checkers are
         # typechecked by being compiled, this covers the site's own sources
@@ -340,13 +340,13 @@ test:
             - conformance/cases/*/expected.yaml
             - spec/TESTFILE.md
             - spec/RESULTS.md
-        # The examples gallery on the website renders these files, so they
+        # The guides on the website render these files, so they
         # must stay valid.
         - name: examples
           tags: [fast, docs]
           needs: [build-cli]
           script: |
-            for dir in examples/*/; do
+            for dir in docs/guides/*/; do
               node testfile-ts/cli/dist/cli.js validate "$dir"
             done
         # The Jenkins shared library's fast layer: its suite and the

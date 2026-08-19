@@ -1,6 +1,7 @@
 ---
 title: GitLab CI
-order: 10
+order: 2
+category: Run tests
 description: Run your Testfile in GitLab CI with one include.
 ---
 

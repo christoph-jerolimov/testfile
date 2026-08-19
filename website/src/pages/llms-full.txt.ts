@@ -7,7 +7,8 @@
 // that structure away.
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
-import { examples } from "../examples";
+import { compareDocs } from "../docs";
+import { guideSlug, guideTestfiles, isGuide } from "../guides";
 import { specPages } from "../spec";
 import { toYaml } from "../wizard";
 
@@ -37,10 +38,13 @@ function section(title: string, url: string, body: string): string {
 }
 
 export const GET: APIRoute = async () => {
-  const docs = (await getCollection("docs")).sort(
-    (a, b) => (a.data.order ?? 999) - (b.data.order ?? 999),
-  );
+  const all = await getCollection("docs");
+  const docs = all.filter((doc) => !isGuide(doc)).sort(compareDocs);
+  const guides = all.filter(isGuide).sort((a, b) => a.data.order - b.data.order);
   const spec = await getCollection("spec");
+  const posts = (await getCollection("blog")).sort(
+    (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+  );
 
   const parts = [
     [
@@ -50,8 +54,8 @@ export const GET: APIRoute = async () => {
       "what to run, what it needs (services, ports, containers) and how to select",
       "subsets of it, so the same suite runs on a laptop and in any CI system.",
       "",
-      "This file is the whole documentation, concatenated: the guides, the normative",
-      "specification and the worked examples. An index of the same pages is at",
+      "This file is the whole documentation, concatenated: the docs, the normative",
+      "specification and the worked guides. An index of the same pages is at",
       `${SITE}/llms.txt.`,
       "",
     ].join("\n"),
@@ -81,24 +85,34 @@ export const GET: APIRoute = async () => {
         spec.find((entry) => entry.id === page.id)?.body ?? "",
       ),
     ),
-    // The examples are the Testfiles themselves; their prose lives in the
-    // metadata, so the file is quoted rather than described.
-    ...examples.map((example) =>
+    // Each guide is its MDX page plus the Testfile it renders through the
+    // <Snippet> component. The component markup says nothing in plain text,
+    // so it is dropped and the file itself is quoted instead.
+    ...guides.map((guide) =>
       [
-        `# Example: ${example.meta.title}`,
-        "",
-        `Source: ${SITE}/examples/${example.id}`,
-        "",
-        example.meta.summary,
-        "",
-        ...example.meta.highlights.map((highlight) => `- ${highlight}`),
+        section(
+          guide.data.title,
+          `${SITE}/guides/${guideSlug(guide)}`,
+          (guide.body ?? "")
+            .split("\n")
+            .filter((line) => !/^import\s/.test(line) && !/^<Snippet[\s/>]/.test(line))
+            .join("\n"),
+        ).trimEnd(),
         "",
         "```yaml",
-        example.testfile.trimEnd(),
+        (guideTestfiles[guideSlug(guide)] ?? "").trimEnd(),
         "```",
         "",
       ].join("\n"),
     ),
+    // The blog is not documentation, but the index above promises the text
+    // of every page, so the posts close the file.
+    section(
+      "Blog",
+      `${SITE}/blog`,
+      "News about the Testfile format and its tooling; the posts follow, newest first.",
+    ),
+    ...posts.map((post) => section(post.data.title, `${SITE}/blog/${post.id}`, post.body ?? "")),
   ];
 
   return new Response(parts.join("\n"), {

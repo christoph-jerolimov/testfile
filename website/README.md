@@ -6,10 +6,19 @@ The Astro site that renders the end-user documentation from
 by [`deploy-website.yaml`](../.github/workflows/deploy-website.yaml) on every
 push to `main`.
 
-Pages are ordered by the `order` field in each doc's frontmatter — core
-concepts first (what is a Testfile, getting started, writing tests), the
-special-purpose guides after (matrix, services, environment, CLI/TUI, GitHub
-Action).
+The documentation menu is split into groups — Quick start, Test definition,
+Run tests, Review results, see [`src/docs.ts`](src/docs.ts) — named by the
+`category` field in each doc's frontmatter; the `order` field sorts the
+pages within their group.
+
+The guides in [`../docs/guides/`](../docs/guides/) are published under
+`/guides/` with their own menu. Each guide is a folder: an `index.mdx` next
+to the example files it shows, embedded at build time through the React
+[`<Snippet>`](src/components/Snippet.tsx) component — so a guide can quote
+several of its files without pasting copies that would drift (see
+[`src/guides.ts`](src/guides.ts) for the routing). The blog is the one thing written for the
+website itself: its posts live in
+[`src/content/blog/`](src/content/blog/) and are published under `/blog/`.
 
 The three normative documents in [`../spec/`](../spec/) are published the
 same way, under `/spec/` — see [`src/spec.ts`](src/spec.ts) for their routes

@@ -1,6 +1,7 @@
 ---
 title: Services
-order: 5
+order: 3
+category: Test definition
 description: Start the app under test, databases and other dependencies — and stop them gracefully.
 ---
 

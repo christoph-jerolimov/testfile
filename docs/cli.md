@@ -1,6 +1,7 @@
 ---
 title: CLI & TUI
-order: 7
+order: 3
+category: Quick start
 description: The testfile command line runner and its interactive terminal UI.
 ---
 
@@ -520,7 +521,7 @@ by the CLI, the TUI and the web viewer. Merging requires `path` +
   - give the runs distinct --variant values (e.g. --variant platform=linux)
 ```
 
-The [three-platform guided tour](./three-platforms) walks through the
+The [three-platform guided tour](./guides/three-platforms) walks through the
 whole setup in GitHub Actions.
 
 ## Changes
@@ -849,7 +850,7 @@ testfile s3 pull s3://my-bucket/testfile-runs --run <full-id>
 And when CI is the [GitHub Action](./github-action) (which uploads every
 recorded run as a `testfile-run` artifact), `sync` pulls the artifacts of
 the latest *n* workflow runs straight into the local history. The artifact
-name is a **prefix**, so a [matrix over platforms](./three-platforms) —
+name is a **prefix**, so a [matrix over platforms](./guides/three-platforms) —
 `testfile-run-ubuntu-latest`, `testfile-run-macos-latest`,
 `testfile-run-merged` — comes along without naming each leg:
 

@@ -1,9 +1,11 @@
 ---
 import { getCollection, render } from "astro:content";
+import { isGuide } from "../../guides";
 import Layout from "../../layouts/Layout.astro";
 
 export async function getStaticPaths() {
-  const docs = await getCollection("docs");
+  // The guides in docs/guides/ are published under /guides/ instead.
+  const docs = (await getCollection("docs")).filter((doc) => !isGuide(doc));
   return docs.map((doc) => ({ params: { slug: doc.id }, props: { doc } }));
 }
 
