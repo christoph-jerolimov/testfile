@@ -102,11 +102,13 @@
       done <<< "$(printf '%s' "$TESTFILE_VARIANTS" | tr ',' '\n')"
       # The labels the run is recorded with: the automatic ones from the
       # GitLab context first, then TESTFILE_LABELS - a key given twice
-      # stays a single --label, and the explicit value is the one that
-      # counts. A label whose value the context does not supply is left
-      # out rather than recorded as empty.
-      declare -A LABELS=()
-      label() { if [ -n "${2-}" ]; then LABELS[$1]=$2; fi; }
+      # stays a single --label (awk keeps the last, so an explicit value
+      # is the one that counts). One key=value per line, not an
+      # associative array: those need bash 4, and macOS runners ship 3.2.
+      # A label whose value the context does not supply is left out
+      # rather than recorded as empty.
+      LABEL_LINES=""
+      label() { if [ -n "${2-}" ]; then LABEL_LINES="${LABEL_LINES}${1}=${2}"$'\n'; fi; }
       if [ "$TESTFILE_AUTO_LABELS" != "false" ]; then
         case "${CI_PIPELINE_SOURCE-}" in
           web | api | trigger) label trigger manual ;;
@@ -132,11 +134,11 @@
         case "$pair" in *=*) ;; *) continue ;; esac
         key=$(printf '%s' "${pair%%=*}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
         value=$(printf '%s' "${pair#*=}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
-        if [ -n "$key" ]; then LABELS[$key]=$value; fi
+        if [ -n "$key" ]; then LABEL_LINES="${LABEL_LINES}${key}=${value}"$'\n'; fi
       done <<< "$(printf '%s' "$TESTFILE_LABELS" | tr ',' '\n')"
-      while IFS= read -r key; do
-        if [ -n "$key" ]; then ARGS+=(--label "$key=${LABELS[$key]}"); fi
-      done < <(printf '%s\n' "${!LABELS[@]}" | sort)
+      while IFS= read -r line; do
+        if [ -n "$line" ]; then ARGS+=(--label "$line"); fi
+      done < <(printf '%s' "$LABEL_LINES" | awk -F= '{ latest[$1] = $0 } END { for (key in latest) print latest[key] }' | sort)
       [ -n "$TESTFILE_REPORTER" ] && ARGS+=(--reporter "$TESTFILE_REPORTER")
       [ -n "$TESTFILE_OUTPUT" ] && ARGS+=(--output "$TESTFILE_OUTPUT")
       npx --yes @testfile.dev/runner "${ARGS[@]}"
