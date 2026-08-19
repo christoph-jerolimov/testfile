@@ -1,0 +1,8 @@
+spec:
+  - Ports
+exitCode: 0
+status: passed
+tests:
+  - { path: root, status: passed }
+  - { path: root/scoped, status: passed }
+  - { path: root/inherited, status: passed }

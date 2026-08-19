@@ -204,6 +204,27 @@ test:
   command: npm run test:e2e
 ```
 
+Ports declared at the top level exist for the whole run. Declared on a
+test, they are scoped to that test and its nested tests — resolved when
+the test starts, visible to its services and children, invisible to its
+siblings — and merge over inherited ports (the test wins on a name
+clash). A `random` port on a test is allocated per test instance, so
+matrix instances never collide:
+
+```yaml
+test:
+  ports:
+    web: random
+  services:
+    web:
+      command: npm start
+      env:
+        PORT: ${{ ports.web }}
+  env:
+    BASE_URL: http://localhost:${{ ports.web }}
+  command: npm run test:e2e
+```
+
 ## Templates
 
 Most string values in the file can use `${{ scope.name }}` — the

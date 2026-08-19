@@ -212,7 +212,12 @@ export class Runner extends EventEmitter {
       } else {
         const where = `test "${test.name}"`;
         const matrix = { ...scopes.matrix, ...test.matrix };
-        const withMatrix: Scopes = { ...scopes, matrix };
+        // Ports declared on the test resolve per instance, so matrix
+        // instances and repeated runs get their own random ports.
+        const ports = test.def.ports
+          ? { ...scopes.ports, ...(await resolvePorts(test.def.ports)) }
+          : scopes.ports;
+        const withMatrix: Scopes = { ...scopes, matrix, ports };
         // precedence: parent env < forwarded host vars < this test's own env
         const forwarded = forwardedEnv(test.def.forwardEnv);
         const testSecrets = collectSecrets(

@@ -3,7 +3,7 @@ import { loadEnvFiles } from "./envfile.js";
 import { describeMatches, matchChangedInputs, type GitChanges } from "./gitchanges.js";
 import { baseEnv as hostBaseEnv, forwardedEnv } from "./hostenv.js";
 import type { TestDef } from "./model.js";
-import { resolvePorts } from "./ports.js";
+import { fixedPortValues, resolvePorts } from "./ports.js";
 import type { RunTest } from "./runsuite.js";
 import type { Session } from "./session.js";
 import { resolveEnvMap, resolveTemplate, type Scopes } from "./template.js";
@@ -65,7 +65,12 @@ async function visitResolved(
       const where = `test "${test.name}"`;
       const def: TestDef = test.def;
       const matrix = { ...inherited.matrix, ...test.matrix };
-      const withMatrix: Scopes = { ...inherited, matrix };
+      // Of the test's own ports only fixed ones resolve here; a "random"
+      // port is allocated fresh per run, so anything referencing it cannot
+      // reproduce a cached configuration and correctly reads as
+      // unresolvable.
+      const ports = def.ports ? { ...inherited.ports, ...fixedPortValues(def.ports) } : undefined;
+      const withMatrix: Scopes = ports ? { ...inherited, matrix, ports } : { ...inherited, matrix };
       const forwarded = forwardedEnv(def.forwardEnv);
       const env = { ...withMatrix.env, ...forwarded, ...resolveEnvMap(def.env, withMatrix, where) };
       for (const [key, value] of Object.entries(test.matrix)) {
