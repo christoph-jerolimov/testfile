@@ -55,7 +55,11 @@ export const GET: APIRoute = async () => {
     "## Guides",
     "",
     ...guides.map((guide) =>
-      entry(guide.data.title, `/guides/${guideSlug(guide)}`, guide.data.description ?? guide.data.title),
+      entry(
+        guide.data.title,
+        `/guides/${guideSlug(guide)}`,
+        guide.data.description ?? guide.data.title,
+      ),
     ),
     "",
     "## Blog",
