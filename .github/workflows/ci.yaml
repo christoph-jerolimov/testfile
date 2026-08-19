@@ -89,6 +89,10 @@ jobs:
       - name: Merge the runs into one
         id: merge
         run: |
+          # On a re-run the pattern above also downloads the previous
+          # attempt's merged artifact; merging that in again would fail
+          # (its tests collide with the legs'), so it is dropped.
+          rm -rf downloaded/testfile-run-merged
           runs=(downloaded/testfile-run-*)
           echo "merging ${#runs[@]} runs: ${runs[*]}"
           if node testfile-ts/cli/dist/cli.js merge "${runs[@]}" --dir .; then
@@ -106,6 +110,9 @@ jobs:
           name: testfile-run-merged
           path: ${{ steps.merge.outputs.dir }}
           if-no-files-found: error
+          # artifact names are unique per run, and the previous attempt of a
+          # re-run has already uploaded this one - replace it
+          overwrite: true
       # one verdict for the three platforms
       - name: Fail when a platform failed
         if: steps.merge.outputs.passed != 'true'
