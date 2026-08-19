@@ -8,18 +8,18 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const example = `version: 0
 ports:
   web: random
-services:
-  web:
-    command: npm start
-    env:
-      PORT: \${{ ports.web }}
-    ready:
-      http: http://localhost:\${{ ports.web }}/healthz
 test:
   parallel:
     - name: lint
       command: npm run lint
     - name: e2e
+      services:
+        web:
+          command: npm start
+          env:
+            PORT: \${{ ports.web }}
+          ready:
+            http: http://localhost:\${{ ports.web }}/healthz
       command: npm run test:e2e`;
 ---
 
