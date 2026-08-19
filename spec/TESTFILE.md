@@ -99,6 +99,7 @@ Common fields available on every test:
 | `continueOnError` | boolean  | The failure of this test is reported but does not fail the parent group. Default `false`. |
 | `retry`           | int/object | Only on `command`/`script` tests: retry on failure. An integer is the number of additional attempts; the object form `{count, delay}` adds a wait between attempts. The test fails when the last attempt fails. |
 | `shell`           | string   | Only on `command`/`script` tests: interpreter instead of `sh`, e.g. `bash`, `bash -e`, `python3`. Split on whitespace and invoked as `<shell...> -c <source>`, so the interpreter must accept `-c`. The default `sh -e` for scripts does not apply — pass flags like `-e` yourself. |
+| `ports`           | map      | Named ports scoped to this test and its nested tests, resolved when the test starts and merged over inherited ports (this test wins), see [Ports](#ports). |
 | `services`        | map      | Services scoped to this test and its nested tests, see [Services](#services). |
 | `matrix`          | map      | Matrix expansion, see [Matrix](#matrix). |
 | `maxParallel`     | integer  | Only together with `parallel`: cap on concurrently running children. Default: unlimited. |
@@ -279,6 +280,13 @@ ports:
 number is available everywhere as `${{ ports.NAME }}`. Port names (like env
 variable names) match `[A-Za-z_][A-Za-z0-9_]*`; service names additionally
 allow `-`.
+
+`ports` may also be declared on a test. Such ports are scoped to that test
+and its nested tests — the test's own fields, its services and everything
+below it resolve them, siblings do not. They are resolved when the test
+starts and merge over inherited ports, with the test's declaration winning
+on a name clash. A `random` port declared on a test is allocated per test
+instance: matrix instances of the test each get their own port.
 
 ## Services
 

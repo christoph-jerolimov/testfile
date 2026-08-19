@@ -50,6 +50,9 @@ export interface TestDef {
   timeout?: Duration;
   continueOnError?: boolean;
   retry?: number | { count: number; delay?: Duration };
+  // Named ports for this test and its nested tests, resolved when the test
+  // starts and merged over inherited ports.
+  ports?: Record<string, number | "random">;
   services?: Record<string, ServiceDef>;
   setup?: HookDef;
   teardown?: HookDef;

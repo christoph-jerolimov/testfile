@@ -21,3 +21,13 @@ export async function resolvePorts(
   }
   return out;
 }
+
+// The subset of a ports declaration known without allocating anything:
+// fixed ports keep their value, "random" ones stay absent.
+export function fixedPortValues(def: Record<string, number | "random">): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [name, value] of Object.entries(def)) {
+    if (typeof value === "number") out[name] = value;
+  }
+  return out;
+}

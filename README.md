@@ -8,20 +8,20 @@ works the same on every laptop and in every CI.
 
 ```yaml
 version: 0
-ports:
-  web: random
-services:
-  web:
-    command: npm start
-    env:
-      PORT: ${{ ports.web }}
-    ready:
-      http: http://localhost:${{ ports.web }}/healthz
 test:
   parallel:
     - name: lint
       command: npm run lint
     - name: e2e
+      ports:
+        web: random
+      services:
+        web:
+          command: npm start
+          env:
+            PORT: ${{ ports.web }}
+          ready:
+            http: http://localhost:${{ ports.web }}/healthz
       env:
         BASE_URL: http://localhost:${{ ports.web }}
       command: npm run test:e2e

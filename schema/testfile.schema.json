@@ -241,6 +241,10 @@
             }
           ]
         },
+        "ports": {
+          "description": "Named ports scoped to this test and its nested tests: resolved when the test starts and merged over inherited ports. A value of \"random\" allocates a free port per test instance, so matrix instances and repeated runs never collide.",
+          "$ref": "#/$defs/portsMap"
+        },
         "services": {
           "description": "Services scoped to this test and its nested tests: started before this test runs, gracefully stopped when it finishes.",
           "$ref": "#/$defs/servicesMap"

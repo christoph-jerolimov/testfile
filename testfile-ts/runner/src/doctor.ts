@@ -138,12 +138,18 @@ export function containerNeeds(doc: TestfileDoc): { needed: boolean } {
   return { needed };
 }
 
-// The ports the Testfile pins; "random" ones are allocated by the runner and
-// cannot clash.
+// The ports the Testfile pins, at the top level and on tests; "random" ones
+// are allocated by the runner and cannot clash.
 export function fixedPorts(doc: TestfileDoc): { name: string; port: number }[] {
-  return Object.entries(doc.ports ?? {})
-    .filter(([, value]) => typeof value === "number")
-    .map(([name, value]) => ({ name, port: value as number }));
+  const out = new Map<string, { name: string; port: number }>();
+  const collect = (def: Record<string, number | "random"> | undefined): void => {
+    for (const [name, value] of Object.entries(def ?? {})) {
+      if (typeof value === "number") out.set(`${name}:${value}`, { name, port: value });
+    }
+  };
+  collect(doc.ports);
+  walkTests(doc.test, (test) => collect(test.ports));
+  return [...out.values()];
 }
 
 // The shells the Testfile invokes: "sh" unless a test names another one.

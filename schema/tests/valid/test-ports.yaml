@@ -1,0 +1,21 @@
+# Ports declared on a test: scoped to that test and its nested tests,
+# resolved when the test starts.
+version: 0
+name: test-ports
+test:
+  parallel:
+    - name: lint
+      command: npm run lint
+    - name: e2e
+      ports:
+        web: random
+      services:
+        web:
+          command: npm start
+          env:
+            PORT: ${{ ports.web }}
+          ready:
+            http: http://localhost:${{ ports.web }}/healthz
+      env:
+        BASE_URL: http://localhost:${{ ports.web }}
+      command: npm run test:e2e

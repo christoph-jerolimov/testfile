@@ -1,0 +1,17 @@
+version: 0
+ports:
+  outer: 8123
+test:
+  name: root
+  sequence:
+    - name: scoped
+      ports:
+        p: random
+        outer: 9123
+      env:
+        P: ${{ ports.p }}
+      script: |
+        test "$P" -gt 0
+        test "${{ ports.outer }}" = 9123
+    - name: inherited
+      command: test "${{ ports.outer }}" = 8123

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -102,6 +102,82 @@ test("random ports resolve in templates", async () => {
   });
   assert.equal(await runner.run(), "passed");
   assert.ok(runner.ports.web > 0);
+});
+
+test("ports on a test resolve for the test and its services", async () => {
+  const runner = makeRunner({
+    version: 0,
+    test: {
+      ports: { web: "random" },
+      services: {
+        web: {
+          env: { PORT: "${{ ports.web }}" },
+          script: 'echo "listening on $PORT"\nsleep 30',
+          ready: { log: "listening on", interval: "100ms", timeout: "5s" },
+        },
+      },
+      env: { PORT: "${{ ports.web }}" },
+      command: 'test "$PORT" -gt 0',
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  assert.equal(runner.services.length, 1);
+  assert.equal(runner.services[0].status, "stopped");
+});
+
+test("a test's ports are not visible to its siblings", async () => {
+  const runner = makeRunner({
+    version: 0,
+    test: {
+      sequence: [
+        { name: "scoped", ports: { web: "random" }, command: 'test "${{ ports.web }}" -gt 0' },
+        { name: "outside", command: 'echo "${{ ports.web }}"', continueOnError: true },
+      ],
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  const [scoped, outside] = runner.root.children;
+  assert.equal(scoped.status, "passed");
+  assert.equal(outside.status, "failed");
+  assert.match(outside.error ?? "", /"ports\.web" is not defined/);
+});
+
+test("a test's port shadows an inherited one for its subtree", async () => {
+  const runner = makeRunner({
+    version: 0,
+    ports: { web: 8080 },
+    test: {
+      sequence: [
+        {
+          name: "shadowed",
+          ports: { web: 9090 },
+          sequence: [{ name: "inner", command: 'test "${{ ports.web }}" = 9090' }],
+        },
+        { name: "outer", command: 'test "${{ ports.web }}" = 8080' },
+      ],
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+});
+
+test("matrix instances allocate their own random ports", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "testfile-test-ports-"));
+  process.on("exit", () => rmSync(dir, { recursive: true, force: true }));
+  const runner = makeRunner({
+    version: 0,
+    env: { DIR: dir },
+    test: {
+      name: "m",
+      matrix: { v: ["a", "b"] },
+      ports: { p: "random" },
+      command: 'echo "${{ ports.p }}" > "$DIR/${{ matrix.v }}"',
+    },
+  });
+  assert.equal(await runner.run(), "passed");
+  const a = readFileSync(join(dir, "a"), "utf8").trim();
+  const b = readFileSync(join(dir, "b"), "utf8").trim();
+  assert.ok(Number(a) > 0 && Number(b) > 0);
+  assert.notEqual(a, b);
 });
 
 test("a timeout fails the test", async () => {
