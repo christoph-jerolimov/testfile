@@ -11,9 +11,11 @@ shell command can run your suite, and because the runner owns services,
 parallelism and matrices, the pipeline stays a single job instead of a
 translation of your test setup into that system's YAML dialect.
 
-The [GitHub Action](./github-action) adds annotations, a job summary and
-artifact upload on top. For everything else, copy one of the templates in
-the repository's
+Two systems get more than a template: the [GitHub Action](./github-action)
+adds annotations, a job summary and artifact upload on top, and the
+[Tekton Task](./tekton) runs the declared services as pods on the cluster
+the pipeline already runs on. For everything else, copy one of the
+templates in the repository's
 [`ci/` folder](https://github.com/testfile-dev/testfile/tree/main/ci):
 
 | System | Template |

@@ -1,0 +1,75 @@
+# What the testfile Task needs to run container services as pods: a
+# ServiceAccount the TaskRuns run as, allowed to create pods and services
+# in its own namespace. A Testfile without services needs none of this.
+#
+#   kubectl apply -f testfile-rbac.yaml
+#
+# and run the pipeline with `taskRunTemplate.serviceAccountName: testfile`
+# (or `tkn pipeline start -s testfile`). Apply it in the namespace the
+# pipeline runs in; the services then run there too.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: testfile
+---
+# The kubernetes engine drives everything through kubectl: `apply` for the
+# pod and its service, `get` to follow the pod's status, `logs -f` for the
+# service log, `port-forward` to bridge the declared ports to localhost,
+# `exec` for command readiness checks, `delete` to stop.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: testfile-services
+rules:
+  - apiGroups: [""]
+    resources: [pods, services]
+    verbs: [create, get, list, watch, patch, delete]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  - apiGroups: [""]
+    resources: [pods/exec, pods/portforward]
+    verbs: [create]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: testfile-services
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: testfile-services
+subjects:
+  - kind: ServiceAccount
+    name: testfile
+---
+# The engine answers "does kubernetes respond?" with `kubectl cluster-info`
+# (so does doctor), and cluster-info lists the services of kube-system.
+# Without this read the probe fails and the engine reports itself absent
+# even though the pods above would work.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: testfile-cluster-info
+  namespace: kube-system
+rules:
+  - apiGroups: [""]
+    resources: [services]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: testfile-cluster-info
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: testfile-cluster-info
+subjects:
+  - kind: ServiceAccount
+    name: testfile
+    # kubectl has no `apply -n <one namespace> -f <file with two>`: this
+    # binding lives in kube-system, so the subject must say where the
+    # ServiceAccount is. Change it along with your pipeline's namespace.
+    namespace: default
