@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://testfile.dev/next/testfile.schema.json
+version: 0
+test:
+  name: ci
+  parallel:
+    - name: unit
+      command: npm test
+
+    - name: integration
+      # containers are Linux-only on GitHub's runners
+      if: ${{ env.TESTFILE_OS }} == linux
+      services:
+        db:
+          container: { image: postgres:16 }
+          ready: { tcp: 5432 }
+      command: npm run test:integration

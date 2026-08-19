@@ -145,9 +145,17 @@ const docsDir = join(schemaDir, "..", "docs");
 if (existsSync(docsDir)) {
   console.log("Documentation examples:");
   let found = 0;
-  for (const file of readdirSync(docsDir)
-    .filter((f) => f.endsWith(".md"))
-    .sort()) {
+  // The docs pages, plus the guides - each a folder with an index.mdx.
+  const pages = readdirSync(docsDir).filter((f) => f.endsWith(".md"));
+  const guidesDir = join(docsDir, "guides");
+  if (existsSync(guidesDir)) {
+    for (const entry of readdirSync(guidesDir, { withFileTypes: true })) {
+      if (entry.isDirectory() && existsSync(join(guidesDir, entry.name, "index.mdx"))) {
+        pages.push(join("guides", entry.name, "index.mdx"));
+      }
+    }
+  }
+  for (const file of pages.sort()) {
     const text = readFileSync(join(docsDir, file), "utf8");
     const blocks = [...text.matchAll(/```yaml\n([\s\S]*?)```/g)].map((m) => m[1]);
     blocks.forEach((block, index) => {

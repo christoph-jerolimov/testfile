@@ -85,7 +85,7 @@ one tab per related service log.
 
 ### A merged run
 
-Runs [merged](./three-platforms) from several legs say what they were
+Runs [merged](./guides/three-platforms) from several legs say what they were
 merged from and show the same test once per variant.
 
 ![A merged run: the legs it combines listed at the top, and each test once per platform variant](../testfile-viewer/e2e/__screenshots__/merged-run-light.png)

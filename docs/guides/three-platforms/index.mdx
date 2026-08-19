@@ -1,8 +1,11 @@
 ---
 title: "Guided tour: three platforms"
-order: 12
+order: 6
+stack: GitHub Actions
 description: Run one Testfile on Linux, macOS and Windows in GitHub Actions and merge the three runs into a single result.
 ---
+
+import Snippet from "../../../website/src/components/Snippet.tsx";
 
 # Guided tour: three platforms
 
@@ -14,7 +17,7 @@ verdict, one duration, every test tagged with the platform it ran on.
 It is the setup this repository uses for itself; the finished workflow is
 [`.github/workflows/ci.yaml`](https://github.com/testfile-dev/testfile/blob/main/.github/workflows/ci.yaml)
 (which adds two extras this tour skips: [per-test commit
-statuses](./github-action#a-status-per-test) and a kind cluster for the
+statuses](../../github-action.md#a-status-per-test) and a kind cluster for the
 kubernetes conformance case).
 
 ## 1. A Testfile that says what needs Linux
@@ -23,27 +26,11 @@ Nothing in the format is platform-specific — the same file runs
 everywhere. What differs is what a platform *can* run: the macOS runners
 have no container engine, and the Windows runners only run Windows
 images, so containerised tests cannot work there. Say so in the Testfile
-with an [`if` condition](./writing-tests#conditional-tests) on `TESTFILE_OS`
+with an [`if` condition](../../writing-tests.md#conditional-tests) on `TESTFILE_OS`
 (`linux`, `darwin` or `win32`), and those tests are reported as skipped
 instead of failing:
 
-```yaml
-version: 0
-test:
-  name: ci
-  parallel:
-    - name: unit
-      command: npm test
-
-    - name: integration
-      # containers are Linux-only on GitHub's runners
-      if: ${{ env.TESTFILE_OS }} == linux
-      services:
-        db:
-          container: { image: postgres:16 }
-          ready: { tcp: 5432 }
-      command: npm run test:integration
-```
+<Snippet file="three-platforms/Testfile" />
 
 Commands still run in a POSIX shell on Windows — the `sh` of the Git
 installation every runner has — so `command:` and `script:` need no
@@ -172,12 +159,12 @@ tests:
 ```
 
 Rather than downloading artifacts by hand,
-[`testfile github sync`](./github-action#bringing-ci-runs-home)
+[`testfile github sync`](../../github-action.md#bringing-ci-runs-home)
 pulls them — including the merged one — straight into your local history.
 
 ## Merging shards
 
-The same command merges [shards](./cli#sharding-across-machines). Sharding splits the
+The same command merges [shards](../../cli.md#sharding-across-machines). Sharding splits the
 suite, so no test appears twice and **no variants are needed**:
 
 ```sh

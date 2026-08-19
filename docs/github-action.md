@@ -257,7 +257,7 @@ Three platforms means three recorded runs. A follow-up job combines them
 into a single run — one verdict, one duration, every test tagged with the
 platform it ran on — with
 [`testfile merge`](./cli-reference#testfile-merge-run). The
-[three-platform guided tour](./three-platforms) walks through the whole
+[three-platform guided tour](./guides/three-platforms) walks through the whole
 workflow, merge job included.
 
 Two things to know before you do:

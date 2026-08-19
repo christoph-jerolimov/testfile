@@ -18,6 +18,7 @@ validated against the schema by the repository's own CI.
 | [`go-containers`](./go-containers/) | Go | Redis and Kafka containers with `tcp`/`log` readiness, `inputs` caching |
 | [`node-matrix`](./node-matrix/) | Any | Matrix across Node and PostgreSQL versions with `exclude` |
 | [`monorepo`](./monorepo/) | Any | Glob `include` of per-package Testfiles |
+| [`three-platforms`](./three-platforms/) | GitHub Actions | Guided tour: one Testfile on Linux, macOS and Windows, merged into a single run |
 
 The commands inside them refer to files these folders do not contain (they
 are recipes, not runnable projects) — `testfile validate` passes, `testfile

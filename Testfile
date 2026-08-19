@@ -48,6 +48,7 @@ test:
             # the complete Testfiles printed in the docs are validated too,
             # and the files the website's wizard is expected to produce
             - docs/**.md
+            - docs/**.mdx
             - website/e2e/expected/**
         # A dependency from one workspace on another has to resolve to that
         # workspace rather than to the registry, where none of them is

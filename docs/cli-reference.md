@@ -227,7 +227,7 @@ run folder (an unpacked CI artifact: `run.yaml` next to the logs) or an id
 The merged run is an ordinary run: one status, one duration, the union of
 the tests. Runs that recorded the same test path must carry distinct
 [`--variant`](#testfile-start-path) values — see the
-[guided tour](./three-platforms). Exits non-zero when the merged verdict
+[guided tour](./guides/three-platforms). Exits non-zero when the merged verdict
 is not `passed`.
 
 ### `testfile tui [path]`
