@@ -20,6 +20,12 @@ packages ([`core`](https://github.com/testfile-dev/testfile/tree/main/testfile-t
 and [`runner`](https://github.com/testfile-dev/testfile/tree/main/testfile-ts/runner)
 is the only one that starts anything.
 
+The whole command line ships as the
+[`@testfile.dev/cli`](https://www.npmjs.com/package/@testfile.dev/cli)
+package: `npx @testfile.dev/cli <command>` runs any of it without
+installing, and `npm install -g @testfile.dev/cli` makes it available as
+the plain `testfile` this page writes.
+
 This page is the guided tour; the [CLI reference](./cli-reference) lists
 every command with all of its arguments and options.
 
