@@ -10,17 +10,12 @@ import {
   pad,
   parseStatuses,
   type RunFilter,
+  commandFailed,
   variantLabel,
   variantOptions,
-} from "@testfile.dev/core";
-import {
-  collect,
-  colorStatus,
-  commandFailed,
-  loadedHistory,
-  summarizeTests,
   writeJson,
-} from "./shared.js";
+} from "@testfile.dev/core";
+import { collect, colorStatus, loadedHistory, summarizeTests } from "./shared.js";
 
 export function registerRuns(program: Command): void {
   program

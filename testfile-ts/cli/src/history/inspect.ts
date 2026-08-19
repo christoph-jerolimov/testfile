@@ -4,17 +4,13 @@ import {
   formatMs,
   pad,
   type RunRecordSuiteNode,
+  commandFailed,
   timelineRows,
   variantLabel,
-} from "@testfile.dev/core";
-import {
-  colorStatus,
-  commandFailed,
-  findRun,
-  loadedHistory,
   wantsJson,
   writeJson,
-} from "./shared.js";
+} from "@testfile.dev/core";
+import { colorStatus, findRun, loadedHistory } from "./shared.js";
 
 // Hangs off the suite's `inspect`: `testfile inspect` shows what would
 // run, `testfile inspect run <id>` shows what did.

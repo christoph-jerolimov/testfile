@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { wantsJson, writeJson } from "./shared.js";
+import { wantsJson, writeJson } from "./util.js";
 
 test("wantsJson tells a given flag from an absent one", () => {
   assert.equal(wantsJson(undefined), false);

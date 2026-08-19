@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "default": "./dist/commands/index.js"
     }
   },
   "files": [
@@ -22,6 +26,7 @@
   },
   "dependencies": {
     "@testfile.dev/core": "^0.0.0",
+    "commander": "^15.0.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {

@@ -1,7 +1,14 @@
 import type { Command } from "commander";
-import { githubRunArchives, lineProgress, syncFromGithub } from "@testfile.dev/sync";
-import { color, pad } from "@testfile.dev/core";
-import { commandFailed, reportImport, resolveHistoryBase, wantsJson, writeJson } from "./shared.js";
+import { githubRunArchives, lineProgress, syncFromGithub } from "../index.js";
+import {
+  color,
+  commandFailed,
+  pad,
+  resolveHistoryBase,
+  wantsJson,
+  writeJson,
+} from "@testfile.dev/core";
+import { reportImport } from "./shared.js";
 
 interface GithubCliOptions {
   latest: number;

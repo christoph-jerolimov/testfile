@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 import type { Command } from "commander";
-import { importRunArchive, packRun } from "@testfile.dev/sync";
-import { color } from "@testfile.dev/core";
-import { commandFailed, pickRun, reportImport, resolveHistoryBase } from "./shared.js";
+import { importRunArchive, packRun } from "../index.js";
+import { color, commandFailed, resolveHistoryBase } from "@testfile.dev/core";
+import { pickRun, reportImport } from "./shared.js";
 
 export function registerArchive(program: Command): void {
   const archiveCommand = program

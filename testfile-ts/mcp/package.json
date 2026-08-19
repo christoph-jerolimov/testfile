@@ -10,6 +10,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./commands": {
+      "types": "./dist/commands/index.d.ts",
+      "default": "./dist/commands/index.js"
     }
   },
   "files": [
@@ -21,7 +25,8 @@
     "test": "node --test \"dist/**/*.test.js\""
   },
   "dependencies": {
-    "@testfile.dev/core": "^0.0.0"
+    "@testfile.dev/core": "^0.0.0",
+    "commander": "^15.0.0"
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
