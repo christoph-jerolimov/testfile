@@ -10,6 +10,9 @@ const base = "";
 
 export default defineConfig({
   site: "https://testfile.dev",
+  // The default compression drops the line break between text and an inline
+  // element, gluing words together ("a<a>self-documenting…"), so it stays off.
+  compressHTML: false,
   markdown: {
     // The remark/rehype pipeline, not Astro's newer default processor: the
     // link rewriting below is a rehype plugin, and the heading ids this

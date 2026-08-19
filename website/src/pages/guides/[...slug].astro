@@ -1,0 +1,57 @@
+---
+import { Code } from "astro:components";
+import { getCollection, render } from "astro:content";
+import { examplesRepoUrl, guideSlug, guideTestfiles, isGuide } from "../../guides";
+import Layout from "../../layouts/Layout.astro";
+
+export async function getStaticPaths() {
+  const guides = (await getCollection("docs")).filter(isGuide);
+  return guides.map((guide) => ({ params: { slug: guideSlug(guide) }, props: { guide } }));
+}
+
+const { guide } = Astro.props;
+const { Content } = await render(guide);
+const slug = guideSlug(guide);
+const testfile = guideTestfiles[slug];
+if (testfile === undefined) throw new Error(`examples/${slug} has no Testfile`);
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+
+<Layout title={guide.data.title} description={guide.data.description} nav="guides">
+  {guide.data.stack && <p class="stack">{guide.data.stack}</p>}
+  <Content />
+  <Code code={testfile} lang="yaml" themes={{ light: "github-light", dark: "github-dark" }} />
+  <p class="source">
+    <a href={`${examplesRepoUrl}/${slug}`}>Browse this example on GitHub →</a>
+  </p>
+  <p class="outro">
+    Copy it into your project, adjust the commands, run <code>testfile start</code>. Missing your
+    stack? <a href="https://github.com/testfile-dev/testfile/issues">Open an issue</a> — or
+    start from <a href={`${base}/docs/getting-started`}>Getting started</a> and let
+    <code>testfile init</code> write a first version for you.
+  </p>
+</Layout>
+
+<style>
+  .stack {
+    float: right;
+    margin: 0.75rem 0 0 1rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.15rem 0.7rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  /* One guide per page, so the file is shown whole rather than in a
+     scrollable box the way the stacked gallery needed. */
+  .source {
+    margin: 0.9rem 0 0;
+    font-size: 0.9rem;
+  }
+  .outro {
+    margin: 2.5rem 0 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+  }
+</style>

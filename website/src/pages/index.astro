@@ -1,9 +1,13 @@
 ---
 import { Code } from "astro:components";
-import { firstExample } from "../examples";
+import { getCollection } from "astro:content";
+import { guideSlug, isGuide } from "../guides";
 import Layout from "../layouts/Layout.astro";
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+const firstGuide = (await getCollection("docs"))
+  .filter(isGuide)
+  .sort((a, b) => a.data.order - b.data.order)[0];
 
 const example = `version: 0
 test:
@@ -26,13 +30,15 @@ test:
 <Layout
   title="Home"
   description="Testfile — a declarative YAML format for running your project's tests."
-  sidebar={false}
+  nav="none"
 >
   <section class="hero">
     <div class="hero-text">
       <h1>
-        Testfile definition that scales from simple tests to complex test
-        suites. <span class="grad">Runs on your CI and locally.</span>
+        <span class="grad">Testfile</span>, a
+        <a href={`${base}/docs/index`}>self-documenting definition</a> how to
+        run your tests &amp; a <a href={`${base}/docs/cli`}>tooling</a> to run
+        them locally, on your CI/CD infrastructure, or in the cloud
       </h1>
       <p class="lead">
         A YAML file that describes the whole test setup, with the services
@@ -43,7 +49,7 @@ test:
       <div class="cta">
         <a class="button primary" href={`${base}/start`}>Get started</a>
         <a class="button ghost" href={`${base}/docs/getting-started`}>Documentation</a>
-        <a class="button ghost" href={`${base}/examples/${firstExample.id}`}>Examples</a>
+        <a class="button ghost" href={`${base}/guides/${guideSlug(firstGuide)}`}>Guides</a>
       </div>
     </div>
     <div class="hero-code">
@@ -165,7 +171,7 @@ test:
     </div>
     <p class="all-features-cta">
       <a class="button ghost" href={`${base}/docs/writing-tests`}>Read the docs</a>
-      <a class="button ghost" href={`${base}/examples/${firstExample.id}`}>Browse examples</a>
+      <a class="button ghost" href={`${base}/guides/${guideSlug(firstGuide)}`}>Browse the guides</a>
     </p>
   </section>
 </Layout>
@@ -185,10 +191,20 @@ test:
     letter-spacing: -0.01em;
   }
   .grad {
-    background: linear-gradient(90deg, var(--accent), var(--accent-red));
+    background: var(--gradient);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+  }
+  .hero h1 a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--accent);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+  .hero h1 a:hover {
+    color: var(--accent);
   }
   .lead {
     margin: 1.1rem 0 1.6rem;
@@ -209,8 +225,8 @@ test:
     border: 1px solid transparent;
   }
   .button.primary {
-    background: var(--accent);
-    color: #ffffff;
+    background: var(--gradient);
+    color: #04301f;
   }
   .button.primary:hover {
     filter: brightness(1.1);
@@ -227,7 +243,7 @@ test:
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 12px 32px rgba(9, 105, 218, 0.08);
+    box-shadow: 0 12px 32px rgba(16, 216, 137, 0.12);
     background: var(--code-bg);
   }
   .titlebar {
@@ -325,7 +341,7 @@ test:
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 16px 40px rgba(9, 105, 218, 0.1);
+    box-shadow: 0 16px 40px rgba(16, 216, 137, 0.14);
   }
   .shot img {
     display: block;

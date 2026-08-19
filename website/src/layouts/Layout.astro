@@ -1,20 +1,26 @@
 ---
 import { getCollection } from "astro:content";
-import { examples, firstExample } from "../examples";
+import { guideSlug, isGuide } from "../guides";
 import { specPages } from "../spec";
 
 interface Props {
   title: string;
   description?: string;
-  // The docs sidebar; the landing page turns it off and links the
-  // documentation from the header instead.
-  sidebar?: boolean;
+  // Which sidebar the page gets: the docs menu, the guides menu, or none
+  // (the landing page and the blog link everything from the header instead).
+  nav?: "docs" | "guides" | "none";
 }
 
-const { title, description, sidebar = true } = Astro.props;
-const docs = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.order);
+const { title, description, nav = "docs" } = Astro.props;
+const all = (await getCollection("docs")).sort((a, b) => a.data.order - b.data.order);
+const docs = all.filter((doc) => !isGuide(doc));
+const guides = all.filter(isGuide);
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");
 const currentPath = Astro.url.pathname.replace(/\/$/, "");
+
+const tagline =
+  "Testfile, a self-documenting definition how to run your tests & a tooling " +
+  "to run them locally, on your CI/CD infrastructure, or in the cloud.";
 ---
 
 <!doctype html>
@@ -27,18 +33,31 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
   </head>
   <body>
     <header>
-      <a class="brand" href={`${base}/`}><span class="brand-icon">🐙</span>Testfile</a>
-      <nav class="top">
-        <a href={`${base}/docs/${docs[0].id}`}>Docs</a>
-        <a href={`${base}/examples/${firstExample.id}`}>Examples</a>
-      </nav>
-      <nav class="top right">
-        <a href="https://github.com/testfile-dev/testfile">GitHub</a>
-      </nav>
+      <div class="header-inner">
+        <a class="brand" href={`${base}/`}><span class="brand-icon">🐙</span>Testfile</a>
+        <nav class="top">
+          <a href={`${base}/docs/${docs[0].id}`}>Docs</a>
+          <a href={`${base}/guides/${guideSlug(guides[0])}`}>Guides</a>
+          <a href={`${base}/blog`}>Blog</a>
+        </nav>
+        <nav class="top right">
+          <a
+            class="github"
+            href="https://github.com/testfile-dev/testfile"
+            aria-label="Testfile on GitHub"
+          >
+            <svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true" fill="currentColor">
+              <path
+                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+              ></path>
+            </svg>
+          </a>
+        </nav>
+      </div>
     </header>
-    <div class={`wrap ${sidebar ? "" : "no-sidebar"}`}>
+    <div class={`wrap ${nav === "none" ? "no-sidebar" : ""}`}>
       {
-        sidebar && (
+        nav === "docs" && (
           <aside>
             <nav>
               <p class="nav-title">Documentation</p>
@@ -49,19 +68,6 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
                     <li>
                       <a href={href} aria-current={currentPath === href ? "page" : undefined}>
                         {doc.data.title}
-                      </a>
-                    </li>
-                  );
-                })}
-              </ul>
-              <p class="nav-title">Examples</p>
-              <ul>
-                {examples.map((example) => {
-                  const href = `${base}/examples/${example.id}`;
-                  return (
-                    <li>
-                      <a href={href} aria-current={currentPath === href ? "page" : undefined}>
-                        {example.meta.title}
                       </a>
                     </li>
                   );
@@ -84,20 +90,57 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
           </aside>
         )
       }
+      {
+        nav === "guides" && (
+          <aside>
+            <nav>
+              <p class="nav-title">Guides</p>
+              <ul>
+                {guides.map((guide) => {
+                  const href = `${base}/guides/${guideSlug(guide)}`;
+                  return (
+                    <li>
+                      <a href={href} aria-current={currentPath === href ? "page" : undefined}>
+                        {guide.data.title}
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          </aside>
+        )
+      }
       <main>
         <slot />
       </main>
     </div>
+    <footer>
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <p class="footer-logo">🐙</p>
+          <p class="footer-tagline">{tagline}</p>
+        </div>
+        <nav class="footer-links" aria-label="Footer">
+          <a href={`${base}/docs/${docs[0].id}`}>Documentation</a>
+          <a href={`${base}/spec/${specPages[0].slug}`}>Specification</a>
+          <a href={`${base}/guides/${guideSlug(guides[0])}`}>Guides</a>
+          <a href={`${base}/blog`}>Blog</a>
+          <a href="https://github.com/testfile-dev/testfile">GitHub</a>
+        </nav>
+      </div>
+    </footer>
     <style is:global>
       :root {
         --bg: #ffffff;
         --fg: #1c1e21;
         --muted: #57606a;
         --border: #d0d7de;
-        /* blue + red highlights: the CI-friendly pair (running/planned vs
-           failed) instead of green/red */
-        --accent: #0969da;
+        /* green + red highlights: the brand green for everything primary,
+           red only where a failure is meant */
+        --accent: #10d889;
         --accent-red: #cf222e;
+        --gradient: linear-gradient(135deg, #a1f68e 0%, #10d889 50%, #01baad 100%);
         --code-bg: #f6f8fa;
       }
       @media (prefers-color-scheme: dark) {
@@ -106,7 +149,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
           --fg: #e6edf3;
           --muted: #8b949e;
           --border: #30363d;
-          --accent: #58a6ff;
+          --accent: #10d889;
           --accent-red: #ff7b72;
           --code-bg: #161b22;
         }
@@ -122,16 +165,22 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
         color: var(--fg);
       }
       header {
-        display: flex;
-        align-items: center;
-        gap: 1.75rem;
-        padding: 0.75rem 1.5rem;
         border-bottom: 1px solid var(--border);
         /* stays in place while the page scrolls */
         position: sticky;
         top: 0;
         z-index: 10;
         background: var(--bg);
+      }
+      /* the header content shares the page content's column: same
+         max-width, centered the same way */
+      .header-inner {
+        display: flex;
+        align-items: center;
+        gap: 1.75rem;
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 0.75rem 1.5rem;
       }
       /* so an anchor target does not end up hidden behind the header */
       :target,
@@ -149,6 +198,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
       }
       nav.top {
         display: flex;
+        align-items: center;
         gap: 1.25rem;
       }
       /* everything after the brand sits left; this one is pushed to the end */
@@ -162,15 +212,19 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
       nav.top a:hover {
         color: var(--accent);
       }
+      nav.top a.github {
+        display: inline-flex;
+        color: var(--fg);
+      }
+      nav.top a.github:hover {
+        color: var(--accent);
+      }
       .wrap {
         display: flex;
         max-width: 72rem;
         margin: 0 auto;
         gap: 2rem;
         padding: 0 1.5rem;
-      }
-      .wrap.no-sidebar {
-        max-width: 68rem;
       }
       aside {
         flex: 0 0 14rem;
@@ -263,18 +317,56 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "");
         padding: 0.4rem 0.75rem;
         text-align: left;
       }
+      footer {
+        border-top: 1px solid var(--border);
+        background: var(--code-bg);
+      }
+      .footer-inner {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+        gap: 2rem;
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 2.5rem 1.5rem;
+      }
+      .footer-logo {
+        margin: 0 0 0.5rem;
+        font-size: 1.8rem;
+        line-height: 1;
+      }
+      .footer-tagline {
+        margin: 0;
+        max-width: 30rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .footer-links {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        justify-self: end;
+      }
+      .footer-links a {
+        color: var(--muted);
+        text-decoration: none;
+        font-size: 0.9rem;
+      }
+      .footer-links a:hover {
+        color: var(--accent);
+      }
       @media (max-width: 48rem) {
-        /* phones: the header only has room for the brand and the two
-           content links, so the outbound GitHub link steps aside */
-        nav.top.right {
-          display: none;
-        }
         .wrap {
           flex-direction: column;
         }
         aside {
           flex-basis: auto;
           padding-bottom: 0;
+        }
+        .footer-inner {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .footer-links {
+          justify-self: start;
         }
       }
     </style>

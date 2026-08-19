@@ -11,6 +11,13 @@ concepts first (what is a Testfile, getting started, writing tests), the
 special-purpose guides after (matrix, services, environment, CLI/TUI, GitHub
 Action).
 
+The guides in [`../docs/guides/`](../docs/guides/) are published under
+`/guides/` with their own menu; each page embeds the real Testfile from the
+matching folder in [`../examples/`](../examples/) at build time — see
+[`src/guides.ts`](src/guides.ts). The blog is the one thing written for the
+website itself: its posts live in
+[`src/content/blog/`](src/content/blog/) and are published under `/blog/`.
+
 The three normative documents in [`../spec/`](../spec/) are published the
 same way, under `/spec/` — see [`src/spec.ts`](src/spec.ts) for their routes
 and menu labels. Both folders are read at build time, so the markdown files

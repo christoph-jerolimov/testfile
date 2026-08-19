@@ -1,0 +1,62 @@
+---
+import { getCollection } from "astro:content";
+import Layout from "../../layouts/Layout.astro";
+
+const posts = (await getCollection("blog")).sort(
+  (a, b) => b.data.date.getTime() - a.data.date.getTime(),
+);
+const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+const dateOf = (date: Date) =>
+  date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+---
+
+<Layout title="Blog" description="News about the Testfile format and its tooling." nav="none">
+  <h1>Blog</h1>
+  <ul class="posts">
+    {
+      posts.map((post) => (
+        <li>
+          <p class="date">{dateOf(post.data.date)}</p>
+          <h2>
+            <a href={`${base}/blog/${post.id}`}>{post.data.title}</a>
+          </h2>
+          <p class="teaser">{post.data.description}</p>
+        </li>
+      ))
+    }
+  </ul>
+</Layout>
+
+<style>
+  .posts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-width: 44rem;
+  }
+  .posts li {
+    padding: 1.25rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .date {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .posts h2 {
+    margin: 0.25rem 0;
+    font-size: 1.25rem;
+  }
+  .posts h2 a {
+    color: var(--fg);
+    text-decoration: none;
+  }
+  .posts h2 a:hover {
+    color: var(--accent);
+  }
+  .teaser {
+    margin: 0;
+    color: var(--muted);
+  }
+</style>

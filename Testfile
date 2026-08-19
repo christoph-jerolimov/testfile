@@ -340,7 +340,7 @@ test:
             - conformance/cases/*/expected.yaml
             - spec/TESTFILE.md
             - spec/RESULTS.md
-        # The examples gallery on the website renders these files, so they
+        # The guides on the website render these files, so they
         # must stay valid.
         - name: examples
           tags: [fast, docs]

@@ -11,10 +11,10 @@ adjust the commands, run `testfile start`.
 | [`node-matrix`](./node-matrix/) | Any | Matrix across Node and PostgreSQL versions with `exclude` |
 | [`monorepo`](./monorepo/) | Any | Glob `include` of per-package Testfiles |
 
-They are rendered on the
-[examples page](https://testfile.dev/examples) of
-the website and validated against the schema by the repository's own CI, so
-they never drift from the current format.
+They are rendered as the [guides](https://testfile.dev/guides/pytest-postgres)
+of the website (written in [`docs/guides/`](../docs/guides/)) and validated
+against the schema by the repository's own CI, so they never drift from the
+current format.
 
 The commands inside them refer to files these folders do not contain (they
 are recipes, not runnable projects) — `testfile validate` passes, `testfile

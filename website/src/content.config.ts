@@ -1,14 +1,18 @@
 import { defineCollection, z } from "astro:content";
 import { glob } from "astro/loaders";
 
-// The website has no content of its own: it renders the markdown files from
-// the repository's docs/ folder.
+// The website has almost no content of its own: it renders the markdown
+// files from the repository's docs/ folder. That includes docs/guides/,
+// whose pages are published under /guides/ with their own menu - see
+// src/guides.ts for the split.
 const docs = defineCollection({
   loader: glob({ pattern: "**/*.md", base: "../docs" }),
   schema: z.object({
     title: z.string(),
     order: z.number().default(999),
     description: z.string().optional(),
+    // Guides only: the language or ecosystem the example is written for.
+    stack: z.string().optional(),
   }),
 });
 
@@ -23,4 +27,15 @@ const spec = defineCollection({
   }),
 });
 
-export const collections = { docs, spec };
+// The blog is the one thing written for the website itself rather than for
+// the repository, so its posts live here and not in docs/.
+const blog = defineCollection({
+  loader: glob({ pattern: "*.md", base: "./src/content/blog" }),
+  schema: z.object({
+    title: z.string(),
+    date: z.coerce.date(),
+    description: z.string(),
+  }),
+});
+
+export const collections = { docs, spec, blog };
