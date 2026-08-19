@@ -1,0 +1,30 @@
+# Configuration as Code for the disposable test controllers: no security
+# (they listen on loopback only, see container-init.sh), the library under
+# test registered as a global shared library, and the three test jobs
+# seeded through Job DSL.
+jenkins:
+  numExecutors: 2
+  securityRealm:
+    local:
+      allowsSignup: false
+  authorizationStrategy: "unsecured"
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "PATH+NODE"
+            value: "/var/jenkins_home/tools/node/bin"
+unclassified:
+  location:
+    url: "http://127.0.0.1:${JENKINS_PORT}/"
+  globalLibraries:
+    libraries:
+      - name: "testfile"
+        defaultVersion: "main"
+        implicit: false
+        retriever:
+          modernSCM:
+            scm:
+              git:
+                remote: "/var/jenkins_home/testfile-src"
+jobs:
+  - file: /var/jenkins_home/testfile-src/test/jobs.groovy

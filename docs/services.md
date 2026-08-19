@@ -209,6 +209,10 @@ With `network`, service containers can talk to each other directly: each
 container joins the named network with its service name as alias, so an app
 container reaches its database at `db:5432` instead of going through host
 ports. The network is created on first use and left in place after the run.
+The engine's own modes — `host`, `none`, `bridge` — are joined as such
+instead, with nothing created and no alias set: `network: host` puts a
+service and the machine on the same localhost, which is how a container can
+reach a service running outside the engine.
 
 ## Services on a Kubernetes cluster
 

@@ -350,7 +350,7 @@ point.
 | `env`     | map             | Environment inside the container. |
 | `volumes` | array of string | `"HOST:CONTAINER[:OPTIONS]"` mounts. |
 | `pull`    | enum            | `always`, `missing` or `never`: when to pull the image. Unset defers to the engine's own default — effectively `missing`, except that kubernetes always pulls `:latest`/untagged images. |
-| `network` | string          | Attach to this named container network, creating it if needed (networks are left in place after the run). The service name becomes a network alias, so services on the same network reach each other by name. |
+| `network` | string          | Attach to this named container network, creating it if needed (networks are left in place after the run). The service name becomes a network alias, so services on the same network reach each other by name. The engine's own modes — `host`, `none`, `bridge` — are joined as such instead: nothing is created and no alias is set (only user-defined networks have aliases); `host` is how a service and the machine reach each other on localhost. |
 | `entrypoint` | array of string | Override the image entrypoint. |
 | `command` | array of string | Override the image command. |
 | `context`, `namespace` | string | Only read when the run's engine is kubernetes: which kubeconfig context / namespace to run in (the namespace must exist). Defaults: kubectl's own. |

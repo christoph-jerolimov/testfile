@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=../../schema/testfile.schema.json
+# The shared library's own test suite: boot real Jenkins controllers - the
+# most common LTS versions plus latest - seed each with the library and
+# three pipeline jobs, then drive those jobs over the REST API and assert
+# their verdicts, JUnit results and archived artifacts.
+#
+# Nothing is mounted into the containers (a Testfile cannot know an
+# absolute host path): src-server serves this folder as a tarball, and each
+# Jenkins container bootstraps itself from it - see test/container-init.sh.
+version: 0
+name: jenkins-shared-library
+ports:
+  src: random
+services:
+  src-server:
+    description: Serves this folder as a tarball to the Jenkins containers
+    command: node test/serve.mjs
+    env:
+      PORT: ${{ ports.src }}
+    ready:
+      http: http://127.0.0.1:${{ ports.src }}/healthz
+test:
+  name: jenkins-library
+  sequence:
+    # The cheap failures first. A fixture that no longer validates would
+    # fail every job in every Jenkins, minutes later and less readably -
+    # checked with the repository's own CLI (build it once with
+    # `npm run build --workspace @testfile.dev/cli`).
+    - name: fixtures-validate
+      tags: [fast]
+      timeout: 5m
+      script: |
+        for dir in test/fixtures/*/; do
+          node ../../testfile-ts/cli/dist/cli.js validate "$dir"
+        done
+      inputs:
+        - test/fixtures/**
+    # The REST verifier against a stubbed Jenkins: crumb handling, queue
+    # polling and every assertion, without booting a controller.
+    - name: verify-unit
+      tags: [fast, unit]
+      command: node --test test/verify.test.mjs
+      inputs:
+        - test/verify.mjs
+        - test/verify.test.mjs
+    # One leg per Jenkins version. The legs run in parallel, each with host
+    # networking on its own fixed port (matrix legs cannot share a random
+    # port, and host paths cannot be mounted - so the container reaches
+    # src-server on localhost instead). On small machines:
+    #   testfile start integrations/jenkins --max-parallel 2
+    - name: jenkins
+      tags: [slow, e2e, jenkins]
+      timeout: 25m
+      matrix:
+        include:
+          - jenkins: 2.504.3-lts
+            port: "18080"
+          - jenkins: 2.516.3-lts
+            port: "18081"
+          - jenkins: lts
+            port: "18082"
+          - jenkins: latest
+            port: "18083"
+      services:
+        jenkins:
+          description: Jenkins ${{ matrix.jenkins }}, seeded with the library and the test jobs
+          container:
+            image: docker.io/jenkins/jenkins:${{ matrix.jenkins }}
+            network: host
+            env:
+              TESTFILE_SRC_URL: http://127.0.0.1:${{ ports.src }}/src.tgz
+              JENKINS_PORT: ${{ matrix.port }}
+            entrypoint: ["/bin/bash", "-c"]
+            command:
+              - >-
+                mkdir -p /var/jenkins_home/testfile-src
+                && curl -fsSL "$TESTFILE_SRC_URL" | tar xzm -C /var/jenkins_home/testfile-src
+                && exec bash /var/jenkins_home/testfile-src/test/container-init.sh
+          ready:
+            # /login answers 2xx only once Jenkins is fully up (503 while it
+            # boots); the generous timeout covers the plugin and Node.js
+            # downloads that happen before Jenkins even starts.
+            http: http://127.0.0.1:${{ matrix.port }}/login
+            interval: 5s
+            timeout: 15m
+          stop:
+            timeout: 30s
+      env:
+        JENKINS_URL: http://127.0.0.1:${{ matrix.port }}
+        JENKINS_VERSION: ${{ matrix.jenkins }}
+      command: node test/verify.mjs
+      artifacts:
+        # console logs of the triggered builds, one folder per version
+        - .tmp/consoles/**
+      inputs:
+        - vars/**
+        - test/**

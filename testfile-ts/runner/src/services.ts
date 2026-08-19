@@ -132,8 +132,11 @@ export function buildContainerRunArgs(
   const args = opts.detached === false ? ["run", "--rm"] : ["run", "--rm", "-d"];
   if (container.pull) args.push(`--pull=${container.pull}`);
   if (container.network) {
-    args.push("--network", resolveTemplate(container.network, scopes, where));
-    args.push("--network-alias", name);
+    const network = resolveTemplate(container.network, scopes, where);
+    args.push("--network", network);
+    // only user-defined networks support aliases; the engine's own modes
+    // (host, none, bridge) are joined as-is
+    if (!isEngineNetworkMode(network)) args.push("--network-alias", name);
   }
   for (const mapping of container.ports ?? []) {
     args.push("-p", resolveTemplate(mapping, scopes, where));
@@ -156,10 +159,19 @@ export function buildContainerRunArgs(
   return args;
 }
 
+// The engine's own network modes, as opposed to named networks a service
+// may ask for: nothing to create, and no alias to set. `host` is how a
+// service reaches (and is reached by) the machine directly - the same mode
+// test containers default to.
+export function isEngineNetworkMode(network: string): boolean {
+  return network === "host" || network === "none" || network === "bridge";
+}
+
 // Networks created (or verified) in this process, per engine.
 const ensuredNetworks = new Set<string>();
 
 async function ensureNetwork(engine: string, network: string, cwd: string): Promise<void> {
+  if (isEngineNetworkMode(network)) return;
   const key = `${engine}:${network}`;
   if (ensuredNetworks.has(key)) return;
   const inspect = await execCapture(engine, ["network", "inspect", network], cwd);

@@ -349,6 +349,23 @@ test:
             for dir in examples/*/; do
               node testfile-ts/cli/dist/cli.js validate "$dir"
             done
+        # The Jenkins shared library's fast layer: its suite and the
+        # fixtures its seeded jobs run stay valid, and the REST verifier is
+        # checked against a stubbed Jenkins. The real controllers
+        # (integrations/jenkins/Testfile) are not started here - that suite
+        # pulls images, plugins and Node, and runs on demand:
+        # testfile start integrations/jenkins
+        - name: jenkins-library
+          tags: [fast, integrations]
+          needs: [build-cli]
+          script: |
+            node testfile-ts/cli/dist/cli.js validate integrations/jenkins
+            for dir in integrations/jenkins/test/fixtures/*/; do
+              node testfile-ts/cli/dist/cli.js validate "$dir"
+            done
+            node --test integrations/jenkins/test/verify.test.mjs
+          inputs:
+            - integrations/jenkins/**
         # The web viewer's Playwright suite, dogfooding the format: the
         # CLI's serve command runs as a service over the committed e2e
         # fixture, and the browser tests (incl. screenshot comparison) hit

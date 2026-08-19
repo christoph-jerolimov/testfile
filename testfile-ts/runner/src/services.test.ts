@@ -102,6 +102,14 @@ test("pull policy, network with alias, entrypoint and command overrides", () => 
   ]);
 });
 
+test("the engine's own network modes get no alias", () => {
+  // aliases exist only on user-defined networks; docker rejects the flag
+  // for host/none/bridge outright
+  const args = buildContainerRunArgs("jenkins", { image: "img", network: "host" }, scopes, "t");
+  assert.deepEqual(args.slice(3, 5), ["--network", "host"]);
+  assert.ok(!args.includes("--network-alias"));
+});
+
 test("a single-part entrypoint is passed plainly", () => {
   const args = buildContainerRunArgs("tool", { image: "img", entrypoint: ["/entry"] }, scopes, "t");
   assert.deepEqual(args.slice(-3), ["--entrypoint", "/entry", "img"]);
