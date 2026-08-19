@@ -619,7 +619,7 @@
           "default": "missing"
         },
         "network": {
-          "description": "Attach the container to this named network, creating it if needed. The service name becomes a network alias, so services on the same network reach each other by name.",
+          "description": "Attach the container to this named network, creating it if needed. The service name becomes a network alias, so services on the same network reach each other by name. The engine's own modes - host, none, bridge - are joined as such: nothing is created and no alias is set.",
           "type": "string",
           "minLength": 1
         },

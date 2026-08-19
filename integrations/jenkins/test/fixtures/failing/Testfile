@@ -1,0 +1,10 @@
+# A suite that fails: the testfile step must fail the build and still
+# record the JUnit report on the way out.
+version: 0
+test:
+  name: failing
+  sequence:
+    - name: passes
+      command: echo about to fail
+    - name: fails
+      command: exit 1

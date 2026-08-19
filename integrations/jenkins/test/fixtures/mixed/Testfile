@@ -1,0 +1,13 @@
+# One passing fast test, one broken slow test: run unfiltered this suite
+# fails, so a green testfile-filtered build proves filterTags reached the
+# runner.
+version: 0
+test:
+  name: mixed
+  parallel:
+    - name: fast
+      tags: [fast]
+      command: echo fast test
+    - name: slow-broken
+      tags: [slow]
+      command: exit 1

@@ -1,0 +1,10 @@
+# The happy-path fixture: two tests that pass. `node --version` doubles as
+# proof that the Node.js the container-init installed reaches the build.
+version: 0
+test:
+  name: passing
+  sequence:
+    - name: hello
+      command: echo hello from a Testfile
+    - name: node-version
+      command: node --version
